@@ -155,6 +155,7 @@ create table public.articles (
   content              text,
   word_count           integer,
   status               text not null default 'draft' check (status in ('draft', 'brief_ready', 'generating', 'complete', 'published')),
+  scores               jsonb,
   published_url        text,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()

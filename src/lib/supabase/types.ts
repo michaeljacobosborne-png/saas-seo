@@ -36,6 +36,22 @@ export interface Keyword {
   created_at: string
 }
 
+export interface ArticleScoreCriteria {
+  label: string
+  points: number
+  max: number
+  passed: boolean
+}
+
+export interface ArticleScores {
+  seo: { score: number; breakdown: Record<string, ArticleScoreCriteria> }
+  readability: { score: number; breakdown: Record<string, { label: string; value: number }> }
+  geo: { score: number; breakdown: Record<string, { label: string; passed: boolean }> }
+  aeo: { score: number; breakdown: Record<string, { label: string; passed: boolean }> }
+  ranking_prediction: { timeline: string; confidence: 'low' | 'medium' | 'high' }
+  traffic_prediction: { at_rank_1: number; at_rank_3: number; at_rank_5: number; at_rank_10: number }
+}
+
 export interface Article {
   id: string
   user_id: string
@@ -48,6 +64,7 @@ export interface Article {
   content: string | null
   word_count: number | null
   status: 'draft' | 'brief_ready' | 'generating' | 'complete' | 'published'
+  scores: ArticleScores | null
   published_url: string | null
   created_at: string
   updated_at: string
@@ -77,7 +94,7 @@ export type Database = {
       }
       articles: {
         Row: Article
-        Insert: Omit<Article, 'id' | 'created_at' | 'updated_at'>
+        Insert: Omit<Article, 'id' | 'created_at' | 'updated_at' | 'scores'> & { scores?: ArticleScores | null }
         Update: Partial<Omit<Article, 'id' | 'created_at' | 'updated_at'>>
         Relationships: []
       }

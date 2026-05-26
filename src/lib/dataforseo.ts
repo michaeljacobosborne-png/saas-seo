@@ -17,6 +17,7 @@ export async function getKeywordIdeas(
   const password = process.env.DATAFORSEO_PASSWORD
 
   if (!login || !password) {
+    console.warn('[Byline] DataForSEO credentials missing. Set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD in your environment (Vercel dashboard or .env.local). Keyword research and scoring will not work without them.')
     throw new Error('DataForSEO credentials not configured. Set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD.')
   }
 
