@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkArticleLimit } from '@/lib/usage'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -8,6 +9,14 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { allowed, used, limit } = await checkArticleLimit(user.id, supabase)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Article limit reached', used, limit, upgradeUrl: '/pricing' },
+      { status: 403 }
+    )
+  }
 
   const body = await request.json() as {
     articleId: string

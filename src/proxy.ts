@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
+const SUBSCRIPTION_PROTECTED = ['/dashboard', '/brand', '/keywords', '/articles']
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -27,16 +29,30 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const isProtected =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/brand') ||
-    pathname.startsWith('/keywords') ||
-    pathname.startsWith('/articles')
+  const isProtected = SUBSCRIPTION_PROTECTED.some((p) => pathname.startsWith(p))
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Authenticated users on protected routes: check for active subscription
+  if (isProtected && user) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: sub } = await (supabase as any)
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+
+    if (!sub) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/pricing'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse
