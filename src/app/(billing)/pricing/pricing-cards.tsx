@@ -16,8 +16,8 @@ const PLANS = [
   {
     id: 'starter' as Plan,
     name: 'Starter',
-    monthlyPrice: 49,
-    annualPrice: 490,
+    monthlyPrice: 29,
+    annualPrice: 276,
     articles: '8 articles / mo',
     keywordSessions: '10 keyword sessions',
     brandProfiles: '1 brand profile',
@@ -32,8 +32,8 @@ const PLANS = [
   {
     id: 'pro' as Plan,
     name: 'Pro',
-    monthlyPrice: 99,
-    annualPrice: 990,
+    monthlyPrice: 79,
+    annualPrice: 756,
     articles: '25 articles / mo',
     keywordSessions: '40 keyword sessions',
     brandProfiles: '3 brand profiles',
@@ -50,7 +50,7 @@ const PLANS = [
     id: 'agency' as Plan,
     name: 'Agency',
     monthlyPrice: 199,
-    annualPrice: 1990,
+    annualPrice: 1908,
     articles: '80 articles / mo',
     keywordSessions: 'Unlimited keyword sessions',
     brandProfiles: '10 brand profiles',
@@ -67,8 +67,10 @@ const PLANS = [
 export default function PricingCards({ currentPlan, currentInterval, hasActiveSubscription }: PricingCardsProps) {
   const [interval, setInterval] = useState<Interval>(currentInterval ?? 'monthly')
   const [loading, setLoading] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleCheckout(plan: Plan) {
+    setError(null)
     setLoading(plan)
     try {
       const res = await fetch('/api/billing/checkout', {
@@ -77,23 +79,36 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         body: JSON.stringify({ plan, interval }),
       })
       const data = await res.json()
+      if (!res.ok || data.error) {
+        setError(data.error ?? `Checkout failed (${res.status})`)
+        setLoading(null)
+        return
+      }
       if (data.url) {
         window.location.href = data.url
       }
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error — please try again')
       setLoading(null)
     }
   }
 
   async function handleManageBilling() {
+    setError(null)
     setLoading('portal')
     try {
       const res = await fetch('/api/billing/portal', { method: 'POST' })
       const data = await res.json()
+      if (!res.ok || data.error) {
+        setError(data.error ?? `Portal failed (${res.status})`)
+        setLoading(null)
+        return
+      }
       if (data.url) {
         window.location.href = data.url
       }
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error — please try again')
       setLoading(null)
     }
   }
@@ -129,10 +144,16 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
               }`}
             >
               Annual
-              <span className="ml-1.5 text-xs text-emerald-400 font-semibold">Save 17%</span>
+              <span className="ml-1.5 text-xs text-emerald-400 font-semibold">Save 20%</span>
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="max-w-md mx-auto mb-6 px-4 py-3 rounded-lg bg-red-900/40 border border-red-500/40 text-red-300 text-sm text-center">
+            {error}
+          </div>
+        )}
 
         {/* Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -166,12 +187,12 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                   </div>
                 )}
 
-                <h2 className={`text-lg font-bold mb-1 ${isFeatured ? 'text-white' : 'text-white'}`}>
+                <h2 className="text-lg font-bold mb-1 text-white">
                   {plan.name}
                 </h2>
 
                 <div className="mb-4">
-                  <span className={`text-4xl font-bold ${isFeatured ? 'text-white' : 'text-white'}`}>
+                  <span className="text-4xl font-bold text-white">
                     ${price}
                   </span>
                   <span className={`text-sm ml-1 ${isFeatured ? 'text-indigo-200' : 'text-gray-400'}`}>

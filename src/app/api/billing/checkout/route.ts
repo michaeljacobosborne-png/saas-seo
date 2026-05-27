@@ -49,12 +49,14 @@ export async function POST(request: Request) {
     customerId = customer.id
   }
 
+  const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL
+
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     customer: customerId,
     line_items: [{ price: PRICE_IDS[plan][interval], quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
+    success_url: `${origin}/dashboard?success=true`,
+    cancel_url: `${origin}/pricing`,
     allow_promotion_codes: true,
     metadata: { userId: user.id, plan, interval },
     subscription_data: {
