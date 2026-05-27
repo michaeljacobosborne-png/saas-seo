@@ -79,16 +79,16 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         body: JSON.stringify({ plan, interval }),
       })
       const data = await res.json()
-      if (!res.ok || data.error) {
-        setError(data.error ?? `Checkout failed (${res.status})`)
+      if (!res.ok || !data.url) {
+        console.error('Checkout error:', data.error)
+        alert(data.error ?? 'Something went wrong starting checkout. Check the console.')
         setLoading(null)
         return
       }
-      if (data.url) {
-        window.location.href = data.url
-      }
+      window.location.href = data.url
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error — please try again')
+      console.error('Checkout error:', err)
+      alert(err instanceof Error ? err.message : 'Network error — please try again')
       setLoading(null)
     }
   }
@@ -99,16 +99,16 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
     try {
       const res = await fetch('/api/billing/portal', { method: 'POST' })
       const data = await res.json()
-      if (!res.ok || data.error) {
-        setError(data.error ?? `Portal failed (${res.status})`)
+      if (!res.ok || !data.url) {
+        console.error('Portal error:', data.error)
+        alert(data.error ?? 'Something went wrong opening billing portal. Check the console.')
         setLoading(null)
         return
       }
-      if (data.url) {
-        window.location.href = data.url
-      }
+      window.location.href = data.url
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error — please try again')
+      console.error('Portal error:', err)
+      alert(err instanceof Error ? err.message : 'Network error — please try again')
       setLoading(null)
     }
   }
