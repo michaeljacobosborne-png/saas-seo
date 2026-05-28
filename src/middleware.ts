@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 
 const SUBSCRIPTION_PROTECTED = ['/dashboard', '/brand', '/keywords', '/articles']
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
