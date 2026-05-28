@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, use } from 'react'
+import { useEffect, useState, useCallback, useRef, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject } from '@/lib/supabase/types'
@@ -107,6 +107,23 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
   }, [id, supabase])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // Auto-start research when a freshly-created project lands here in 'pending' state.
+  const autoResearched = useRef(false)
+  useEffect(() => {
+    if (project?.status === 'pending' && !autoResearched.current) {
+      autoResearched.current = true
+      handleResearch()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project?.status])
+
+  // Poll every 4 s while research is running so the UI updates when it completes.
+  useEffect(() => {
+    if (!project || (project.status !== 'pending' && project.status !== 'researching')) return
+    const timer = setInterval(fetchData, 4000)
+    return () => clearInterval(timer)
+  }, [project?.status, fetchData])
 
   async function handleResearch() {
     if (!project) return
