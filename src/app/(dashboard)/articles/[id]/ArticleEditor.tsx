@@ -1,9 +1,12 @@
 'use client'
 
 import { useEditor, EditorContent } from '@tiptap/react'
+import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Typography from '@tiptap/extension-typography'
 import CharacterCount from '@tiptap/extension-character-count'
+import { Plugin } from '@tiptap/pm/state'
+import { DOMParser as PMDOMParser } from '@tiptap/pm/model'
 import { marked } from 'marked'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -17,6 +20,48 @@ function prepareContent(content: string): string {
   return marked.parse(content) as string
 }
 
+// Pressing Enter at the end of a heading exits to a new paragraph instead of
+// creating another heading (the ProseMirror default split behaviour).
+const HeadingEnterExit = Extension.create({
+  name: 'headingEnterExit',
+  addKeyboardShortcuts() {
+    return {
+      Enter: ({ editor }) => {
+        if (!editor.isActive('heading')) return false
+        const { $from } = editor.state.selection
+        // Only intercept when cursor is at the very end; middle splits stay as headings.
+        if ($from.parentOffset < $from.parent.content.size) return false
+        return editor.chain().splitBlock().setParagraph().run()
+      },
+    }
+  },
+})
+
+// When pasting plain text that contains markdown headers (# / ## / ###),
+// convert to HTML via marked so headings render correctly.
+const MarkdownPaste = Extension.create({
+  name: 'markdownPaste',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          handlePaste: (view, event) => {
+            const text = event.clipboardData?.getData('text/plain')
+            if (!text || !text.match(/^#{1,6} /m)) return false
+            const html = marked.parse(text) as string
+            const dom = document.createElement('div')
+            dom.innerHTML = html
+            const parser = PMDOMParser.fromSchema(view.state.schema)
+            const slice = parser.parseSlice(dom, { preserveWhitespace: false })
+            view.dispatch(view.state.tr.replaceSelection(slice))
+            return true
+          },
+        },
+      }),
+    ]
+  },
+})
+
 interface ArticleEditorProps {
   articleId: string
   initialContent: string
@@ -27,21 +72,37 @@ interface ArticleEditorProps {
 export default function ArticleEditor({ articleId, initialContent, getTextRef, applyContentRef }: ArticleEditorProps) {
   const supabase = createClient()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const isMountedRef = useRef(true)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+  }, [])
 
   const editor = useEditor({
-    extensions: [StarterKit, Typography, CharacterCount],
+    extensions: [StarterKit, Typography, CharacterCount, HeadingEnterExit, MarkdownPaste],
     content: prepareContent(initialContent),
     onUpdate: ({ editor }) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      setSaveStatus('idle')
+      if (isMountedRef.current) setSaveStatus('idle')
       saveTimerRef.current = setTimeout(async () => {
+        if (!isMountedRef.current) return
         setSaveStatus('saving')
         const html = editor.getHTML()
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from('articles').update({ content: html }).eq('id', articleId)
+        const { error } = await (supabase as any).from('articles').update({ content: html }).eq('id', articleId)
+        if (!isMountedRef.current) return
+        if (error) {
+          console.error('[autosave] Failed to save article:', error)
+          setSaveStatus('error')
+          setTimeout(() => { if (isMountedRef.current) setSaveStatus('idle') }, 3000)
+          return
+        }
         setSaveStatus('saved')
-        setTimeout(() => setSaveStatus('idle'), 2000)
+        setTimeout(() => { if (isMountedRef.current) setSaveStatus('idle') }, 2000)
       }, 1500)
     },
     editorProps: {
@@ -67,9 +128,6 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
     }
   }, [editor, getTextRef, applyContentRef])
 
-  useEffect(() => {
-    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
-  }, [])
 
   if (!editor) return null
 
@@ -108,6 +166,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
         <div className="flex-1" />
         {saveStatus === 'saving' && <span className="text-xs text-gray-400">Saving…</span>}
         {saveStatus === 'saved' && <span className="text-xs text-green-600">Saved</span>}
+        {saveStatus === 'error' && <span className="text-xs text-red-500">Save failed</span>}
       </div>
 
       {/* Editor body */}

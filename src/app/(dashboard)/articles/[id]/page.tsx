@@ -83,6 +83,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [activeTab, setActiveTab] = useState<'content' | 'scores'>('content')
   const getEditorTextRef = useRef<(() => string) | null>(null)
   const applyContentRef = useRef<((markdown: string) => void) | null>(null)
+  const [metaDesc, setMetaDesc] = useState('')
+  const [metaSaving, setMetaSaving] = useState(false)
+  const metaInitialized = useRef(false)
 
   // Agent state
   const [agentOpen, setAgentOpen] = useState(false)
@@ -105,6 +108,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     return () => { active = false }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  useEffect(() => {
+    if (article && !metaInitialized.current) {
+      setMetaDesc(article.meta_description ?? '')
+      metaInitialized.current = true
+    }
+  }, [article])
 
   useEffect(() => {
     const el = messagesContainerRef.current
@@ -160,6 +170,16 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       initialSentRef.current = true
       sendAgentMessage('Review this article and tell me the most important things to fix first.', [])
     }
+  }
+
+  async function handleMetaDescBlur() {
+    if (!article) return
+    if (metaDesc === (article.meta_description ?? '')) return
+    setMetaSaving(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from('articles').update({ meta_description: metaDesc || null }).eq('id', id)
+    if (error) console.error('[meta-description] Save failed:', error)
+    setMetaSaving(false)
   }
 
   async function handleCopy() {
@@ -270,8 +290,27 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           </div>
         )}
 
-        <div className="flex items-center gap-4 mb-6 text-xs text-gray-400">
+        <div className="flex items-center gap-4 mb-4 text-xs text-gray-400">
           <span className="capitalize">{article.status}</span>
+        </div>
+
+        {/* Meta description */}
+        <div className="mb-6">
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Meta Description</label>
+          <textarea
+            value={metaDesc}
+            onChange={(e) => setMetaDesc(e.target.value)}
+            onBlur={handleMetaDescBlur}
+            placeholder="Write a compelling meta description (150–160 characters)…"
+            rows={2}
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-700 placeholder-gray-400"
+          />
+          <div className="flex items-center justify-between mt-1">
+            <span className={`text-xs tabular-nums ${metaDesc.length > 160 ? 'text-red-500' : 'text-gray-400'}`}>
+              {metaDesc.length}/160
+            </span>
+            {metaSaving && <span className="text-xs text-gray-400">Saving…</span>}
+          </div>
         </div>
 
         {/* Tabs */}
