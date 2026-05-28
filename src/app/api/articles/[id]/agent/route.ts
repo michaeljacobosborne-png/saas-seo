@@ -10,8 +10,8 @@ type Message = { role: 'user' | 'assistant'; content: string }
 function buildFailedList(breakdown: Record<string, { label: string; passed?: boolean }>): string {
   const failed = Object.values(breakdown)
     .filter((c) => c.passed === false)
-    .map((c) => `  - ${c.label}`)
-  return failed.length ? failed.join('\n') : '  (all criteria passed)'
+    .map((c) => `- ${c.label}`)
+  return failed.length ? failed.join('\n') : '(none)'
 }
 
 export async function POST(
@@ -46,46 +46,33 @@ export async function POST(
   const scores = article.scores as ArticleScores | null
   const contentPreview = (article.content ?? '').slice(0, 3000)
 
-  const scoresSection = scores ? `
-SCORES:
-- SEO: ${scores.seo.score}/100
-- Readability: ${scores.readability.score}/100
-- GEO: ${scores.geo.score}/100
-- AEO: ${scores.aeo.score}/100
+  const weakAreasSection = scores ? `
+WEAK AREAS TO PRIORITIZE (translate these into specific editorial actions — do NOT recite them verbatim):
+SEO gaps: ${buildFailedList(scores.seo.breakdown)}
+AEO gaps: ${buildFailedList(scores.aeo.breakdown as Record<string, { label: string; passed?: boolean }>)}
+GEO gaps: ${buildFailedList(scores.geo.breakdown as Record<string, { label: string; passed?: boolean }>)}` : `
+SCORING CONTEXT: Article not yet scored. Focus purely on the content you can read above.`
 
-SEO failed criteria:
-${buildFailedList(scores.seo.breakdown)}
+  const systemPrompt = `You are a senior SEO editor. Your job is to give specific, editorial feedback on the actual article content — not restate scores or metrics. When reviewing, cite specific lines or sections. When asked how to fix something, provide an example rewrite or concrete edit. Never repeat advice already given in this conversation.
 
-AEO failed criteria:
-${buildFailedList(scores.aeo.breakdown as Record<string, { label: string; passed?: boolean }>)}
+ARTICLE UNDER REVIEW:
+Title: ${article.title ?? '(untitled)'}
+Target keyword: "${article.target_keyword ?? '(none set)'}"
+Word count: ${article.word_count ?? 'unknown'}
+${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice ?? 'professional'}` : ''}
+${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
+${weakAreasSection}
 
-GEO failed criteria:
-${buildFailedList(scores.geo.breakdown as Record<string, { label: string; passed?: boolean }>)}
-
-Ranking prediction: ${scores.ranking_prediction.timeline} (${scores.ranking_prediction.confidence} confidence)` : `
-SCORES: Not yet scored. Encourage the user to score the article first for full analysis.`
-
-  const systemPrompt = `You are Byline's editorial agent — an expert SEO editor and content strategist.
-
-You are reviewing this article:
-- Title: ${article.title ?? '(untitled)'}
-- Target keyword: ${article.target_keyword ?? '(none set)'}
-- Word count: ${article.word_count ?? 'unknown'}
-- Brand: ${brand?.brand_name ?? '(no brand set)'}, Voice: ${brand?.brand_voice ?? 'professional'}
-${brand?.tone_notes ? `- Tone notes: ${brand.tone_notes}` : ''}
-${scoresSection}
-
-ARTICLE CONTENT (first 3000 chars):
+ARTICLE CONTENT:
 ${contentPreview}${(article.content ?? '').length > 3000 ? '\n[... content truncated ...]' : ''}
 
-You are in REVIEW mode. Your job is to:
-- Give honest, specific feedback — not generic praise
-- Explain exactly why scores are what they are, referencing the failed criteria above
-- Suggest concrete fixes with examples drawn from the actual content
-- If asked, help brainstorm angles, headers, FAQs, or sections to add
-- Never rewrite large chunks unprompted — suggest, don't replace
-- Be direct and concise. The user is a professional.
-- When listing fixes, prioritize by impact on score`
+HOW TO BEHAVE:
+- Read the article above and give paragraph-level, line-level observations. Quote the actual text when making a point. Example: "Your intro buries the keyword — it doesn't appear until the third sentence. Rewrite the opener as: '${article.target_keyword ?? 'your keyword'} is…'"
+- Use the weak areas list to know what to look for — but turn each failure into a specific fix in the article. Never say "the keyword is missing from the H1." Instead say "Your H1 reads 'Getting Started with X' — add '${article.target_keyword ?? 'keyword'}' so it becomes 'How to [keyword] in 5 Steps'."
+- On follow-up questions: go DEEPER. Give the actual rewrite, the exact FAQ question to add, the specific H2 to rename. Do not restate what you already said.
+- Prioritize fixes by editorial impact: structure and keyword placement first, then content depth, then polish.
+- Never write more than 3 bullet points without pausing to ask if they want to go deeper on one.
+- Be direct. The user is a professional.`
 
   const stream = new ReadableStream({
     async start(controller) {
