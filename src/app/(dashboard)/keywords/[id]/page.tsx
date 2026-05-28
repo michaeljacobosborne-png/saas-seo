@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject } from '@/lib/supabase/types'
 import {
   ArrowLeft, Sparkles, Loader2, AlertCircle, CheckCircle2,
-  ChevronUp, ChevronDown, BookmarkPlus,
+  ChevronUp, ChevronDown, BookmarkPlus, X,
 } from 'lucide-react'
 
 interface Keyword {
@@ -29,6 +29,16 @@ const COMPETITION_COLORS: Record<string, string> = {
   LOW: 'text-green-600 bg-green-50',
   MEDIUM: 'text-amber-600 bg-amber-50',
   HIGH: 'text-red-600 bg-red-50',
+}
+
+type ToastStage = 'fetching' | 'clustering' | 'saving' | 'complete' | 'error'
+
+const TOAST_CONFIG: Record<ToastStage, { label: string; progress: number }> = {
+  fetching:   { label: 'Fetching keywords…',  progress: 25 },
+  clustering: { label: 'Clustering topics…',  progress: 60 },
+  saving:     { label: 'Saving results…',      progress: 85 },
+  complete:   { label: 'Complete!',            progress: 100 },
+  error:      { label: 'Research failed',      progress: 100 },
 }
 
 function DifficultyBar({ value }: { value: number | null }) {
@@ -78,6 +88,11 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: 'avg_monthly_searches', dir: 'desc' })
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastStage, setToastStage] = useState<ToastStage>('fetching')
+  const [toastErrorMsg, setToastErrorMsg] = useState<string | null>(null)
+  const stageTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+
   const fetchData = useCallback(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: proj } = await (supabase as any)
@@ -125,10 +140,24 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
     return () => clearInterval(timer)
   }, [project?.status, fetchData])
 
+  // Clean up any pending toast timers when navigating away.
+  useEffect(() => {
+    return () => { stageTimers.current.forEach(clearTimeout) }
+  }, [])
+
   async function handleResearch() {
     if (!project) return
     setResearching(true)
     setResearchError(null)
+
+    // Show toast and schedule optimistic stage advances
+    stageTimers.current.forEach(clearTimeout)
+    stageTimers.current = []
+    setToastErrorMsg(null)
+    setToastStage('fetching')
+    setToastVisible(true)
+    stageTimers.current.push(setTimeout(() => setToastStage('clustering'), 7000))
+    stageTimers.current.push(setTimeout(() => setToastStage('saving'), 14000))
 
     const res = await fetch('/api/keywords/research', {
       method: 'POST',
@@ -136,16 +165,25 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
       body: JSON.stringify({ project_id: id, seed_topic: project.seed_topic }),
     })
 
+    // API resolved — cancel any pending stage advances
+    stageTimers.current.forEach(clearTimeout)
+    stageTimers.current = []
+
     const json = await res.json()
 
     if (!res.ok) {
-      setResearchError(json.error ?? 'Research failed')
+      const msg = json.error ?? 'Research failed'
+      setResearchError(msg)
+      setToastStage('error')
+      setToastErrorMsg(msg)
+      stageTimers.current.push(setTimeout(() => setToastVisible(false), 6000))
       setResearching(false)
-      // Refresh to get error status
       fetchData()
       return
     }
 
+    setToastStage('complete')
+    stageTimers.current.push(setTimeout(() => setToastVisible(false), 3000))
     setResearching(false)
     fetchData()
   }
@@ -424,6 +462,49 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
         </>
+      )}
+
+      {/* Research progress toast — bottom-right fixed card */}
+      {toastVisible && (
+        <div className="fixed bottom-5 right-5 z-50 w-72 bg-white rounded-xl shadow-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              {toastStage === 'complete' ? (
+                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+              ) : toastStage === 'error' ? (
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              ) : (
+                <Loader2 className="w-4 h-4 text-indigo-500 animate-spin shrink-0" />
+              )}
+              <span className="text-sm font-semibold text-gray-800">Keyword Research</span>
+            </div>
+            <button
+              onClick={() => setToastVisible(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <p className={`text-xs mb-3 ${
+            toastStage === 'error' ? 'text-red-600' :
+            toastStage === 'complete' ? 'text-green-600' : 'text-gray-500'
+          }`}>
+            {TOAST_CONFIG[toastStage].label}
+            {toastStage === 'error' && toastErrorMsg ? `: ${toastErrorMsg}` : ''}
+          </p>
+
+          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ease-out ${
+                toastStage === 'error' ? 'bg-red-400' :
+                toastStage === 'complete' ? 'bg-green-400' : 'bg-indigo-500'
+              }`}
+              style={{ width: `${TOAST_CONFIG[toastStage].progress}%` }}
+            />
+          </div>
+        </div>
       )}
     </div>
   )
