@@ -35,6 +35,7 @@ export interface KeywordProject {
   brand_profile_id: string | null
   name: string
   seed_topic: string | null
+  folder: string | null
   status: 'pending' | 'researching' | 'complete' | 'error'
   created_at: string
 }
