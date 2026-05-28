@@ -21,9 +21,10 @@ interface ArticleEditorProps {
   articleId: string
   initialContent: string
   getTextRef: React.MutableRefObject<(() => string) | null>
+  applyContentRef?: React.MutableRefObject<((markdown: string) => void) | null>
 }
 
-export default function ArticleEditor({ articleId, initialContent, getTextRef }: ArticleEditorProps) {
+export default function ArticleEditor({ articleId, initialContent, getTextRef, applyContentRef }: ArticleEditorProps) {
   const supabase = createClient()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
@@ -53,9 +54,18 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef }:
   useEffect(() => {
     if (editor) {
       getTextRef.current = () => editor.getText()
+      if (applyContentRef) {
+        applyContentRef.current = (markdown: string) => {
+          const html = marked.parse(markdown) as string
+          editor.chain().focus().insertContent(html).run()
+        }
+      }
     }
-    return () => { getTextRef.current = null }
-  }, [editor, getTextRef])
+    return () => {
+      getTextRef.current = null
+      if (applyContentRef) applyContentRef.current = null
+    }
+  }, [editor, getTextRef, applyContentRef])
 
   useEffect(() => {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }

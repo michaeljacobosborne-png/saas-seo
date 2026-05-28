@@ -16,6 +16,14 @@ const COPPER = '#B87333'
 
 type AgentMessage = { role: 'user' | 'assistant'; content: string }
 
+function extractApplicableContent(content: string): string | null {
+  const codeMatch = content.match(/```[\w]*\n?([\s\S]+?)```/)
+  if (codeMatch) return codeMatch[1].trim()
+  const bqLines = content.split('\n').filter((l) => l.startsWith('> '))
+  if (bqLines.length >= 2) return bqLines.map((l) => l.replace(/^>\s?/, '')).join('\n')
+  return null
+}
+
 function ScoreBar({ label, score }: { label: string; score: number }) {
   const barColor = score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-400' : 'bg-red-400'
   return (
@@ -74,6 +82,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState<'content' | 'scores'>('content')
   const getEditorTextRef = useRef<(() => string) | null>(null)
+  const applyContentRef = useRef<((markdown: string) => void) | null>(null)
 
   // Agent state
   const [agentOpen, setAgentOpen] = useState(false)
@@ -99,7 +108,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     const el = messagesContainerRef.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (!el) return
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100
+    if (isNearBottom) el.scrollTop = el.scrollHeight
   }, [agentMessages])
 
   const sendAgentMessage = useCallback(async (content: string, history: AgentMessage[]) => {
@@ -288,6 +299,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 articleId={id}
                 initialContent={article.content}
                 getTextRef={getEditorTextRef}
+                applyContentRef={applyContentRef}
               />
             ) : (
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
@@ -480,22 +492,37 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 {agentMessages.length === 0 && agentStreaming === false && (
                   <div className="text-center text-xs text-gray-400 py-8">Starting review…</div>
                 )}
-                {agentMessages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    {msg.role === 'user' ? (
-                      <div className="max-w-[85%] px-3.5 py-2.5 bg-indigo-600 text-white text-sm rounded-2xl rounded-tr-sm leading-relaxed">
-                        {msg.content}
-                      </div>
-                    ) : (
-                      <div className="max-w-[92%] px-3.5 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
-                        {msg.content}
-                        {agentStreaming && i === agentMessages.length - 1 && (
-                          <span className="inline-block w-0.5 h-3.5 bg-indigo-500 ml-0.5 animate-pulse align-middle" />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {agentMessages.map((msg, i) => {
+                  const isStreamingThis = agentStreaming && i === agentMessages.length - 1
+                  const applicable = !isStreamingThis && msg.role === 'assistant'
+                    ? extractApplicableContent(msg.content)
+                    : null
+                  return (
+                    <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                      {msg.role === 'user' ? (
+                        <div className="max-w-[85%] px-3.5 py-2.5 bg-indigo-600 text-white text-sm rounded-2xl rounded-tr-sm leading-relaxed">
+                          {msg.content}
+                        </div>
+                      ) : (
+                        <div className="max-w-[92%] px-3.5 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
+                          {msg.content}
+                          {isStreamingThis && (
+                            <span className="inline-block w-0.5 h-3.5 bg-indigo-500 ml-0.5 animate-pulse align-middle" />
+                          )}
+                        </div>
+                      )}
+                      {/* TODO: gate Apply button behind premium check */}
+                      {applicable && (
+                        <button
+                          onClick={() => applyContentRef.current?.(applicable)}
+                          className="mt-1 text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
+                        >
+                          Apply to article
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
                 <div />
               </div>
 
