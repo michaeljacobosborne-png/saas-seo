@@ -80,7 +80,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([])
   const [agentInput, setAgentInput] = useState('')
   const [agentStreaming, setAgentStreaming] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const initialSentRef = useRef(false)
 
   useEffect(() => {
@@ -98,7 +98,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   }, [id])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = messagesContainerRef.current
+    if (el) el.scrollTop = el.scrollHeight
   }, [agentMessages])
 
   const sendAgentMessage = useCallback(async (content: string, history: AgentMessage[]) => {
@@ -475,7 +476,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           ) : (
             <>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                 {agentMessages.length === 0 && agentStreaming === false && (
                   <div className="text-center text-xs text-gray-400 py-8">Starting review…</div>
                 )}
@@ -495,7 +496,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     )}
                   </div>
                 ))}
-                <div ref={messagesEndRef} />
+                <div />
               </div>
 
               {/* Input */}
