@@ -1,13 +1,16 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2,
 } from 'lucide-react'
+
+const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
 
 const COPPER = '#B87333'
 
@@ -68,6 +71,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [scoreError, setScoreError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState<'content' | 'scores'>('content')
+  const getEditorTextRef = useRef<(() => string) | null>(null)
 
   useEffect(() => {
     let active = true
@@ -85,7 +89,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   async function handleCopy() {
     if (!article?.content) return
-    await navigator.clipboard.writeText(article.content)
+    const text = getEditorTextRef.current ? getEditorTextRef.current() : article.content
+    await navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -176,16 +181,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* Meta bar */}
-      {article.word_count && (
-        <div className="flex items-center gap-4 mb-6 text-xs text-gray-400">
-          <span>{article.word_count.toLocaleString()} words</span>
-          <span>·</span>
-          <span>~{Math.ceil(article.word_count / 200)} min read</span>
-          <span>·</span>
-          <span className="capitalize">{article.status}</span>
-        </div>
-      )}
+      {/* Meta bar — status only; word count now shown in editor footer */}
+      <div className="flex items-center gap-4 mb-6 text-xs text-gray-400">
+        <span className="capitalize">{article.status}</span>
+      </div>
 
       {/* Tabs */}
       {article.content && (
@@ -208,11 +207,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       {(activeTab === 'content' || !article.content) && (
         <div>
           {article.content ? (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-              <pre className="p-5 text-sm text-gray-700 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto max-h-[70vh] overflow-y-auto">
-                {article.content}
-              </pre>
-            </div>
+            <ArticleEditor
+              articleId={id}
+              initialContent={article.content}
+              getTextRef={getEditorTextRef}
+            />
           ) : (
             <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
               <p className="text-sm text-gray-500 mb-3">No content yet.</p>

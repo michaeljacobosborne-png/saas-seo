@@ -6,15 +6,22 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate": "npx supabase db push --db-url postgresql://postgres:CCUsf30DM7XQLtMy@db.xvlfgqempwucbuczwxro.supabase.co:5432/postgres"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
     "@stripe/stripe-js": "^9.7.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.1",
+    "@tiptap/extension-character-count": "^3.23.6",
+    "@tiptap/extension-typography": "^3.23.6",
+    "@tiptap/pm": "^3.23.6",
+    "@tiptap/react": "^3.23.6",
+    "@tiptap/starter-kit": "^3.23.6",
     "axios": "^1.16.1",
     "lucide-react": "^1.16.0",
+    "marked": "^18.0.4",
     "next": "16.2.6",
     "openai": "^6.39.0",
     "react": "19.2.4",
