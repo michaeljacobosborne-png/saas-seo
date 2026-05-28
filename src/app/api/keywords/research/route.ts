@@ -1,3 +1,5 @@
+export const maxDuration = 60
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getKeywordIdeas } from '@/lib/dataforseo'
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
 
   try {
     // 1. Fetch keyword ideas from DataForSEO
-    const ideas = await getKeywordIdeas([seed_topic])
+    const ideas = await getKeywordIdeas([seed_topic], 'United States', 'English', 20)
 
     if (ideas.length === 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
