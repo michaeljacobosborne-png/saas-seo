@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ArticleScores } from '@/lib/supabase/types'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
@@ -44,13 +44,16 @@ export async function POST(
     .single() : { data: null }
 
   const scores = article.scores as ArticleScores | null
-  const contentPreview = (article.content ?? '').slice(0, 3000)
+  const fullContent = article.content ?? ''
 
   const weakAreasSection = scores ? `
 WEAK AREAS TO PRIORITIZE (translate these into specific editorial actions — do NOT recite them verbatim):
-SEO gaps: ${buildFailedList(scores.seo.breakdown)}
-AEO gaps: ${buildFailedList(scores.aeo.breakdown as Record<string, { label: string; passed?: boolean }>)}
-GEO gaps: ${buildFailedList(scores.geo.breakdown as Record<string, { label: string; passed?: boolean }>)}` : `
+SEO gaps:
+${buildFailedList(scores.seo.breakdown)}
+AEO gaps:
+${buildFailedList(scores.aeo.breakdown as Record<string, { label: string; passed?: boolean }>)}
+GEO gaps:
+${buildFailedList(scores.geo.breakdown as Record<string, { label: string; passed?: boolean }>)}` : `
 SCORING CONTEXT: Article not yet scored. Focus purely on the content you can read above.`
 
   const systemPrompt = `You are a senior SEO editor. Your job is to give specific, editorial feedback on the actual article content — not restate scores or metrics. When reviewing, cite specific lines or sections. When asked how to fix something, provide an example rewrite or concrete edit. Never repeat advice already given in this conversation.
@@ -63,8 +66,8 @@ ${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice 
 ${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
 ${weakAreasSection}
 
-ARTICLE CONTENT:
-${contentPreview}${(article.content ?? '').length > 3000 ? '\n[... content truncated ...]' : ''}
+FULL ARTICLE CONTENT:
+${fullContent}
 
 HOW TO BEHAVE:
 - Read the article above and give paragraph-level, line-level observations. Quote the actual text when making a point. Example: "Your intro buries the keyword — it doesn't appear until the third sentence. Rewrite the opener as: '${article.target_keyword ?? 'your keyword'} is…'"
@@ -78,19 +81,19 @@ HOW TO BEHAVE:
     async start(controller) {
       const encoder = new TextEncoder()
       try {
-        const completion = await openai.chat.completions.create({
-          model: 'gpt-4o',
-          stream: true,
-          temperature: 0.7,
-          max_tokens: 1200,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...messages.map((m) => ({ role: m.role, content: m.content })),
-          ],
+        const anthropicStream = anthropic.messages.stream({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 2048,
+          system: systemPrompt,
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
         })
-        for await (const chunk of completion) {
-          const text = chunk.choices[0]?.delta?.content ?? ''
-          if (text) controller.enqueue(encoder.encode(text))
+        for await (const event of anthropicStream) {
+          if (
+            event.type === 'content_block_delta' &&
+            event.delta.type === 'text_delta'
+          ) {
+            controller.enqueue(encoder.encode(event.delta.text))
+          }
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Stream error'
