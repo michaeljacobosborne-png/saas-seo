@@ -16,6 +16,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect('/login')
 
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .limit(1)
+    .maybeSingle()
+
+  if (!sub) redirect('/pricing')
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
