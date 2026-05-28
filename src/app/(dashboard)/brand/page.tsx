@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, KeyboardEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandProfile, BrandVoice } from '@/lib/supabase/types'
 import { X, Plus, Loader2, CheckCircle2 } from 'lucide-react'
@@ -101,6 +102,7 @@ const EMPTY_FORM: FormState = {
 }
 
 export default function BrandPage() {
+  const router = useRouter()
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [profileId, setProfileId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -112,7 +114,10 @@ export default function BrandPage() {
 
   const fetchProfile = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
     const { data, error } = await supabase
       .from('brand_profiles')
@@ -153,44 +158,47 @@ export default function BrandPage() {
     setError(null)
     setSaving(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setError('Not authenticated.')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setError('Not authenticated.')
+        return
+      }
+
+      const payload = {
+        user_id: user.id,
+        brand_name: form.brand_name,
+        website_url: form.website_url || null,
+        industry: form.industry || null,
+        target_audience: form.target_audience || null,
+        brand_voice: form.brand_voice || null,
+        tone_notes: form.tone_notes || null,
+        competitors: form.competitors,
+        primary_keywords: form.primary_keywords,
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const table = supabase.from('brand_profiles') as any
+      let err
+      if (profileId) {
+        const { error } = await table.update(payload).eq('id', profileId)
+        err = error
+      } else {
+        const { data, error } = await table.insert(payload).select('id').single()
+        if (data) setProfileId((data as { id: string }).id)
+        err = error
+      }
+
+      if (err) {
+        setError(err.message)
+      } else {
+        router.push('/dashboard')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
       setSaving(false)
-      return
     }
-
-    const payload = {
-      user_id: user.id,
-      brand_name: form.brand_name,
-      website_url: form.website_url || null,
-      industry: form.industry || null,
-      target_audience: form.target_audience || null,
-      brand_voice: form.brand_voice || null,
-      tone_notes: form.tone_notes || null,
-      competitors: form.competitors,
-      primary_keywords: form.primary_keywords,
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const table = supabase.from('brand_profiles') as any
-    let err
-    if (profileId) {
-      const { error } = await table.update(payload).eq('id', profileId)
-      err = error
-    } else {
-      const { data, error } = await table.insert(payload).select('id').single()
-      if (data) setProfileId((data as { id: string }).id)
-      err = error
-    }
-
-    if (err) {
-      setError(err.message)
-    } else {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    }
-    setSaving(false)
   }
 
   if (loading) {
