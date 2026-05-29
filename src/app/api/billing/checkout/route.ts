@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: PRICE_IDS[plan][interval], quantity: 1 }],
-      success_url: `${origin}/dashboard?success=true`,
+      success_url: `${origin}/welcome`,
       cancel_url: `${origin}/pricing`,
       allow_promotion_codes: true,
       metadata: { userId: user.id, plan, interval },
