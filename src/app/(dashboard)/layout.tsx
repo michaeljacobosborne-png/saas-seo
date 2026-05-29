@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, LogOut } from 'lucide-react'
+import { LayoutDashboard, Building2, Search, FileText } from 'lucide-react'
+import SignOutButton from './SignOutButton'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -49,15 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
         <div className="px-3 py-4 border-t border-gray-200">
           <div className="px-3 py-2 text-xs text-gray-400 truncate mb-1">{user.email}</div>
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign out
-            </button>
-          </form>
+          <SignOutButton />
         </div>
       </aside>
 
