@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject } from '@/lib/supabase/types'
 import {
   ArrowLeft, Sparkles, Loader2, AlertCircle, CheckCircle2,
-  ChevronUp, ChevronDown, BookmarkPlus, X, Bookmark,
+  ChevronUp, ChevronDown, BookmarkPlus, X, Bookmark, RefreshCw,
 } from 'lucide-react'
 
 interface Keyword {
@@ -335,6 +335,12 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
     )
   }
 
+  const lastResearched = project.last_researched_at ? new Date(project.last_researched_at) : null
+  const daysSinceResearch = lastResearched
+    ? Math.floor((Date.now() - lastResearched.getTime()) / (1000 * 60 * 60 * 24))
+    : null
+  const isDataStale = daysSinceResearch !== null ? daysSinceResearch >= 90 : keywords.length > 0
+
   return (
     <div className="p-8 max-w-5xl">
       {/* Header */}
@@ -366,19 +372,51 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
         )}
 
         {project.status === 'complete' && keywords.length > 0 && (
-          <button
-            onClick={handleSaveSelected}
-            disabled={saving || selected.size === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {saving ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-            ) : savedCount > 0 ? (
-              <><CheckCircle2 className="w-4 h-4" /> Saved {savedCount}</>
-            ) : (
-              <><BookmarkPlus className="w-4 h-4" /> Save {selected.size > 0 ? `${selected.size} ` : ''}Selected</>
-            )}
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            {/* Staleness badge + refresh control */}
+            <div className="flex flex-col items-end gap-1">
+              {daysSinceResearch !== null && (
+                <span className="text-xs text-gray-400">
+                  Last updated {daysSinceResearch === 0 ? 'today' : `${daysSinceResearch} day${daysSinceResearch !== 1 ? 's' : ''} ago`}
+                </span>
+              )}
+              {isDataStale ? (
+                <button
+                  onClick={handleResearch}
+                  disabled={researching}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium rounded-lg hover:bg-amber-100 disabled:opacity-60 transition-colors"
+                >
+                  {researching
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <RefreshCw className="w-3.5 h-3.5" />}
+                  Data may be stale — Refresh
+                </button>
+              ) : (
+                <button
+                  onClick={handleResearch}
+                  disabled={researching}
+                  className="text-xs text-gray-400 hover:text-indigo-500 transition-colors disabled:opacity-60"
+                >
+                  {researching ? 'Refreshing…' : 'Refresh data'}
+                </button>
+              )}
+            </div>
+
+            {/* Save selected */}
+            <button
+              onClick={handleSaveSelected}
+              disabled={saving || selected.size === 0}
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {saving ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+              ) : savedCount > 0 ? (
+                <><CheckCircle2 className="w-4 h-4" /> Saved {savedCount}</>
+              ) : (
+                <><BookmarkPlus className="w-4 h-4" /> Save {selected.size > 0 ? `${selected.size} ` : ''}Selected</>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
