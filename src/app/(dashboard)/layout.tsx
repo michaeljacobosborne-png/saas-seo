@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from('subscriptions')
     .select('id')
     .eq('user_id', user.id)
-    .eq('status', 'active')
+    .in('status', ['active', 'trialing'])
     .limit(1)
     .maybeSingle()
 

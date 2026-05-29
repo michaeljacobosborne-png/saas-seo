@@ -48,9 +48,12 @@ export async function POST(request: Request) {
       const plan = session.metadata?.plan
       const interval = session.metadata?.interval
 
-      if (!userId || !plan || !interval) break
+      if (!userId || !plan || !interval) {
+        console.error('Webhook checkout.session.completed: missing metadata', { userId, plan, interval, sessionId: session.id })
+        break
+      }
 
-      await supabase.from('subscriptions').insert({
+      const { error: upsertError } = await supabase.from('subscriptions').upsert({
         user_id: userId,
         stripe_customer_id: session.customer as string,
         stripe_subscription_id: subscription.id,
@@ -60,7 +63,11 @@ export async function POST(request: Request) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
         cancel_at_period_end: subscription.cancel_at_period_end,
-      })
+      }, { onConflict: 'stripe_subscription_id' })
+
+      if (upsertError) {
+        console.error('Webhook checkout.session.completed: failed to upsert subscription', upsertError, { userId, sessionId: session.id })
+      }
       break
     }
 
@@ -69,7 +76,7 @@ export async function POST(request: Request) {
       const status = mapStripeStatus(subscription.status)
       if (!status) break
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('subscriptions')
         .update({
           status,
@@ -79,6 +86,10 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq('stripe_subscription_id', subscription.id)
+
+      if (updateError) {
+        console.error('Webhook customer.subscription.updated: failed to update subscription', updateError, { subscriptionId: subscription.id })
+      }
       break
     }
 
