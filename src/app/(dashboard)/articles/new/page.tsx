@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject, BrandProfile } from '@/lib/supabase/types'
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, CheckCircle2,
-  AlertCircle, ChevronUp, ChevronDown, FileText,
+  AlertCircle, ChevronUp, ChevronDown, FileText, Info,
 } from 'lucide-react'
 
 interface Keyword {
@@ -21,6 +21,16 @@ interface Keyword {
 
 type SortField = 'avg_monthly_searches' | 'keyword_difficulty' | 'keyword'
 type SortDir = 'asc' | 'desc'
+
+const WORD_COUNT_OPTIONS = [800, 1200, 1800, 2500] as const
+type WordCountOption = typeof WORD_COUNT_OPTIONS[number]
+
+function suggestWordCount(keyword: string): WordCountOption {
+  const kw = keyword.toLowerCase()
+  if (/guide|how to|what is|best |complete/.test(kw)) return 1800
+  if (/\bvs\b|review|alternative/.test(kw)) return 1200
+  return 1200
+}
 
 function DifficultyBar({ value }: { value: number | null }) {
   if (value === null) return <span className="text-gray-300">—</span>
@@ -105,6 +115,7 @@ export default function NewArticlePage() {
   const [articleId, setArticleId] = useState<string | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [brief, setBrief] = useState<Record<string, any> | null>(null)
+  const [targetWordCount, setTargetWordCount] = useState<WordCountOption>(1200)
 
   // Load initial data
   useEffect(() => {
@@ -205,6 +216,7 @@ export default function NewArticlePage() {
     if (!res.ok) { setError(json.error ?? 'Brief generation failed'); setLoading(false); return }
 
     setBrief(json.brief)
+    setTargetWordCount(suggestWordCount(json.brief?.target_keyword ?? ''))
     setStep(3)
     setLoading(false)
   }
@@ -218,7 +230,7 @@ export default function NewArticlePage() {
     const res = await fetch('/api/articles/generate-draft', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ articleId }),
+      body: JSON.stringify({ articleId, target_word_count: targetWordCount }),
     })
 
     const json = await res.json()
@@ -460,6 +472,50 @@ export default function NewArticlePage() {
               </div>
             )}
           </div>
+
+          {/* Word count selector */}
+          {(() => {
+            const suggested = suggestWordCount(brief.target_keyword ?? '')
+            return (
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Target Word Count</div>
+                  <Info className="w-3.5 h-3.5 text-gray-300" />
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  Recommended:{' '}
+                  <span className="font-semibold text-gray-700">{suggested.toLocaleString()} words</span>
+                  {' '}based on your keyword
+                </p>
+                <div className="flex gap-2">
+                  {WORD_COUNT_OPTIONS.map((n) => {
+                    const isSelected = targetWordCount === n
+                    const isRecommended = n === suggested
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => setTargetWordCount(n)}
+                        className={`relative flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                        }`}
+                      >
+                        {n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : n}
+                        {isRecommended && (
+                          <span className={`absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                            isSelected ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-600'
+                          }`}>
+                            rec
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
 
           <div className="mt-6 flex items-center justify-between">
             <p className="text-xs text-gray-400">SERP intent: <span className="font-medium text-gray-600">{brief.serp_intent}</span></p>
