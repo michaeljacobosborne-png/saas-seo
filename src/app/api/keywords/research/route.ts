@@ -46,10 +46,17 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { project_id, seed_topic } = body as { project_id: string; seed_topic: string }
+  const { project_id, seed_topic, seeds, brief } = body as {
+    project_id: string
+    seed_topic?: string
+    seeds?: string[]
+    brief?: Record<string, unknown>
+  }
 
-  if (!project_id || !seed_topic) {
-    return NextResponse.json({ error: 'project_id and seed_topic are required' }, { status: 400 })
+  const seedsToUse: string[] = seeds?.length ? seeds : seed_topic ? [seed_topic] : []
+
+  if (!project_id || seedsToUse.length === 0) {
+    return NextResponse.json({ error: 'project_id and seed_topic or seeds are required' }, { status: 400 })
   }
 
   // Verify ownership
@@ -65,16 +72,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 })
   }
 
-  // Mark as researching
+  // Mark as researching; save brief if provided
+  const updatePayload: Record<string, unknown> = { status: 'researching' }
+  if (brief) updatePayload.research_brief = brief
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any)
     .from('keyword_projects')
-    .update({ status: 'researching' })
+    .update(updatePayload)
     .eq('id', project_id)
 
   try {
-    // 1. Fetch keyword ideas from DataForSEO
-    const ideas = await getKeywordIdeas([seed_topic], 'United States', 'English', 20)
+    // Fetch keyword ideas — DataForSEO supports multiple seeds natively
+    const ideas = await getKeywordIdeas(seedsToUse, 'United States', 'English', 50)
 
     if (ideas.length === 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,7 +95,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No keyword ideas returned' }, { status: 502 })
     }
 
-    // 2. Cluster keywords with AI
+    // Cluster keywords with AI
     const clusters = await clusterKeywords(ideas.map((k) => k.keyword))
 
     const clusterMap = new Map<string, string>()
@@ -93,7 +103,7 @@ export async function POST(request: Request) {
       c.keywords.forEach((kw) => clusterMap.set(kw.toLowerCase(), c.name))
     })
 
-    // 3. Insert keywords into DB
+    // Insert keywords into DB
     const rows = ideas.map((k) => ({
       project_id,
       keyword: k.keyword,
@@ -113,7 +123,7 @@ export async function POST(request: Request) {
 
     if (insertError) throw new Error(insertError.message)
 
-    // 4. Mark complete
+    // Mark complete
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
       .from('keyword_projects')

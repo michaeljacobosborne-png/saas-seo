@@ -37,6 +37,21 @@ export interface KeywordProject {
   seed_topic: string | null
   folder: string | null
   status: 'pending' | 'researching' | 'complete' | 'error'
+  research_brief: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface SavedKeyword {
+  id: string
+  user_id: string
+  keyword: string
+  volume: number | null
+  difficulty: number | null
+  cpc: number | null
+  intent: string | null
+  folder: string
+  has_article: boolean
+  article_id: string | null
   created_at: string
 }
 
@@ -98,8 +113,14 @@ export type Database = {
       }
       keyword_projects: {
         Row: KeywordProject
-        Insert: Omit<KeywordProject, 'id' | 'created_at'>
+        Insert: Omit<KeywordProject, 'id' | 'created_at'> & { research_brief?: Record<string, unknown> | null }
         Update: Partial<Omit<KeywordProject, 'id' | 'created_at'>>
+        Relationships: []
+      }
+      saved_keywords: {
+        Row: SavedKeyword
+        Insert: Omit<SavedKeyword, 'id' | 'created_at'>
+        Update: Partial<Omit<SavedKeyword, 'id' | 'created_at'>>
         Relationships: []
       }
       keywords: {
