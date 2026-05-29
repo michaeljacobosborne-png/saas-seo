@@ -95,6 +95,7 @@ export interface Article {
   content: string | null
   meta_description: string | null
   word_count: number | null
+  target_word_count: number | null
   status: 'draft' | 'brief_ready' | 'generating' | 'complete' | 'published'
   scores: ArticleScores | null
   published_url: string | null

@@ -9,7 +9,9 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { articleId } = await request.json() as { articleId: string }
+  const body = await request.json() as { articleId: string; target_word_count?: number }
+  const { articleId } = body
+  const targetWordCount = body.target_word_count ?? 1200
   if (!articleId) return NextResponse.json({ error: 'articleId is required' }, { status: 400 })
 
   // Fetch article with brief
@@ -86,7 +88,9 @@ H1: ${(brief.h1_options as string[])?.[0] ?? brief.target_keyword}
 SERP INTENT: ${brief.serp_intent ?? 'informational'}
 TONE NOTES: ${brief.tone_notes ?? toneNotes}
 COMPETITOR GAPS TO ADDRESS: ${(brief.competitor_gaps as string[] ?? []).join('; ')}
-TARGET WORD COUNT: ${brief.word_count_target ?? 2100}
+TARGET WORD COUNT: ${targetWordCount}
+
+WORD COUNT REQUIREMENT: The article must be exactly ${targetWordCount} words. Do not go under. If content runs short, add a relevant FAQ section, case study, or deeper analysis section — never add filler.
 
 OUTLINE:
 ${outlineText}
@@ -130,7 +134,7 @@ Write the full article now.`
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)
     .from('articles')
-    .update({ content, word_count: wordCount, status: 'complete' })
+    .update({ content, word_count: wordCount, status: 'complete', target_word_count: targetWordCount })
     .eq('id', articleId)
     .eq('user_id', user.id)
 
