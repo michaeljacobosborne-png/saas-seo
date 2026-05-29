@@ -38,6 +38,7 @@ export interface KeywordProject {
   folder: string | null
   status: 'pending' | 'researching' | 'complete' | 'error'
   research_brief: Record<string, unknown> | null
+  last_researched_at: string | null
   created_at: string
 }
 
