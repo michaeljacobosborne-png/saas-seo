@@ -67,13 +67,17 @@ interface ArticleEditorProps {
   initialContent: string
   getTextRef: React.MutableRefObject<(() => string) | null>
   applyContentRef?: React.MutableRefObject<((markdown: string) => void) | null>
+  applyAtRangeRef?: React.MutableRefObject<((from: number, to: number, html: string) => void) | null>
+  onSelectionChange?: (text: string, from: number, to: number) => void
 }
 
-export default function ArticleEditor({ articleId, initialContent, getTextRef, applyContentRef }: ArticleEditorProps) {
+export default function ArticleEditor({ articleId, initialContent, getTextRef, applyContentRef, applyAtRangeRef, onSelectionChange }: ArticleEditorProps) {
   const supabase = createClient()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
 
   useEffect(() => {
     return () => {
@@ -105,6 +109,15 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
         setTimeout(() => { if (isMountedRef.current) setSaveStatus('idle') }, 2000)
       }, 1500)
     },
+    onSelectionUpdate: ({ editor }) => {
+      const { from, to } = editor.state.selection
+      if (from !== to) {
+        const text = editor.state.doc.textBetween(from, to, '\n')
+        onSelectionChangeRef.current?.(text, from, to)
+      } else {
+        onSelectionChangeRef.current?.('', from, to)
+      }
+    },
     editorProps: {
       attributes: {
         class: 'prose-editor-content outline-none',
@@ -121,12 +134,18 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
           editor.chain().focus().insertContent(html).run()
         }
       }
+      if (applyAtRangeRef) {
+        applyAtRangeRef.current = (from: number, to: number, html: string) => {
+          editor.chain().focus().deleteRange({ from, to }).insertContentAt(from, html).run()
+        }
+      }
     }
     return () => {
       getTextRef.current = null
       if (applyContentRef) applyContentRef.current = null
+      if (applyAtRangeRef) applyAtRangeRef.current = null
     }
-  }, [editor, getTextRef, applyContentRef])
+  }, [editor, getTextRef, applyContentRef, applyAtRangeRef])
 
 
   if (!editor) return null

@@ -29,7 +29,12 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { messages } = await request.json() as { messages: Message[] }
+  const { messages, mode, selectedText, fixInstruction } = await request.json() as {
+    messages: Message[]
+    mode?: 'review' | 'assist'
+    selectedText?: string
+    fixInstruction?: string
+  }
 
   // Fetch article first (required for everything else)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,6 +94,62 @@ SCORING CONTEXT: Article not yet scored. Focus purely on the content above.`
     : ''
 
   const articleTitle = article.title ?? article.target_keyword ?? 'article'
+
+  if (mode === 'assist') {
+    const assistSystem = `You are in Assist mode. Your ONLY job is to return improved content — no commentary, no explanation, no preamble.
+
+ARTICLE CONTEXT:
+Title: ${articleTitle}
+Target keyword: "${article.target_keyword ?? '(none set)'}"
+${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice ?? 'professional'}` : ''}
+${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
+
+FULL ARTICLE CONTENT (for tone/style reference):
+${fullContent}
+
+Rules:
+- Return ONLY the rewritten/new content in clean markdown
+- Match the article's existing tone, sentence length, and formatting style exactly
+- If rewriting selected text: return only what replaces that text
+- If adding a new section: return just that section, formatted with the correct heading level
+- Never use em dashes, "delve", "leverage", "robust", "seamlessly", "crucial", or any AI clichés
+- Never add a preamble like "Here's the rewritten version:" — just return the content`
+
+    const userMessage = selectedText
+      ? `${selectedText}\n\nInstruction: ${fixInstruction ?? ''}`
+      : (fixInstruction ?? '')
+
+    const assistStream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder()
+        try {
+          const anthropicStream = anthropic.messages.stream({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 2048,
+            system: assistSystem,
+            messages: [{ role: 'user', content: userMessage }],
+          })
+          for await (const event of anthropicStream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text))
+            }
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Stream error'
+          controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`))
+        } finally {
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(assistStream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  }
 
   const systemPrompt = `You are a senior SEO editor. Your job is to give specific, editorial feedback on the actual article content — not restate scores or metrics. When reviewing, cite specific lines or sections. When asked how to fix something, provide an example rewrite or concrete edit. Never repeat advice already given in this conversation.
 ${memorySection}${contentGapsSection}
