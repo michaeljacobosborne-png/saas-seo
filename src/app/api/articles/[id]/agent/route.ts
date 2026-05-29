@@ -42,21 +42,23 @@ export async function POST(
 
   if (!article) return NextResponse.json({ error: 'Article not found' }, { status: 404 })
 
-  // Parallel: brand profile + account memory + article memory
+  // Parallel: brand profile + account memory + article memory + content gaps
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabaseAny = supabase as any
-  const [brandResult, accountMemResult, articleMemResult] = await Promise.all([
+  const [brandResult, accountMemResult, articleMemResult, contentGapsResult] = await Promise.all([
     article.brand_profile_id
       ? supabaseAny.from('brand_profiles').select('brand_name, brand_voice, tone_notes').eq('id', article.brand_profile_id).eq('user_id', user.id).single()
       : Promise.resolve({ data: null }),
     supabaseAny.from('agent_memory').select('content').eq('user_id', user.id).eq('memory_type', 'account').order('updated_at', { ascending: false }).limit(5),
     supabaseAny.from('agent_memory').select('content').eq('user_id', user.id).eq('memory_type', 'article').eq('article_id', id).order('updated_at', { ascending: false }).limit(3),
+    supabaseAny.from('saved_keywords').select('keyword, folder').eq('user_id', user.id).eq('has_article', false).order('created_at', { ascending: false }).limit(10),
   ])
 
   const brand = brandResult.data
   // Gracefully handle missing table (before migration is applied)
   const accountMemory: Array<{ content: string }> = accountMemResult.data ?? []
   const articleMemory: Array<{ content: string }> = articleMemResult.data ?? []
+  const contentGaps: Array<{ keyword: string; folder: string }> = contentGapsResult.data ?? []
 
   const scores = article.scores as ArticleScores | null
   const fullContent = article.content ?? ''
@@ -82,10 +84,14 @@ SCORING CONTEXT: Article not yet scored. Focus purely on the content above.`
     ? `\nMEMORY FROM PREVIOUS SESSIONS (use to avoid repeating prior feedback — build on it, go deeper):\n${memoryLines.join('\n\n')}\n`
     : ''
 
+  const contentGapsSection = contentGaps.length
+    ? `\nCONTENT GAPS (keywords saved but not yet written — mention proactively if relevant to the current article):\n${contentGaps.map((g) => `- ${g.keyword} (folder: ${g.folder})`).join('\n')}\n`
+    : ''
+
   const articleTitle = article.title ?? article.target_keyword ?? 'article'
 
   const systemPrompt = `You are a senior SEO editor. Your job is to give specific, editorial feedback on the actual article content — not restate scores or metrics. When reviewing, cite specific lines or sections. When asked how to fix something, provide an example rewrite or concrete edit. Never repeat advice already given in this conversation.
-${memorySection}
+${memorySection}${contentGapsSection}
 ARTICLE UNDER REVIEW:
 Title: ${articleTitle}
 Target keyword: "${article.target_keyword ?? '(none set)'}"
