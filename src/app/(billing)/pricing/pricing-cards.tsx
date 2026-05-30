@@ -86,7 +86,7 @@ const FAQS = [
   },
   {
     q: 'Do you offer a free trial?',
-    a: "We offer a 7-day money-back guarantee on all plans. If it's not working for you in the first week, email us and we'll refund in full.",
+    a: "We offer a 30-day money-back guarantee on all plans. If it's not working for you in the first 30 days, email us and we'll refund in full.",
   },
 ]
 
@@ -293,7 +293,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           </div>
 
           <p className="text-center text-gray-500 text-xs mt-6">
-            7-day money-back guarantee on all plans. No questions asked — email us and we'll refund in full.
+            30-day money-back guarantee on all plans. No questions asked — email us and we'll refund in full.
           </p>
         </div>
       </div>
