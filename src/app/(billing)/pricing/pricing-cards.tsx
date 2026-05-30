@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Check } from 'lucide-react'
+import Link from 'next/link'
 
 type Plan = 'starter' | 'pro' | 'agency'
 type Interval = 'monthly' | 'annual'
@@ -12,55 +13,80 @@ interface PricingCardsProps {
   hasActiveSubscription: boolean
 }
 
+// TODO: Update Stripe price IDs in /api/billing/checkout to match new monthly prices:
+//   starter → $49/mo, pro → $99/mo, agency → $249/mo
 const PLANS = [
   {
     id: 'starter' as Plan,
     name: 'Starter',
-    monthlyPrice: 29,
-    annualPrice: 276,
-    articles: '8 articles / mo',
-    keywordSessions: '10 keyword sessions',
-    brandProfiles: '1 brand profile',
+    tagline: 'Everything you need to start ranking.',
+    cta: 'Start with Starter',
+    monthlyPrice: 49,
+    annualPrice: 470,
+    popular: false,
     features: [
-      'AI article generation',
-      'SEO brief builder',
-      'Keyword research',
-      'SEO + readability scoring',
+      'AI keyword discovery agent',
+      '8 articles per month',
+      'SEO, Readability, GEO + AEO scoring',
+      '5 agent review sessions/month',
+      'Global keyword cache',
+      'Save for later keyword library',
       'Email support',
     ],
   },
   {
     id: 'pro' as Plan,
     name: 'Pro',
-    monthlyPrice: 79,
-    annualPrice: 756,
-    articles: '25 articles / mo',
-    keywordSessions: '40 keyword sessions',
-    brandProfiles: '3 brand profiles',
+    tagline: 'The full editorial workflow, end to end.',
+    cta: 'Start with Pro',
+    monthlyPrice: 99,
+    annualPrice: 950,
     popular: true,
     features: [
       'Everything in Starter',
-      'Priority AI generation',
-      'GEO + AEO scoring',
-      'Traffic predictions',
+      'Unlimited articles',
+      'Unlimited agent sessions',
+      'Agent Assist mode — select text, agent rewrites it in-place',
+      'Score-based one-click fixes',
+      'Persistent agent memory across sessions',
       'Priority support',
     ],
   },
   {
     id: 'agency' as Plan,
     name: 'Agency',
-    monthlyPrice: 199,
-    annualPrice: 1908,
-    articles: '80 articles / mo',
-    keywordSessions: 'Unlimited keyword sessions',
-    brandProfiles: '10 brand profiles',
+    tagline: 'For teams managing multiple clients or content operations.',
+    cta: 'Talk to us',
+    monthlyPrice: 249,
+    annualPrice: 2390,
+    popular: false,
     features: [
       'Everything in Pro',
-      'Bulk article generation',
-      'White-label exports',
-      'API access',
-      'Dedicated support',
+      'Multiple brand profiles',
+      'Team seat (2 users included)',
+      'Custom keyword research volume',
+      'Dedicated onboarding',
+      'SLA support',
     ],
+  },
+]
+
+const FAQS = [
+  {
+    q: 'Can I cancel anytime?',
+    a: 'Yes — no contracts, cancel from your account settings at any time. Your access continues until the end of the billing period.',
+  },
+  {
+    q: 'What happens if I hit my article limit on Starter?',
+    a: "You'll be prompted to upgrade to Pro. We don't cut off access mid-article.",
+  },
+  {
+    q: 'Is the agent really different from just using ChatGPT?',
+    a: "Yes. ChatGPT has no access to your article, your scores, your keyword data, or your brand profile. Byline's agent has all of that in context — it knows what's actually wrong and where, and can apply the fix without you leaving the editor.",
+  },
+  {
+    q: 'Do you offer a free trial?',
+    a: "We offer a 7-day money-back guarantee on all plans. If it's not working for you in the first week, email us and we'll refund in full.",
   },
 ]
 
@@ -68,6 +94,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   const [interval, setInterval] = useState<Interval>(currentInterval ?? 'monthly')
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   async function handleCheckout(plan: Plan) {
     setError(null)
@@ -114,150 +141,221 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   }
 
   return (
-    <div className="min-h-full bg-[#0f1117] px-6 py-12">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-white mb-3">Simple, Transparent Pricing</h1>
-          <p className="text-gray-400 text-sm">
-            No free trial — 30-day money-back guarantee on all plans.
-          </p>
+    <div className="min-h-full bg-[#0f1117] text-white">
 
-          {/* Interval toggle */}
-          <div className="inline-flex items-center mt-6 bg-[#1a1d27] rounded-lg p-1">
-            <button
-              onClick={() => setInterval('monthly')}
-              className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
-                interval === 'monthly'
-                  ? 'bg-white text-gray-900'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setInterval('annual')}
-              className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
-                interval === 'annual'
-                  ? 'bg-white text-gray-900'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Annual
-              <span className="ml-1.5 text-xs text-emerald-400 font-semibold">Save 20%</span>
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <div className="max-w-md mx-auto mb-6 px-4 py-3 rounded-lg bg-red-900/40 border border-red-500/40 text-red-300 text-sm text-center">
-            {error}
-          </div>
-        )}
-
-        {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {PLANS.map((plan) => {
-            const price = interval === 'monthly' ? plan.monthlyPrice : Math.round(plan.annualPrice / 12)
-            const isCurrentPlan = hasActiveSubscription && currentPlan === plan.id
-            const isFeatured = plan.popular
-
-            return (
-              <div
-                key={plan.id}
-                className={`relative rounded-2xl p-6 flex flex-col ${
-                  isFeatured
-                    ? 'bg-[#6366f1] ring-2 ring-[#6366f1]'
-                    : 'bg-[#1a1d27] ring-1 ring-white/10'
-                }`}
-              >
-                {isFeatured && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-white text-[#6366f1] text-xs font-bold px-3 py-1 rounded-full">
-                      MOST POPULAR
-                    </span>
-                  </div>
-                )}
-
-                {isCurrentPlan && (
-                  <div className="absolute -top-3 right-4">
-                    <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      CURRENT PLAN
-                    </span>
-                  </div>
-                )}
-
-                <h2 className="text-lg font-bold mb-1 text-white">
-                  {plan.name}
-                </h2>
-
-                <div className="mb-4">
-                  <span className="text-4xl font-bold text-white">
-                    ${price}
-                  </span>
-                  <span className={`text-sm ml-1 ${isFeatured ? 'text-indigo-200' : 'text-gray-400'}`}>
-                    /mo
-                  </span>
-                  {interval === 'annual' && (
-                    <p className={`text-xs mt-0.5 ${isFeatured ? 'text-indigo-200' : 'text-gray-500'}`}>
-                      ${plan.annualPrice}/yr billed annually
-                    </p>
-                  )}
-                </div>
-
-                {/* Limits */}
-                <div className={`text-sm space-y-1 mb-5 pb-5 border-b ${isFeatured ? 'border-indigo-400' : 'border-white/10'}`}>
-                  <p className={isFeatured ? 'text-indigo-100' : 'text-gray-300'}>{plan.articles}</p>
-                  <p className={isFeatured ? 'text-indigo-100' : 'text-gray-300'}>{plan.keywordSessions}</p>
-                  <p className={isFeatured ? 'text-indigo-100' : 'text-gray-300'}>{plan.brandProfiles}</p>
-                </div>
-
-                {/* Features */}
-                <ul className="space-y-2 mb-6 flex-1">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2 text-sm">
-                      <Check className={`w-4 h-4 flex-shrink-0 ${isFeatured ? 'text-white' : 'text-indigo-400'}`} />
-                      <span className={isFeatured ? 'text-indigo-100' : 'text-gray-300'}>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA */}
-                {hasActiveSubscription && isCurrentPlan ? (
-                  <button
-                    onClick={handleManageBilling}
-                    disabled={loading === 'portal'}
-                    className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                      isFeatured
-                        ? 'bg-white text-[#6366f1] hover:bg-indigo-50 disabled:opacity-60'
-                        : 'bg-[#6366f1] text-white hover:bg-indigo-500 disabled:opacity-60'
-                    }`}
-                  >
-                    {loading === 'portal' ? 'Loading…' : 'Manage Billing'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleCheckout(plan.id)}
-                    disabled={loading === plan.id}
-                    className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                      isFeatured
-                        ? 'bg-white text-[#6366f1] hover:bg-indigo-50 disabled:opacity-60'
-                        : 'bg-[#6366f1] text-white hover:bg-indigo-500 disabled:opacity-60'
-                    }`}
-                  >
-                    {loading === plan.id ? 'Loading…' : hasActiveSubscription ? 'Switch Plan' : 'Get Started'}
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Money-back note */}
-        <p className="text-center text-gray-500 text-xs mt-8">
-          30-day money-back guarantee. No questions asked — contact support to request a refund.
+      {/* Hero */}
+      <div className="px-6 pt-16 pb-10 text-center">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 max-w-2xl mx-auto leading-tight">
+          Content that ranks. An agent that fixes it.
+        </h1>
+        <p className="text-gray-400 text-lg max-w-xl mx-auto leading-relaxed">
+          Byline combines AI keyword research, SEO-optimized article generation, and a real editorial agent that rewrites your content — not just scores it.
         </p>
       </div>
+
+      {/* Objection bar */}
+      <div className="px-6 pb-12">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-sm text-gray-400">
+          <span className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+            No ChatGPT wrapper — a real SEO workflow
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+            Agent applies fixes directly to your article
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+            Built on Claude Sonnet, the model editors trust
+          </span>
+        </div>
+      </div>
+
+      {/* Pricing section */}
+      <div className="px-6 pb-20">
+        <div className="max-w-5xl mx-auto">
+
+          {/* Interval toggle */}
+          <div className="flex justify-center mb-10">
+            <div className="inline-flex items-center bg-[#1a1d27] rounded-lg p-1">
+              <button
+                onClick={() => setInterval('monthly')}
+                className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
+                  interval === 'monthly'
+                    ? 'bg-white text-gray-900'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setInterval('annual')}
+                className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
+                  interval === 'annual'
+                    ? 'bg-white text-gray-900'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Annual
+                <span className="ml-1.5 text-xs text-emerald-400 font-semibold">Save 20%</span>
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="max-w-md mx-auto mb-6 px-4 py-3 rounded-lg bg-red-900/40 border border-red-500/40 text-red-300 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            {PLANS.map((plan) => {
+              const price = interval === 'monthly' ? plan.monthlyPrice : Math.round(plan.annualPrice / 12)
+              const isCurrentPlan = hasActiveSubscription && currentPlan === plan.id
+              const isFeatured = plan.popular
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-2xl p-6 flex flex-col ${
+                    isFeatured
+                      ? 'bg-[#1a1d27] border-2 border-indigo-500'
+                      : 'bg-[#1a1d27] border border-white/10'
+                  }`}
+                >
+                  {isFeatured && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <span className="bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
+                        MOST POPULAR
+                      </span>
+                    </div>
+                  )}
+
+                  {isCurrentPlan && (
+                    <div className="absolute -top-3.5 right-4">
+                      <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                        CURRENT PLAN
+                      </span>
+                    </div>
+                  )}
+
+                  <h2 className="text-lg font-bold text-white mb-1">{plan.name}</h2>
+                  <p className="text-gray-400 text-sm mb-5 leading-relaxed">{plan.tagline}</p>
+
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold text-white">${price}</span>
+                    <span className="text-sm ml-1 text-gray-400">/mo</span>
+                    {interval === 'annual' && (
+                      <p className="text-xs mt-1 text-gray-500">
+                        ${plan.annualPrice}/yr billed annually
+                      </p>
+                    )}
+                  </div>
+
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2.5 text-sm">
+                        <Check className="w-4 h-4 flex-shrink-0 text-indigo-400 mt-0.5" />
+                        <span className="text-gray-300 leading-snug">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {hasActiveSubscription && isCurrentPlan ? (
+                    <button
+                      onClick={handleManageBilling}
+                      disabled={loading === 'portal'}
+                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-60"
+                    >
+                      {loading === 'portal' ? 'Loading…' : 'Manage Billing'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleCheckout(plan.id)}
+                      disabled={loading === plan.id}
+                      className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${
+                        isFeatured
+                          ? 'bg-indigo-500 text-white hover:bg-indigo-400'
+                          : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                      }`}
+                    >
+                      {loading === plan.id
+                        ? 'Loading…'
+                        : hasActiveSubscription
+                        ? 'Switch Plan'
+                        : plan.cta}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="text-center text-gray-500 text-xs mt-6">
+            7-day money-back guarantee on all plans. No questions asked — email us and we'll refund in full.
+          </p>
+        </div>
+      </div>
+
+      {/* Comparison section */}
+      <div className="bg-[#13151f] px-6 py-16">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold mb-8">Why not just use Surfer or Frase?</h2>
+          <div className="space-y-5 text-gray-400 leading-relaxed text-[15px]">
+            <p>
+              Surfer SEO gives you a score and a list of keywords to add. Frase gives you a content brief. Both tell you what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, identifies specific sentences and sections that are underperforming, and rewrites them — directly inside your editor, with one click.
+            </p>
+            <p>
+              The agent is built on Claude Sonnet, the same model SEO professionals use when they actually need nuanced editorial feedback. It&apos;s been trained on Byline&apos;s SEO framework — E-E-A-T signals, topical authority, AEO and GEO optimization — so its suggestions are grounded in what actually moves rankings, not generic writing tips.
+            </p>
+            <p>
+              And because Byline&apos;s keyword database is shared across all accounts, your research loads from cache on repeat queries — which means your results get faster the more you use the platform, and your API costs stay flat as the user base grows.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div className="px-6 py-16">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl font-bold mb-8">Frequently asked questions</h2>
+          <div className="space-y-3">
+            {FAQS.map((faq, i) => (
+              <div key={i} className="border border-white/10 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-white hover:bg-white/5 transition-colors"
+                >
+                  <span>{faq.q}</span>
+                  <span className="ml-4 text-gray-400 flex-shrink-0 text-base leading-none">
+                    {openFaq === i ? '−' : '+'}
+                  </span>
+                </button>
+                {openFaq === i && (
+                  <div className="px-5 pb-5 text-sm text-gray-400 leading-relaxed">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom CTA */}
+      <div className="px-6 py-16 text-center border-t border-white/10">
+        <h2 className="text-3xl font-bold mb-6 max-w-lg mx-auto leading-tight">
+          Start with a keyword. Leave with an article that ranks.
+        </h2>
+        <Link
+          href="/signup"
+          className="inline-flex items-center px-7 py-3 rounded-lg bg-indigo-500 text-white font-semibold hover:bg-indigo-400 transition-colors text-sm"
+        >
+          Get started
+        </Link>
+      </div>
+
     </div>
   )
 }
