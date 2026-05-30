@@ -25,6 +25,9 @@ export interface BrandProfile {
   tone_notes: string | null
   competitors: string[]
   primary_keywords: string[]
+  avoid_topics: string | null
+  tone_examples: string | null
+  content_goals: string | null
   created_at: string
   updated_at: string
 }
