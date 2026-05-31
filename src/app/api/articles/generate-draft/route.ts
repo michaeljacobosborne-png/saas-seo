@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: brand } = article.brand_profile_id ? await (supabase as any)
     .from('brand_profiles')
-    .select('brand_name, brand_voice, tone_notes, target_audience, industry')
+    .select('brand_name, brand_voice, tone_notes, target_audience, industry, expertise_notes, signature_angles')
     .eq('id', article.brand_profile_id)
     .eq('user_id', user.id)
     .single() : { data: null }
@@ -56,11 +56,17 @@ export async function POST(request: Request) {
     return `${hLevel} ${s.heading}\n  → ${s.notes} (~${s.word_count_target} words)`
   }).join('\n\n')
 
+  const expertiseBlock = [
+    brand?.expertise_notes ? `═══ AUTHOR EXPERTISE (ground the article here) ═══\nThe author has real experience in this space. Where relevant, weave in or reference these perspectives naturally — don't quote them verbatim, use them to inform specific claims and examples:\n${brand.expertise_notes}` : '',
+    brand?.signature_angles ? `SIGNATURE ANGLES: ${brand.signature_angles}` : '',
+  ].filter(Boolean).join('\n\n')
+
   const systemPrompt = `You are an expert SEO content writer for ${brandName}.
 
 BRAND VOICE: ${brandVoice}
 TONE: ${toneNotes}
 AUDIENCE: ${audience}
+${expertiseBlock ? `\n${expertiseBlock}\n` : ''}
 
 ═══ HUMANIZATION RULES (non-negotiable) ═══
 • Vary sentence length deliberately — a 6-word sentence after a 30-word one creates rhythm. Never three sentences of matching length in a row.
@@ -289,10 +295,144 @@ Write the full article now.`
     }
   }
 
+  // ─── Polish Pass: generate and select best intro/conclusion ───
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any)
+    .from('articles')
+    .update({ status: 'polishing' })
+    .eq('id', articleId)
+    .eq('user_id', user.id)
+
+  try {
+    const firstH2Pos = content.indexOf('\n## ')
+    const lastH2Pos = content.lastIndexOf('\n## ')
+
+    if (firstH2Pos !== -1) {
+      // Preserve H1 line separately so alternatives don't need to reproduce it
+      const h1LineMatch = content.match(/^(# .+)$/m)
+      const h1Line = h1LineMatch ? h1LineMatch[0] : ''
+      const introFull = content.slice(0, firstH2Pos).trim()
+      const introBody = introFull.replace(/^# .+\n*/m, '').trim()
+
+      // Last H2 section: heading line + body
+      const lastH2SectionStart = lastH2Pos + 1
+      const lastH2Tail = content.slice(lastH2SectionStart)
+      const lastH2LineEnd = lastH2Tail.indexOf('\n')
+      const lastH2Heading = lastH2LineEnd !== -1 ? lastH2Tail.slice(0, lastH2LineEnd) : lastH2Tail
+      const currentConclusion = lastH2LineEnd !== -1 ? lastH2Tail.slice(lastH2LineEnd + 1).trim() : ''
+
+      // All H2 sections between the first and last (may be empty for single-H2 articles)
+      const middleBody = content.slice(firstH2Pos + 1, lastH2Pos).trim()
+
+      const polishH1 = (brief.h1_options as string[])?.[0] ?? brief.target_keyword ?? ''
+      const polishKeyword = (article.target_keyword ?? brief.target_keyword ?? '') as string
+      const polishBrandVoice = brand?.brand_voice ?? 'professional'
+
+      // Generate 3 intro options and 3 conclusion options in parallel
+      const [introsResult, conclusionsResult] = await Promise.allSettled([
+        openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [{
+            role: 'user',
+            content: `Write 3 alternative introductions for this article. Each should be distinct in its opening move — one starts with a problem statement, one with a surprising observation, one with a specific scenario. All must: avoid defining the topic, use contractions, start with a hook not a thesis, be 80-120 words. Return only JSON: {"options": ["...", "...", "..."]}\nArticle title (H1): ${polishH1}\nTarget keyword: ${polishKeyword}\nCurrent intro: ${introBody}\nBrand voice: ${polishBrandVoice}`,
+          }],
+          response_format: { type: 'json_object' },
+          temperature: 0.85,
+          max_tokens: 1000,
+        }),
+        openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [{
+            role: 'user',
+            content: `Write 3 alternative conclusions for this article. Each should close differently — one ends with a clear next action, one ends with a provocative question, one ends with a reframe of the opening problem. No "In conclusion" or summary recaps. 60-100 words each. Return only JSON: {"options": ["...", "...", "..."]}\nArticle title (H1): ${polishH1}\nTarget keyword: ${polishKeyword}\nCurrent conclusion: ${currentConclusion}`,
+          }],
+          response_format: { type: 'json_object' },
+          temperature: 0.85,
+          max_tokens: 800,
+        }),
+      ])
+
+      let introOptions: string[] = []
+      let conclusionOptions: string[] = []
+
+      if (introsResult.status === 'fulfilled') {
+        try {
+          const parsed = JSON.parse(introsResult.value.choices[0].message.content ?? '{}')
+          if (Array.isArray(parsed.options) && parsed.options.length > 0) introOptions = parsed.options
+        } catch { /* bad JSON — keep original */ }
+      }
+
+      if (conclusionsResult.status === 'fulfilled') {
+        try {
+          const parsed = JSON.parse(conclusionsResult.value.choices[0].message.content ?? '{}')
+          if (Array.isArray(parsed.options) && parsed.options.length > 0) conclusionOptions = parsed.options
+        } catch { /* bad JSON — keep original */ }
+      }
+
+      // Pick winners in parallel using GPT-4o-mini
+      const [bestIntroRes, bestConclusionRes] = await Promise.allSettled([
+        introOptions.length > 0
+          ? openai.chat.completions.create({
+              model: 'gpt-4o-mini',
+              messages: [{
+                role: 'user',
+                content: `You are an editorial judge. Pick the best option from these 3. Best = most human, least AI-sounding, strongest hook/close, fits the brand voice. Return only JSON: {"winner": 0} (0-indexed)\nBrand voice: ${polishBrandVoice}\nOptions: ${JSON.stringify(introOptions)}`,
+              }],
+              response_format: { type: 'json_object' },
+              temperature: 0.1,
+              max_tokens: 50,
+            })
+          : Promise.reject(new Error('no options')),
+        conclusionOptions.length > 0
+          ? openai.chat.completions.create({
+              model: 'gpt-4o-mini',
+              messages: [{
+                role: 'user',
+                content: `You are an editorial judge. Pick the best option from these 3. Best = most human, least AI-sounding, strongest hook/close, fits the brand voice. Return only JSON: {"winner": 0} (0-indexed)\nBrand voice: ${polishBrandVoice}\nOptions: ${JSON.stringify(conclusionOptions)}`,
+              }],
+              response_format: { type: 'json_object' },
+              temperature: 0.1,
+              max_tokens: 50,
+            })
+          : Promise.reject(new Error('no options')),
+      ])
+
+      let bestIntroBody = introBody
+      let bestConclusion = currentConclusion
+
+      if (bestIntroRes.status === 'fulfilled' && introOptions.length > 0) {
+        try {
+          const parsed = JSON.parse(bestIntroRes.value.choices[0].message.content ?? '{}')
+          const idx = typeof parsed.winner === 'number' ? Math.max(0, Math.min(parsed.winner, introOptions.length - 1)) : 0
+          bestIntroBody = introOptions[idx] ?? introBody
+        } catch { /* keep original */ }
+      }
+
+      if (bestConclusionRes.status === 'fulfilled' && conclusionOptions.length > 0) {
+        try {
+          const parsed = JSON.parse(bestConclusionRes.value.choices[0].message.content ?? '{}')
+          const idx = typeof parsed.winner === 'number' ? Math.max(0, Math.min(parsed.winner, conclusionOptions.length - 1)) : 0
+          bestConclusion = conclusionOptions[idx] ?? currentConclusion
+        } catch { /* keep original */ }
+      }
+
+      // Reassemble: H1 + best intro body + middle sections + last H2 heading + best conclusion
+      const bestIntro = h1Line ? `${h1Line}\n\n${bestIntroBody}` : bestIntroBody
+      const parts: string[] = [bestIntro]
+      if (middleBody) parts.push(middleBody)
+      parts.push(lastH2Heading)
+      if (bestConclusion) parts.push(bestConclusion)
+      content = parts.join('\n\n')
+      wordCount = countWords(content)
+    }
+  } catch {
+    // Polish pass failed entirely — keep content as-is
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)
     .from('articles')
-    .update({ content, word_count: wordCount, status: 'complete', target_word_count: targetWordCount, pass_count: passCount })
+    .update({ content, word_count: wordCount, status: 'ready', target_word_count: targetWordCount, pass_count: passCount })
     .eq('id', articleId)
     .eq('user_id', user.id)
 
