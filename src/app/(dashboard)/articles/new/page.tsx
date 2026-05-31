@@ -116,6 +116,7 @@ export default function NewArticlePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [brief, setBrief] = useState<Record<string, any> | null>(null)
   const [targetWordCount, setTargetWordCount] = useState<WordCountOption>(1200)
+  const [generatingStatus, setGeneratingStatus] = useState<'generating' | 'expanding' | 'expanded' | null>(null)
 
   // Load initial data
   useEffect(() => {
@@ -226,20 +227,38 @@ export default function NewArticlePage() {
     setLoading(true)
     setError(null)
     setStep(4)
+    setGeneratingStatus('generating')
+
+    // Poll for status updates so the UI reflects when Pass 2 fires
+    const pollId = setInterval(async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase as any)
+          .from('articles')
+          .select('status')
+          .eq('id', articleId)
+          .single()
+        if (data?.status === 'expanding') setGeneratingStatus('expanding')
+      } catch { /* ignore poll errors */ }
+    }, 2000)
 
     const res = await fetch('/api/articles/generate-draft', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ articleId, target_word_count: targetWordCount }),
     })
+    clearInterval(pollId)
 
-    const json = await res.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const json = await res.json() as Record<string, any>
     if (!res.ok) {
       setError(json.error ?? 'Draft generation failed')
       setStep(3)
       setLoading(false)
       return
     }
+
+    if (json.pass_count === 2) setGeneratingStatus('expanded')
 
     // Auto-score (non-blocking — best effort)
     await fetch('/api/articles/score', {
@@ -535,8 +554,17 @@ export default function NewArticlePage() {
       {step === 4 && (
         <div className="border-2 border-dashed border-indigo-100 rounded-2xl p-14 text-center">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-400 mx-auto mb-5" />
-          <h3 className="text-base font-semibold text-gray-700 mb-2">Writing your article…</h3>
-          <p className="text-sm text-gray-400 max-w-xs mx-auto">GPT-4o is generating a full draft in your brand voice. This takes 30–60 seconds.</p>
+          {generatingStatus === 'expanding' ? (
+            <>
+              <h3 className="text-base font-semibold text-gray-700 mb-2">Article came in short — running a second research pass to fill it out…</h3>
+              <p className="text-sm text-gray-400 max-w-xs mx-auto">Pulling related questions from DataForSEO and expanding with real substance.</p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-base font-semibold text-gray-700 mb-2">Generating your article…</h3>
+              <p className="text-sm text-gray-400 max-w-xs mx-auto">GPT-4o is generating a full draft in your brand voice. This takes 30–60 seconds.</p>
+            </>
+          )}
         </div>
       )}
 
@@ -546,9 +574,13 @@ export default function NewArticlePage() {
           <div className="inline-flex p-4 bg-green-50 rounded-2xl mb-5">
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Article generated and scored</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            {generatingStatus === 'expanded' ? 'Done — article expanded to target length' : 'Article generated and scored'}
+          </h2>
           <p className="text-sm text-gray-500 mb-7 max-w-sm mx-auto">
-            Your article is ready. View the full content, SEO scores, and ranking predictions.
+            {generatingStatus === 'expanded'
+              ? 'A second research pass added real substance to hit your target word count.'
+              : 'Your article is ready. View the full content, SEO scores, and ranking predictions.'}
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link href="/articles" className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
