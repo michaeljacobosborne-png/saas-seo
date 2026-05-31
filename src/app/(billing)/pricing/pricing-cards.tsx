@@ -13,8 +13,6 @@ interface PricingCardsProps {
   hasActiveSubscription: boolean
 }
 
-// TODO: Update Stripe price IDs in /api/billing/checkout to match new monthly prices:
-//   starter → $49/mo, pro → $99/mo, agency → $249/mo
 const PLANS = [
   {
     id: 'starter' as Plan,
@@ -36,9 +34,9 @@ const PLANS = [
   },
   {
     id: 'pro' as Plan,
-    name: 'Pro',
+    name: 'Growth',
     tagline: 'The full editorial workflow, end to end.',
-    cta: 'Start with Pro',
+    cta: 'Start with Growth',
     monthlyPrice: 99,
     annualPrice: 950,
     popular: true,
@@ -61,7 +59,7 @@ const PLANS = [
     annualPrice: 2390,
     popular: false,
     features: [
-      'Everything in Pro',
+      'Everything in Growth',
       'Multiple brand profiles',
       'Team seat (2 users included)',
       'Custom keyword research volume',
@@ -78,7 +76,7 @@ const FAQS = [
   },
   {
     q: 'What happens if I hit my article limit on Starter?',
-    a: "You'll be prompted to upgrade to Pro. We don't cut off access mid-article.",
+    a: "You'll be prompted to upgrade to Growth. We don't cut off access mid-article.",
   },
   {
     q: 'Is the agent really different from just using ChatGPT?',

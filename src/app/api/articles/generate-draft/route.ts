@@ -69,9 +69,8 @@ export async function POST(request: Request) {
 
   // Determine whether this user's plan unlocks the intro/conclusion polish pass.
   // Growth (pro) and Agency plans get it; Starter and Free do not.
-  // TODO: replace GROWTH_PRICE_ID and AGENCY_PRICE_ID with real Stripe price IDs once set
-  const GROWTH_PRICE_ID = ''
-  const AGENCY_PRICE_ID = ''
+  const GROWTH_PRICE_ID = 'price_1Td2ZGB6USGnItproo97FT39'
+  const AGENCY_PRICE_ID = 'price_1Td2ZHB6USGnItpr5Y0SpVBn'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeSub = subData as { plan: string; stripe_price_id?: string | null } | null
   const accountType = profileData?.account_type ?? null

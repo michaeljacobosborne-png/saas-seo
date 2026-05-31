@@ -368,14 +368,14 @@ export default function HomePage() {
                 Get started
               </Link>
             </div>
-            {/* Pro */}
+            {/* Growth */}
             <div className="rounded-2xl border-2 border-indigo-500 p-7 text-left relative shadow-lg">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                 <span className="bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
                   MOST POPULAR
                 </span>
               </div>
-              <div className="text-sm font-semibold text-indigo-600 mb-1">Pro</div>
+              <div className="text-sm font-semibold text-indigo-600 mb-1">Growth</div>
               <div className="text-3xl font-bold text-gray-900 mb-4">
                 $99<span className="text-base font-normal text-gray-400">/mo</span>
               </div>
