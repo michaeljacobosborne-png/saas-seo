@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-export async function proxy(request: NextRequest) {
+const AUTH_PROTECTED = ['/dashboard', '/brand', '/keywords', '/articles']
+
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -27,11 +29,7 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const isProtected =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/brand') ||
-    pathname.startsWith('/keywords') ||
-    pathname.startsWith('/articles')
+  const isProtected = AUTH_PROTECTED.some((p) => pathname.startsWith(p))
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone()
@@ -44,6 +42,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

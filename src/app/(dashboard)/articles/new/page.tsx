@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject, BrandProfile } from '@/lib/supabase/types'
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, CheckCircle2,
-  AlertCircle, ChevronUp, ChevronDown, FileText,
+  AlertCircle, ChevronUp, ChevronDown, FileText, Info,
 } from 'lucide-react'
 
 interface Keyword {
@@ -21,6 +21,16 @@ interface Keyword {
 
 type SortField = 'avg_monthly_searches' | 'keyword_difficulty' | 'keyword'
 type SortDir = 'asc' | 'desc'
+
+const WORD_COUNT_OPTIONS = [800, 1200, 1800, 2500] as const
+type WordCountOption = typeof WORD_COUNT_OPTIONS[number]
+
+function suggestWordCount(keyword: string): WordCountOption {
+  const kw = keyword.toLowerCase()
+  if (/guide|how to|what is|best |complete/.test(kw)) return 1800
+  if (/\bvs\b|review|alternative/.test(kw)) return 1200
+  return 1200
+}
 
 function DifficultyBar({ value }: { value: number | null }) {
   if (value === null) return <span className="text-gray-300">—</span>
@@ -105,6 +115,8 @@ export default function NewArticlePage() {
   const [articleId, setArticleId] = useState<string | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [brief, setBrief] = useState<Record<string, any> | null>(null)
+  const [targetWordCount, setTargetWordCount] = useState<WordCountOption>(1200)
+  const [generatingStatus, setGeneratingStatus] = useState<'generating' | 'expanding' | 'expanded' | null>(null)
 
   // Load initial data
   useEffect(() => {
@@ -205,6 +217,7 @@ export default function NewArticlePage() {
     if (!res.ok) { setError(json.error ?? 'Brief generation failed'); setLoading(false); return }
 
     setBrief(json.brief)
+    setTargetWordCount(suggestWordCount(json.brief?.target_keyword ?? ''))
     setStep(3)
     setLoading(false)
   }
@@ -214,20 +227,38 @@ export default function NewArticlePage() {
     setLoading(true)
     setError(null)
     setStep(4)
+    setGeneratingStatus('generating')
+
+    // Poll for status updates so the UI reflects when Pass 2 fires
+    const pollId = setInterval(async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase as any)
+          .from('articles')
+          .select('status')
+          .eq('id', articleId)
+          .single()
+        if (data?.status === 'expanding') setGeneratingStatus('expanding')
+      } catch { /* ignore poll errors */ }
+    }, 2000)
 
     const res = await fetch('/api/articles/generate-draft', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ articleId }),
+      body: JSON.stringify({ articleId, target_word_count: targetWordCount }),
     })
+    clearInterval(pollId)
 
-    const json = await res.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const json = await res.json() as Record<string, any>
     if (!res.ok) {
       setError(json.error ?? 'Draft generation failed')
       setStep(3)
       setLoading(false)
       return
     }
+
+    if (json.pass_count === 2) setGeneratingStatus('expanded')
 
     // Auto-score (non-blocking — best effort)
     await fetch('/api/articles/score', {
@@ -461,6 +492,50 @@ export default function NewArticlePage() {
             )}
           </div>
 
+          {/* Word count selector */}
+          {(() => {
+            const suggested = suggestWordCount(brief.target_keyword ?? '')
+            return (
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Target Word Count</div>
+                  <Info className="w-3.5 h-3.5 text-gray-300" />
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  Recommended:{' '}
+                  <span className="font-semibold text-gray-700">{suggested.toLocaleString()} words</span>
+                  {' '}based on your keyword
+                </p>
+                <div className="flex gap-2">
+                  {WORD_COUNT_OPTIONS.map((n) => {
+                    const isSelected = targetWordCount === n
+                    const isRecommended = n === suggested
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => setTargetWordCount(n)}
+                        className={`relative flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                        }`}
+                      >
+                        {n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : n}
+                        {isRecommended && (
+                          <span className={`absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                            isSelected ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-600'
+                          }`}>
+                            rec
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
           <div className="mt-6 flex items-center justify-between">
             <p className="text-xs text-gray-400">SERP intent: <span className="font-medium text-gray-600">{brief.serp_intent}</span></p>
             <button
@@ -479,8 +554,17 @@ export default function NewArticlePage() {
       {step === 4 && (
         <div className="border-2 border-dashed border-indigo-100 rounded-2xl p-14 text-center">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-400 mx-auto mb-5" />
-          <h3 className="text-base font-semibold text-gray-700 mb-2">Writing your article…</h3>
-          <p className="text-sm text-gray-400 max-w-xs mx-auto">GPT-4o is generating a full draft in your brand voice. This takes 30–60 seconds.</p>
+          {generatingStatus === 'expanding' ? (
+            <>
+              <h3 className="text-base font-semibold text-gray-700 mb-2">Article came in short — running a second research pass to fill it out…</h3>
+              <p className="text-sm text-gray-400 max-w-xs mx-auto">Pulling related questions from DataForSEO and expanding with real substance.</p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-base font-semibold text-gray-700 mb-2">Generating your article…</h3>
+              <p className="text-sm text-gray-400 max-w-xs mx-auto">GPT-4o is generating a full draft in your brand voice. This takes 30–60 seconds.</p>
+            </>
+          )}
         </div>
       )}
 
@@ -490,9 +574,13 @@ export default function NewArticlePage() {
           <div className="inline-flex p-4 bg-green-50 rounded-2xl mb-5">
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Article generated and scored</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            {generatingStatus === 'expanded' ? 'Done — article expanded to target length' : 'Article generated and scored'}
+          </h2>
           <p className="text-sm text-gray-500 mb-7 max-w-sm mx-auto">
-            Your article is ready. View the full content, SEO scores, and ranking predictions.
+            {generatingStatus === 'expanded'
+              ? 'A second research pass added real substance to hit your target word count.'
+              : 'Your article is ready. View the full content, SEO scores, and ranking predictions.'}
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link href="/articles" className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">

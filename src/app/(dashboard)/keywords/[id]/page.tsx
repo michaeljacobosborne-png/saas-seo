@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState, useCallback, use } from 'react'
+import { useEffect, useState, useCallback, useRef, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject } from '@/lib/supabase/types'
 import {
   ArrowLeft, Sparkles, Loader2, AlertCircle, CheckCircle2,
-  ChevronUp, ChevronDown, BookmarkPlus,
+  ChevronUp, ChevronDown, BookmarkPlus, X, Bookmark, RefreshCw,
 } from 'lucide-react'
 
 interface Keyword {
@@ -29,6 +29,16 @@ const COMPETITION_COLORS: Record<string, string> = {
   LOW: 'text-green-600 bg-green-50',
   MEDIUM: 'text-amber-600 bg-amber-50',
   HIGH: 'text-red-600 bg-red-50',
+}
+
+type ToastStage = 'fetching' | 'clustering' | 'saving' | 'complete' | 'error'
+
+const TOAST_CONFIG: Record<ToastStage, { label: string; progress: number }> = {
+  fetching:   { label: 'Fetching keywords…',  progress: 25 },
+  clustering: { label: 'Clustering topics…',  progress: 60 },
+  saving:     { label: 'Saving results…',      progress: 85 },
+  complete:   { label: 'Complete!',            progress: 100 },
+  error:      { label: 'Research failed',      progress: 100 },
 }
 
 function DifficultyBar({ value }: { value: number | null }) {
@@ -78,6 +88,19 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: 'avg_monthly_searches', dir: 'desc' })
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
+  // Save-for-later state
+  const [saveMenu, setSaveMenu] = useState<{ kwId: string } | null>(null)
+  const [savedFolders, setSavedFolders] = useState<string[]>([])
+  const [newFolderText, setNewFolderText] = useState('')
+  const [showNewFolderFor, setShowNewFolderFor] = useState<string | null>(null)
+  const [savingKw, setSavingKw] = useState<string | null>(null)
+  const [savedKwIds, setSavedKwIds] = useState<Set<string>>(new Set())
+
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastStage, setToastStage] = useState<ToastStage>('fetching')
+  const [toastErrorMsg, setToastErrorMsg] = useState<string | null>(null)
+  const stageTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+
   const fetchData = useCallback(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: proj } = await (supabase as any)
@@ -108,27 +131,78 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Auto-start research when a freshly-created project lands here in 'pending' state.
+  const autoResearched = useRef(false)
+  useEffect(() => {
+    if (project?.status === 'pending' && !autoResearched.current) {
+      autoResearched.current = true
+      handleResearch()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project?.status])
+
+  // Poll every 4 s while research is running so the UI updates when it completes.
+  useEffect(() => {
+    if (!project || (project.status !== 'pending' && project.status !== 'researching')) return
+    const timer = setInterval(fetchData, 4000)
+    return () => clearInterval(timer)
+  }, [project?.status, fetchData])
+
+  // Clean up any pending toast timers when navigating away.
+  useEffect(() => {
+    return () => { stageTimers.current.forEach(clearTimeout) }
+  }, [])
+
   async function handleResearch() {
     if (!project) return
     setResearching(true)
     setResearchError(null)
 
+    // Show toast and schedule optimistic stage advances
+    stageTimers.current.forEach(clearTimeout)
+    stageTimers.current = []
+    setToastErrorMsg(null)
+    setToastStage('fetching')
+    setToastVisible(true)
+    stageTimers.current.push(setTimeout(() => setToastStage('clustering'), 7000))
+    stageTimers.current.push(setTimeout(() => setToastStage('saving'), 14000))
+
+    // Use seeds from research_brief if the project was created via discovery chat
+    const brief = project.research_brief as { seed_keywords?: string[] } | null
+    const seeds = brief?.seed_keywords
+    const researchBody: Record<string, unknown> = { project_id: id }
+    if (seeds?.length) {
+      researchBody.seeds = seeds
+      researchBody.brief = project.research_brief
+    } else {
+      researchBody.seed_topic = project.seed_topic
+    }
+
     const res = await fetch('/api/keywords/research', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project_id: id, seed_topic: project.seed_topic }),
+      body: JSON.stringify(researchBody),
     })
+
+    // API resolved — cancel any pending stage advances
+    stageTimers.current.forEach(clearTimeout)
+    stageTimers.current = []
 
     const json = await res.json()
 
     if (!res.ok) {
-      setResearchError(json.error ?? 'Research failed')
+      const msg = json.error ?? 'Research failed'
+      setResearchError(msg)
+      setToastStage('error')
+      setToastErrorMsg(msg)
+      stageTimers.current.push(setTimeout(() => setToastVisible(false), 6000))
       setResearching(false)
-      // Refresh to get error status
       fetchData()
       return
     }
 
+    setToastStage('complete')
+    stageTimers.current.push(setTimeout(() => setToastVisible(false), 3000))
     setResearching(false)
     fetchData()
   }
@@ -161,6 +235,36 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
     setTimeout(() => setSavedCount(0), 3000)
   }
 
+  async function loadFolders() {
+    if (savedFolders.length > 0) return
+    const res = await fetch('/api/keywords/saved')
+    if (!res.ok) { setSavedFolders(['General']); return }
+    const { keywords } = await res.json()
+    const folders = [...new Set<string>((keywords ?? []).map((k: { folder: string }) => k.folder))]
+    setSavedFolders(folders.length ? folders : ['General'])
+  }
+
+  async function handleSaveKeyword(kw: Keyword, folder: string) {
+    setSavingKw(kw.id)
+    setSaveMenu(null)
+    setShowNewFolderFor(null)
+    await fetch('/api/keywords/saved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        keyword: kw.keyword,
+        volume: kw.avg_monthly_searches,
+        difficulty: kw.keyword_difficulty,
+        cpc: kw.cpc,
+        folder,
+      }),
+    })
+    setSavedKwIds((prev) => new Set([...prev, kw.id]))
+    setSavingKw(null)
+    // Add new folder to local list if not already there
+    if (!savedFolders.includes(folder)) setSavedFolders((prev) => [...prev, folder])
+  }
+
   function toggleSort(field: SortField) {
     setSort((prev) =>
       prev.field === field
@@ -187,6 +291,14 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
       return next
     })
   }
+
+  // Close save dropdown on outside click
+  useEffect(() => {
+    if (!saveMenu) return
+    function handle() { setSaveMenu(null); setShowNewFolderFor(null) }
+    document.addEventListener('click', handle)
+    return () => document.removeEventListener('click', handle)
+  }, [saveMenu])
 
   // Cluster tabs
   const clusters = ['All', ...Array.from(new Set(keywords.map((k) => k.cluster ?? 'Other'))).sort()]
@@ -223,6 +335,12 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
     )
   }
 
+  const lastResearched = project.last_researched_at ? new Date(project.last_researched_at) : null
+  const daysSinceResearch = lastResearched
+    ? Math.floor((Date.now() - lastResearched.getTime()) / (1000 * 60 * 60 * 24))
+    : null
+  const isDataStale = daysSinceResearch !== null ? daysSinceResearch >= 90 : keywords.length > 0
+
   return (
     <div className="p-8 max-w-5xl">
       {/* Header */}
@@ -254,19 +372,51 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
         )}
 
         {project.status === 'complete' && keywords.length > 0 && (
-          <button
-            onClick={handleSaveSelected}
-            disabled={saving || selected.size === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {saving ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-            ) : savedCount > 0 ? (
-              <><CheckCircle2 className="w-4 h-4" /> Saved {savedCount}</>
-            ) : (
-              <><BookmarkPlus className="w-4 h-4" /> Save {selected.size > 0 ? `${selected.size} ` : ''}Selected</>
-            )}
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            {/* Staleness badge + refresh control */}
+            <div className="flex flex-col items-end gap-1">
+              {daysSinceResearch !== null && (
+                <span className="text-xs text-gray-400">
+                  Last updated {daysSinceResearch === 0 ? 'today' : `${daysSinceResearch} day${daysSinceResearch !== 1 ? 's' : ''} ago`}
+                </span>
+              )}
+              {isDataStale ? (
+                <button
+                  onClick={handleResearch}
+                  disabled={researching}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium rounded-lg hover:bg-amber-100 disabled:opacity-60 transition-colors"
+                >
+                  {researching
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <RefreshCw className="w-3.5 h-3.5" />}
+                  Data may be stale — Refresh
+                </button>
+              ) : (
+                <button
+                  onClick={handleResearch}
+                  disabled={researching}
+                  className="text-xs text-gray-400 hover:text-indigo-500 transition-colors disabled:opacity-60"
+                >
+                  {researching ? 'Refreshing…' : 'Refresh data'}
+                </button>
+              )}
+            </div>
+
+            {/* Save selected */}
+            <button
+              onClick={handleSaveSelected}
+              disabled={saving || selected.size === 0}
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {saving ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+              ) : savedCount > 0 ? (
+                <><CheckCircle2 className="w-4 h-4" /> Saved {savedCount}</>
+              ) : (
+                <><BookmarkPlus className="w-4 h-4" /> Save {selected.size > 0 ? `${selected.size} ` : ''}Selected</>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
@@ -353,6 +503,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                     <SortHeader label="CPC" field="cpc" sort={sort} onSort={toggleSort} />
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Cluster</th>
+                  <th className="w-10" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -394,6 +545,70 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                         {kw.cluster ?? 'Other'}
                       </span>
                     </td>
+                    <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <div className="relative">
+                        <button
+                          onClick={() => {
+                            loadFolders()
+                            setSaveMenu(saveMenu?.kwId === kw.id ? null : { kwId: kw.id })
+                            setShowNewFolderFor(null)
+                            setNewFolderText('')
+                          }}
+                          title={savedKwIds.has(kw.id) ? 'Saved' : 'Save for later'}
+                          className={`p-1.5 rounded transition-colors ${
+                            savedKwIds.has(kw.id) || savingKw === kw.id
+                              ? 'text-indigo-500'
+                              : 'text-gray-300 hover:text-indigo-400'
+                          }`}
+                        >
+                          {savingKw === kw.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Bookmark className={`w-3.5 h-3.5 ${savedKwIds.has(kw.id) ? 'fill-indigo-500' : ''}`} />
+                          }
+                        </button>
+
+                        {saveMenu?.kwId === kw.id && (
+                          <div
+                            className="absolute right-0 bottom-full mb-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-40 text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {[...new Set(['General', ...savedFolders])].map((f) => (
+                              <button
+                                key={f}
+                                onClick={() => handleSaveKeyword(kw, f)}
+                                className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700"
+                              >
+                                {f}
+                              </button>
+                            ))}
+                            {showNewFolderFor === kw.id ? (
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault()
+                                  if (newFolderText.trim()) handleSaveKeyword(kw, newFolderText.trim())
+                                }}
+                                className="border-t border-gray-100"
+                              >
+                                <input
+                                  autoFocus
+                                  value={newFolderText}
+                                  onChange={(e) => setNewFolderText(e.target.value)}
+                                  placeholder="Folder name…"
+                                  className="w-full px-3 py-2 text-sm focus:outline-none"
+                                />
+                              </form>
+                            ) : (
+                              <button
+                                onClick={() => { setShowNewFolderFor(kw.id); setNewFolderText('') }}
+                                className="w-full text-left px-3 py-2 hover:bg-gray-50 text-indigo-600 font-medium border-t border-gray-100"
+                              >
+                                + New folder…
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -407,6 +622,49 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
         </>
+      )}
+
+      {/* Research progress toast — bottom-right fixed card */}
+      {toastVisible && (
+        <div className="fixed bottom-5 right-5 z-50 w-72 bg-white rounded-xl shadow-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              {toastStage === 'complete' ? (
+                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+              ) : toastStage === 'error' ? (
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              ) : (
+                <Loader2 className="w-4 h-4 text-indigo-500 animate-spin shrink-0" />
+              )}
+              <span className="text-sm font-semibold text-gray-800">Keyword Research</span>
+            </div>
+            <button
+              onClick={() => setToastVisible(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <p className={`text-xs mb-3 ${
+            toastStage === 'error' ? 'text-red-600' :
+            toastStage === 'complete' ? 'text-green-600' : 'text-gray-500'
+          }`}>
+            {TOAST_CONFIG[toastStage].label}
+            {toastStage === 'error' && toastErrorMsg ? `: ${toastErrorMsg}` : ''}
+          </p>
+
+          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ease-out ${
+                toastStage === 'error' ? 'bg-red-400' :
+                toastStage === 'complete' ? 'bg-green-400' : 'bg-indigo-500'
+              }`}
+              style={{ width: `${TOAST_CONFIG[toastStage].progress}%` }}
+            />
+          </div>
+        </div>
       )}
     </div>
   )
