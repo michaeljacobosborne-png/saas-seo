@@ -117,6 +117,7 @@ export default function NewArticlePage() {
   const [brief, setBrief] = useState<Record<string, any> | null>(null)
   const [targetWordCount, setTargetWordCount] = useState<WordCountOption>(1200)
   const [generatingStatus, setGeneratingStatus] = useState<'generating' | 'expanding' | 'expanded' | null>(null)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   // Load initial data
   useEffect(() => {
@@ -191,7 +192,29 @@ export default function NewArticlePage() {
     if (!user) { setError('Session expired — please sign in again.'); setLoading(false); return }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: newArticle, error: insertErr } = await (supabase as any)
+    const supabaseAny = supabase as any
+
+    // Free tier: enforce 1-article cap
+    const { data: userProfile } = await supabaseAny
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (userProfile?.account_type === 'free') {
+      const { count } = await supabaseAny
+        .from('articles')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+      if ((count ?? 0) >= 1) {
+        setShowUpgradeModal(true)
+        setLoading(false)
+        return
+      }
+    }
+
+    const { data: newArticle, error: insertErr } = await supabaseAny
       .from('articles')
       .insert({ user_id: user.id, brand_profile_id: brandProfile.id, keyword_project_id: selectedProject.id, status: 'draft' })
       .select('id')
@@ -273,6 +296,35 @@ export default function NewArticlePage() {
 
   return (
     <div className="p-8 max-w-3xl">
+      {/* Free tier upgrade modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-sm w-full mx-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-6 h-6 text-indigo-500" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Free article used</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              You&apos;ve used your free article. Upgrade to write unlimited articles.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/pricing"
+                className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                View plans
+              </Link>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mb-6">
         <Link href="/articles" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
           <ArrowLeft className="w-4 h-4" />
