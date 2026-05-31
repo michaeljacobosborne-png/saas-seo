@@ -77,7 +77,7 @@ export async function POST(
   const supabaseAny = supabase as any
   const [brandResult, accountMemResult, articleMemResult, contentGapsResult] = await Promise.all([
     article.brand_profile_id
-      ? supabaseAny.from('brand_profiles').select('brand_name, brand_voice, tone_notes').eq('id', article.brand_profile_id).eq('user_id', user.id).single()
+      ? supabaseAny.from('brand_profiles').select('brand_name, brand_voice, tone_notes, expertise_notes, signature_angles').eq('id', article.brand_profile_id).eq('user_id', user.id).single()
       : Promise.resolve({ data: null }),
     supabaseAny.from('agent_memory').select('content').eq('user_id', user.id).eq('memory_type', 'account').order('updated_at', { ascending: false }).limit(5),
     supabaseAny.from('agent_memory').select('content').eq('user_id', user.id).eq('memory_type', 'article').eq('article_id', id).order('updated_at', { ascending: false }).limit(3),
@@ -128,6 +128,8 @@ Title: ${articleTitle}
 Target keyword: "${article.target_keyword ?? '(none set)'}"
 ${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice ?? 'professional'}` : ''}
 ${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
+${brand?.expertise_notes ? `\nAUTHOR EXPERTISE (use this to ground the article in real experience):\n${brand.expertise_notes}` : ''}
+${brand?.signature_angles ? `\nSIGNATURE ANGLES (reinforce these perspectives in rewrites):\n${brand.signature_angles}` : ''}
 
 FULL ARTICLE CONTENT (for tone/style reference):
 ${fullContent}
@@ -188,6 +190,11 @@ ANTI-SLOP EDITORIAL STANDARDS:
     })
   }
 
+  const expertiseSection = [
+    brand?.expertise_notes ? `AUTHOR EXPERTISE (use this to ground the article in real experience):\n${brand.expertise_notes}` : '',
+    brand?.signature_angles ? `SIGNATURE ANGLES (reinforce these perspectives in rewrites):\n${brand.signature_angles}` : '',
+  ].filter(Boolean).join('\n\n')
+
   const systemPrompt = `You are a senior SEO editor. Your job is to give specific, editorial feedback on the actual article content — not restate scores or metrics. When reviewing, cite specific lines or sections. When asked how to fix something, provide an example rewrite or concrete edit. Never repeat advice already given in this conversation.
 When you review the article, flag any anti-slop violations you find — passive voice, banned words, Wh- starters, adverb clusters, vague declaratives. Quote the offending line and suggest a rewrite. These are as important as SEO score failures.
 ${memorySection}${contentGapsSection}
@@ -197,6 +204,7 @@ Target keyword: "${article.target_keyword ?? '(none set)'}"
 Word count: ${article.word_count ?? 'unknown'}
 ${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice ?? 'professional'}` : ''}
 ${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
+${expertiseSection ? `\n${expertiseSection}` : ''}
 ${weakAreasSection}
 
 FULL ARTICLE CONTENT:
