@@ -26,7 +26,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .limit(1)
     .maybeSingle()
 
-  if (!sub) redirect('/pricing')
+  if (!sub) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (profile?.account_type !== 'free') redirect('/pricing')
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">

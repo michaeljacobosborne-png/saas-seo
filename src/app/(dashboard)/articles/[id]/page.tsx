@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CheckCircle2, Loader2, Sparkles,
-  TrendingUp, AlertCircle, BarChart2, Bot, X, Send,
+  TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -167,6 +167,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [assistApplied, setAssistApplied] = useState(false)
   const agentModeRef = useRef<'review' | 'assist'>('review')
 
+  // Free tier state
+  const [accountType, setAccountType] = useState<string | null>(null)
+  const [showAssistUpgrade, setShowAssistUpgrade] = useState(false)
+
   useEffect(() => { agentModeRef.current = agentMode }, [agentMode])
 
   useEffect(() => {
@@ -189,6 +193,22 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       metaInitialized.current = true
     }
   }, [article])
+
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('profiles')
+        .select('account_type')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      setAccountType(data?.account_type ?? null)
+    }
+    loadProfile()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const el = messagesContainerRef.current
@@ -250,7 +270,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       body: JSON.stringify(body),
     })
 
-    if (!res.ok || !res.body) {
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
+      setAgentMessages((prev) => [...prev, { role: 'assistant', content: errorMsg }])
+      setAgentStreaming(false)
+      return
+    }
+    if (!res.body) {
       setAgentMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
       setAgentStreaming(false)
       return
@@ -637,14 +664,26 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 {(['review', 'assist'] as const).map((m) => (
                   <button
                     key={m}
-                    onClick={() => setAgentMode(m)}
-                    className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors ${
-                      agentMode === m
+                    onClick={() => {
+                      if (m === 'assist' && accountType === 'free') {
+                        setShowAssistUpgrade(true)
+                        return
+                      }
+                      setShowAssistUpgrade(false)
+                      setAgentMode(m)
+                    }}
+                    className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                      (agentMode === m && !showAssistUpgrade) || (m === 'review' && showAssistUpgrade)
                         ? 'bg-white text-gray-800 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    {m === 'review' ? 'Review' : 'Assist'}
+                    {m === 'review' ? 'Review' : (
+                      <>
+                        Assist
+                        {accountType === 'free' && <Lock className="w-2.5 h-2.5" />}
+                      </>
+                    )}
                   </button>
                 ))}
               </div>
@@ -657,8 +696,24 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </button>
           </div>
 
-          {/* No scores gate */}
-          {!scores ? (
+          {/* Assist upgrade prompt for free users */}
+          {showAssistUpgrade ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                <Lock className="w-5 h-5 text-gray-400" />
+              </div>
+              <h3 className="font-semibold text-gray-800 text-sm mb-2">Assist mode is a paid feature</h3>
+              <p className="text-sm text-gray-500 mb-5 leading-relaxed">
+                Upgrade to let the agent rewrite sections of your article directly.
+              </p>
+              <Link
+                href="/pricing"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                View plans
+              </Link>
+            </div>
+          ) : !scores ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
               <Bot className="w-10 h-10 text-gray-300 mb-3" />
               <p className="text-sm text-gray-500 mb-4">Score the article first to unlock the agent.</p>

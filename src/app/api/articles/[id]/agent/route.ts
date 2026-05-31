@@ -36,6 +36,31 @@ export async function POST(
     fixInstruction?: string
   }
 
+  // Free tier: gate assist mode and enforce 3-turn cap on review
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
+    .from('profiles')
+    .select('account_type, agent_turns_used')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const isFree = profile?.account_type === 'free'
+
+  if (isFree && mode === 'assist') {
+    return NextResponse.json({
+      error: 'Assist mode is available on paid plans. Upgrade to let the agent rewrite sections of your article directly.',
+    }, { status: 403 })
+  }
+
+  if (isFree) {
+    const turnsUsed = ((profile?.agent_turns_used as Record<string, number>) ?? {})[id] ?? 0
+    if (turnsUsed >= 3) {
+      return NextResponse.json({
+        error: "You've used your 3 free agent turns on this article. Upgrade to get unlimited agent access.",
+      }, { status: 403 })
+    }
+  }
+
   // Fetch article first (required for everything else)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: article } = await (supabase as any)
@@ -203,6 +228,14 @@ HOW TO BEHAVE:
             memory_type: 'article',
             content: note,
           })
+        }
+        // Increment free tier review turn counter
+        if (isFree && fullResponse) {
+          const currentTurns = ((profile?.agent_turns_used as Record<string, number>) ?? {})[id] ?? 0
+          await supabaseAny.from('profiles').update({
+            agent_turns_used: { ...(profile?.agent_turns_used as Record<string, number> ?? {}), [id]: currentTurns + 1 },
+            updated_at: new Date().toISOString(),
+          }).eq('user_id', user.id)
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Stream error'
