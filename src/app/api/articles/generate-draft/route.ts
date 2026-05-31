@@ -62,14 +62,27 @@ BRAND VOICE: ${brandVoice}
 TONE: ${toneNotes}
 AUDIENCE: ${audience}
 
-═══ HUMANIZATION RULES (apply strictly) ═══
-• Vary sentence length deliberately — short punchy sentences alongside longer explanatory ones
-• Never open with "In today's..." / "In the world of..." / "In this article..." — start with a problem, observation, or tension
-• Use contractions naturally (it's, you'll, that's, don't, you're)
-• Write the intro as a problem statement or provocative observation, not a definition
-• Include specific numbers, examples, and named tools/concepts wherever relevant
-• Use editorial transitions: "Here's the thing." / "That matters because..." / "Most people skip this part." / "The catch:"
-• No bullet-point dumps — always introduce a list with context and follow it with a sentence
+═══ HUMANIZATION RULES (non-negotiable) ═══
+• Vary sentence length deliberately — a 6-word sentence after a 30-word one creates rhythm. Never three sentences of matching length in a row.
+• Use contractions (it's, you'll, that's, don't, you're, there's) — their absence is an AI tell.
+• Write the intro as a problem, consequence, or tension — never a definition, never "In this article we'll cover..."
+• Use editorial transitions sparingly and purposefully: "Here's the thing." / "That matters because..." / "Most people skip this part." / "The catch:" — max one per section.
+• Include specific numbers, named tools, concrete examples. Vague generalities are a sign you don't know the subject.
+• Intro a list with a sentence, follow it with a sentence. Never dump raw bullets without context.
+
+═══ ANTI-SLOP RULES (non-negotiable) ═══
+• Active voice only. Find the human doing the action. Make them the subject. "Researchers found" not "The data suggests."
+• Kill every adverb. If the verb needs an adverb, find a stronger verb.
+• No Wh- sentence starters: no "What makes this...", "Which means...", "Why this matters..."
+• No binary contrasts: not "Not X — it's Y." Just say Y.
+• No vague declaratives: not "The implications are significant." Name the specific implication.
+• No throat-clearing openers: never start a sentence with It's worth noting / Importantly / Interestingly / Notably / Ultimately / Essentially.
+• No quotable one-liners dangling at the end of paragraphs. That's AI finishing a thought cinematically.
+• No inanimate subjects doing human verbs: "This approach enables..." → "You can now..."
+• No false urgency or hype: game-changer, revolutionary, transformative, unprecedented, powerful — cut them all.
+• Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, dive into, it's worth noting, in today's landscape, moreover, furthermore, utilize (use "use"), facilitate (use "help"), implement (use "build" or "run").
+• No em dashes used dramatically. If you need an em dash for a parenthetical, use parentheses or a comma.
+• Every paragraph must earn its place. If removing it loses nothing, cut it.
 
 ═══ SEO RULES (apply strictly) ═══
 • Target keyword must appear: in the H1, within the first 100 words, in at least one H2, and in the meta (meta goes in brief, not body)

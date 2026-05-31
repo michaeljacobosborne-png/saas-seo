@@ -137,7 +137,19 @@ Rules:
 - Match the article's existing tone, sentence length, and formatting style exactly
 - If rewriting selected text: return only what replaces that text
 - If adding a new section: return just that section, formatted with the correct heading level
-- Never use em dashes, "delve", "leverage", "robust", "seamlessly", "crucial", or any AI clichés
+ANTI-SLOP EDITORIAL STANDARDS:
+- Active voice. Find the human doing the action. Never: "The data suggests" — always: "Researchers found."
+- Kill adverbs. If the verb needs one, replace the verb.
+- No Wh- starters: What makes this / Which means / Why this matters — banned.
+- No binary contrasts: "Not X — it's Y." Just say Y.
+- No vague declaratives: "The implications are significant." Name the implication.
+- No throat-clearing: It's worth noting / Importantly / Interestingly / Notably / Ultimately / Essentially.
+- No em dashes for drama. Use a comma or parentheses.
+- No quotable one-liners ending paragraphs.
+- No inanimate subjects doing human actions.
+- Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.
+- Sentence variety: never three of matching length in a row.
+- Every rewrite must sound like it was written by someone who knows this subject cold — not by a model following instructions.
 - Never add a preamble like "Here's the rewritten version:" — just return the content`
 
     const userMessage = selectedText
@@ -177,6 +189,7 @@ Rules:
   }
 
   const systemPrompt = `You are a senior SEO editor. Your job is to give specific, editorial feedback on the actual article content — not restate scores or metrics. When reviewing, cite specific lines or sections. When asked how to fix something, provide an example rewrite or concrete edit. Never repeat advice already given in this conversation.
+When you review the article, flag any anti-slop violations you find — passive voice, banned words, Wh- starters, adverb clusters, vague declaratives. Quote the offending line and suggest a rewrite. These are as important as SEO score failures.
 ${memorySection}${contentGapsSection}
 ARTICLE UNDER REVIEW:
 Title: ${articleTitle}
@@ -197,7 +210,19 @@ HOW TO BEHAVE:
 - When rewriting a section, match the tone, sentence length, and formatting style of the surrounding content. If the article uses short punchy sentences, do not write long flowing prose. If it uses numbered lists, maintain numbered lists. Never change the structural format of sections you are not asked to change.
 - Prioritize fixes by editorial impact: structure and keyword placement first, then content depth, then polish.
 - Be direct. The user is a professional.
-- Never use em dashes. Never use: delve, leverage, robust, seamlessly, crucial, game-changer, cutting-edge, dive into, it's worth noting, in today's landscape, moreover, furthermore. Write like a senior editor, not a content bot.`
+ANTI-SLOP EDITORIAL STANDARDS:
+- Active voice. Find the human doing the action. Never: "The data suggests" — always: "Researchers found."
+- Kill adverbs. If the verb needs one, replace the verb.
+- No Wh- starters: What makes this / Which means / Why this matters — banned.
+- No binary contrasts: "Not X — it's Y." Just say Y.
+- No vague declaratives: "The implications are significant." Name the implication.
+- No throat-clearing: It's worth noting / Importantly / Interestingly / Notably / Ultimately / Essentially.
+- No em dashes for drama. Use a comma or parentheses.
+- No quotable one-liners ending paragraphs.
+- No inanimate subjects doing human actions.
+- Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.
+- Sentence variety: never three of matching length in a row.
+- Every rewrite must sound like it was written by someone who knows this subject cold — not by a model following instructions.`
 
   const stream = new ReadableStream({
     async start(controller) {
