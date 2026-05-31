@@ -24,6 +24,9 @@ export async function POST(request: Request) {
     avoid_topics: body.avoid_topics ?? null,
     tone_examples: body.tone_examples ?? null,
     competitors: Array.isArray(body.competitors) ? body.competitors : [],
+    expertise_notes: body.expertise_notes ?? null,
+    signature_angles: body.signature_angles ?? null,
+    avoid_phrases: body.avoid_phrases ?? null,
   }
 
   // Only overwrite these if explicitly included in the payload
