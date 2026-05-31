@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     expertise_notes: body.expertise_notes ?? null,
     signature_angles: body.signature_angles ?? null,
     avoid_phrases: body.avoid_phrases ?? null,
+    expertise_skipped: body.expertise_skipped ?? false,
   }
 
   // Only overwrite these if explicitly included in the payload
