@@ -1,8 +1,16 @@
+export const maxDuration = 120
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { getKeywordIdeas, KeywordIdea } from '@/lib/dataforseo'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+function countWords(text: string): number {
+  return text.split(/\s+/).filter(Boolean).length
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -105,6 +113,7 @@ Write the full article now.`
     .eq('id', articleId)
     .eq('user_id', user.id)
 
+  // ─── Pass 1 ───
   let content: string
   try {
     const completion = await openai.chat.completions.create({
@@ -129,12 +138,148 @@ Write the full article now.`
     return NextResponse.json({ error: `AI generation failed: ${msg}` }, { status: 500 })
   }
 
-  const wordCount = content.split(/\s+/).filter(Boolean).length
+  let wordCount = countWords(content)
+  const threshold = Math.floor(targetWordCount * 0.85)
+  let passCount = 1
+
+  // ─── Pass 2: research + expansion (only when Pass 1 is under 85% of target) ───
+  if (wordCount < threshold) {
+    const targetKeyword = (article.target_keyword ?? brief.target_keyword ?? '') as string
+
+    // Signal the UI that expansion is running
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('articles')
+      .update({ status: 'expanding' })
+      .eq('id', articleId)
+      .eq('user_id', user.id)
+
+    // Step A: identify expansion angles (GPT-4o-mini — cheap)
+    let expansionAngles: string[] = []
+    try {
+      const anglesCompletion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an SEO content strategist. Given this article and its target keyword, identify 3-4 specific subtopics, questions, or angles that are underexplored and would add genuine value if expanded. Do not suggest padding or filler. Focus on what a reader would actually want to know. Return a JSON object with key "angles" containing an array of strings.',
+          },
+          {
+            role: 'user',
+            content: `Article: ${content}\nKeyword: ${targetKeyword}\nTarget word count: ${targetWordCount}\nCurrent word count: ${wordCount}`,
+          },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+        max_tokens: 300,
+      })
+      const parsed = JSON.parse(anglesCompletion.choices[0].message.content ?? '{}')
+      expansionAngles = Array.isArray(parsed.angles) ? parsed.angles : []
+    } catch {
+      expansionAngles = []
+    }
+
+    // Step B: targeted research via DataForSEO (uses global keyword cache)
+    let researchData = expansionAngles.map((a) => `Expansion angle: ${a}`).join('\n')
+    try {
+      const serviceClient = createServiceClient()
+      const seedsForResearch = [targetKeyword, ...expansionAngles.slice(0, 2)].filter(Boolean)
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: cachedRows } = await (serviceClient as any)
+        .from('keyword_cache')
+        .select('*')
+        .in('keyword', seedsForResearch)
+        .gt('expires_at', new Date().toISOString())
+
+      const cachedSet = new Set<string>(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (cachedRows ?? []).map((r: any) => r.keyword as string)
+      )
+      const cacheMisses = seedsForResearch.filter((s) => !cachedSet.has(s))
+
+      const cachedIdeas: KeywordIdea[] = (cachedRows ?? []).map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (r: any) => ({
+          keyword: r.keyword,
+          search_volume: r.volume,
+          competition: null,
+          competition_index: null,
+          cpc: r.cpc,
+          keyword_difficulty: r.difficulty,
+        })
+      )
+
+      let freshIdeas: KeywordIdea[] = []
+      if (cacheMisses.length > 0) {
+        try {
+          freshIdeas = await getKeywordIdeas(cacheMisses, 'United States', 'English', 10)
+          if (freshIdeas.length > 0) {
+            const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+            const nowIso = new Date().toISOString()
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (serviceClient as any)
+              .from('keyword_cache')
+              .upsert(
+                freshIdeas.map((k) => ({
+                  keyword: k.keyword,
+                  volume: k.search_volume,
+                  difficulty: k.keyword_difficulty,
+                  cpc: k.cpc,
+                  fetched_at: nowIso,
+                  expires_at: expiresAt,
+                })),
+                { onConflict: 'keyword' }
+              )
+          }
+        } catch {
+          // DataForSEO failure is non-fatal — proceed with cached data only
+        }
+      }
+
+      const allIdeas = [...cachedIdeas, ...freshIdeas].slice(0, 10)
+      researchData = [
+        ...expansionAngles.map((a) => `Expansion angle: ${a}`),
+        ...allIdeas.map((k) => `Related search: "${k.keyword}" (volume: ${k.search_volume ?? 'unknown'}, difficulty: ${k.keyword_difficulty ?? 'unknown'})`),
+      ].join('\n')
+    } catch {
+      // Research failed — proceed with angles only
+    }
+
+    // Step C: expansion pass (GPT-4o — quality)
+    try {
+      const expansionCompletion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a senior SEO editor. Your job is to expand the provided article to reach the target word count. Use ONLY the research data provided — add real examples, statistics, explanations, and answers to the questions listed. Never add filler, vague transitions, or repetitive content. Add new sections or expand existing ones. Return the complete expanded article in markdown.',
+          },
+          {
+            role: 'user',
+            content: `ORIGINAL ARTICLE:\n${content}\n\nTARGET WORD COUNT: ${targetWordCount}\nCURRENT WORD COUNT: ${wordCount}\nWORDS NEEDED: ${targetWordCount - wordCount}\n\nRESEARCH DATA TO INCORPORATE:\n${researchData}\n\nExpand the article to hit the target word count using this research. Add a new section for each expansion angle if needed.`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 5000,
+      })
+      content = expansionCompletion.choices[0].message.content ?? content
+    } catch {
+      // Expansion failed — save Pass 1 content
+    }
+
+    wordCount = countWords(content)
+    passCount = 2
+
+    if (wordCount < threshold) {
+      console.warn(`Article under target after two passes — topic may be inherently narrow. articleId: ${articleId}, target: ${targetWordCount}, actual: ${wordCount}`)
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)
     .from('articles')
-    .update({ content, word_count: wordCount, status: 'complete', target_word_count: targetWordCount })
+    .update({ content, word_count: wordCount, status: 'complete', target_word_count: targetWordCount, pass_count: passCount })
     .eq('id', articleId)
     .eq('user_id', user.id)
 
@@ -142,5 +287,5 @@ Write the full article now.`
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
-  return NextResponse.json({ content, word_count: wordCount })
+  return NextResponse.json({ content, word_count: wordCount, pass_count: passCount })
 }
