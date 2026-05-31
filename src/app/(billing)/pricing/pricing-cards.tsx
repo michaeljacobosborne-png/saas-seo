@@ -139,7 +139,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   }
 
   return (
-    <div className="min-h-full bg-[#0f1117] text-[#1C1917]">
+    <div className="min-h-full bg-[#1C1917] text-[#F7F3EC]">
 
       {/* Hero */}
       <div className="px-6 pt-16 pb-10 text-center">
@@ -155,15 +155,15 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       <div className="px-6 pb-12">
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-sm text-[#A89070]">
           <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
             No ChatGPT wrapper — a real SEO workflow
           </span>
           <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
             Agent applies fixes directly to your article
           </span>
           <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
             Built on Claude Sonnet, the model editors trust
           </span>
         </div>
@@ -175,13 +175,13 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
 
           {/* Interval toggle */}
           <div className="flex justify-center mb-10">
-            <div className="inline-flex items-center bg-[#1a1d27] rounded-lg p-1">
+            <div className="inline-flex items-center bg-[#231F1B] rounded-lg p-1">
               <button
                 onClick={() => setInterval('monthly')}
                 className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
                   interval === 'monthly'
                     ? 'bg-[#231F1B] text-[#F7F3EC]'
-                    : 'text-[#A89070] hover:text-[#1C1917]'
+                    : 'text-[#A89070] hover:text-[#F7F3EC]'
                 }`}
               >
                 Monthly
@@ -191,7 +191,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                 className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
                   interval === 'annual'
                     ? 'bg-[#231F1B] text-[#F7F3EC]'
-                    : 'text-[#A89070] hover:text-[#1C1917]'
+                    : 'text-[#A89070] hover:text-[#F7F3EC]'
                 }`}
               >
                 Annual
@@ -218,13 +218,13 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                   key={plan.id}
                   className={`relative rounded-2xl p-6 flex flex-col ${
                     isFeatured
-                      ? 'bg-[#1a1d27] border-2 border-indigo-500'
-                      : 'bg-[#1a1d27] border border-white/10'
+                      ? 'bg-[#231F1B] border-2 border-[#B87333]'
+                      : 'bg-[#231F1B] border border-[rgba(184,115,51,0.2)]'
                   }`}
                 >
                   {isFeatured && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="bg-[rgba(184,115,51,0.1)]0 text-[#1C1917] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
+                      <span className="bg-[#B87333] text-[#1C1917] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
                         MOST POPULAR
                       </span>
                     </div>
@@ -238,11 +238,11 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     </div>
                   )}
 
-                  <h2 className="text-lg font-bold text-[#1C1917] mb-1">{plan.name}</h2>
+                  <h2 className="text-lg font-bold text-[#F7F3EC] mb-1">{plan.name}</h2>
                   <p className="text-[#A89070] text-sm mb-5 leading-relaxed">{plan.tagline}</p>
 
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-[#1C1917]">${price}</span>
+                    <span className="text-4xl font-bold text-[#F7F3EC]">${price}</span>
                     <span className="text-sm ml-1 text-[#A89070]">/mo</span>
                     {interval === 'annual' && (
                       <p className="text-xs mt-1 text-[#A89070]">
@@ -254,8 +254,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                   <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2.5 text-sm">
-                        <Check className="w-4 h-4 flex-shrink-0 text-indigo-400 mt-0.5" />
-                        <span className="text-gray-300 leading-snug">{feature}</span>
+                        <Check className="w-4 h-4 flex-shrink-0 text-[#B87333] mt-0.5" />
+                        <span className="text-[#A89070] leading-snug">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -264,7 +264,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     <button
                       onClick={handleManageBilling}
                       disabled={loading === 'portal'}
-                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors bg-[#B87333] text-[#1C1917] hover:bg-[rgba(184,115,51,0.1)]0 disabled:opacity-60"
+                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors bg-[#B87333] text-[#1C1917] hover:bg-[#A0622A] disabled:opacity-60"
                     >
                       {loading === 'portal' ? 'Loading…' : 'Manage Billing'}
                     </button>
@@ -274,8 +274,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                       disabled={loading === plan.id}
                       className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${
                         isFeatured
-                          ? 'bg-[rgba(184,115,51,0.1)]0 text-[#1C1917] hover:bg-indigo-400'
-                          : 'bg-[#B87333] text-[#1C1917] hover:bg-[rgba(184,115,51,0.1)]0'
+                          ? 'bg-[#B87333] text-[#1C1917] hover:bg-[#A0622A]'
+                          : 'bg-[#B87333] text-[#1C1917] hover:bg-[#A0622A]'
                       }`}
                     >
                       {loading === plan.id
@@ -297,7 +297,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       </div>
 
       {/* Comparison section */}
-      <div className="bg-[#13151f] px-6 py-16">
+      <div className="bg-[#231F1B] px-6 py-16">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold mb-8">Why not just use Surfer or Frase?</h2>
           <div className="space-y-5 text-[#A89070] leading-relaxed text-[15px]">
@@ -320,10 +320,10 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           <h2 className="text-2xl font-bold mb-8">Frequently asked questions</h2>
           <div className="space-y-3">
             {FAQS.map((faq, i) => (
-              <div key={i} className="border border-white/10 rounded-xl overflow-hidden">
+              <div key={i} className="border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-[#1C1917] hover:bg-[#231F1B]/5 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-[#F7F3EC] hover:bg-[rgba(184,115,51,0.05)] transition-colors"
                 >
                   <span>{faq.q}</span>
                   <span className="ml-4 text-[#A89070] flex-shrink-0 text-base leading-none">
@@ -342,18 +342,18 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       </div>
 
       {/* Bottom CTA */}
-      <div className="px-6 py-16 text-center border-t border-white/10">
+      <div className="px-6 py-16 text-center border-t border-[rgba(184,115,51,0.15)]">
         <h2 className="text-3xl font-bold mb-6 max-w-lg mx-auto leading-tight">
           Start with a keyword. Leave with an article that ranks.
         </h2>
         <Link
           href="/signup"
-          className="inline-flex items-center px-7 py-3 rounded-lg bg-[rgba(184,115,51,0.1)]0 text-[#1C1917] font-semibold hover:bg-indigo-400 transition-colors text-sm"
+          className="inline-flex items-center px-7 py-3 rounded-lg bg-[rgba(184,115,51,0.1)]0 text-[#1C1917] font-semibold hover:bg-[#B87333] transition-colors text-sm"
         >
           Get started
         </Link>
       </div>
 
       {/* Footer */}
-      <div className="border-t border-white/10 px-6 py-8">
+      <div className="border-t border-[rgba(184,115,51,0.15)] px-6 py-8">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center ju
