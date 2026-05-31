@@ -139,21 +139,21 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   }
 
   return (
-    <div className="min-h-full bg-[#0f1117] text-white">
+    <div className="min-h-full bg-[#0f1117] text-[#1C1917]">
 
       {/* Hero */}
       <div className="px-6 pt-16 pb-10 text-center">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 max-w-2xl mx-auto leading-tight">
           Content that ranks. An agent that fixes it.
         </h1>
-        <p className="text-gray-400 text-lg max-w-xl mx-auto leading-relaxed">
+        <p className="text-[#A89070] text-lg max-w-xl mx-auto leading-relaxed">
           Byline combines AI keyword research, SEO-optimized article generation, and a real editorial agent that rewrites your content — not just scores it.
         </p>
       </div>
 
       {/* Objection bar */}
       <div className="px-6 pb-12">
-        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-sm text-gray-400">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-sm text-[#A89070]">
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
             No ChatGPT wrapper — a real SEO workflow
@@ -180,8 +180,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                 onClick={() => setInterval('monthly')}
                 className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
                   interval === 'monthly'
-                    ? 'bg-white text-gray-900'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-[#231F1B] text-[#F7F3EC]'
+                    : 'text-[#A89070] hover:text-[#1C1917]'
                 }`}
               >
                 Monthly
@@ -190,8 +190,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                 onClick={() => setInterval('annual')}
                 className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
                   interval === 'annual'
-                    ? 'bg-white text-gray-900'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-[#231F1B] text-[#F7F3EC]'
+                    : 'text-[#A89070] hover:text-[#1C1917]'
                 }`}
               >
                 Annual
@@ -224,7 +224,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                 >
                   {isFeatured && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
+                      <span className="bg-[rgba(184,115,51,0.1)]0 text-[#1C1917] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
                         MOST POPULAR
                       </span>
                     </div>
@@ -232,20 +232,20 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
 
                   {isCurrentPlan && (
                     <div className="absolute -top-3.5 right-4">
-                      <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                      <span className="bg-emerald-500 text-[#1C1917] text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
                         CURRENT PLAN
                       </span>
                     </div>
                   )}
 
-                  <h2 className="text-lg font-bold text-white mb-1">{plan.name}</h2>
-                  <p className="text-gray-400 text-sm mb-5 leading-relaxed">{plan.tagline}</p>
+                  <h2 className="text-lg font-bold text-[#1C1917] mb-1">{plan.name}</h2>
+                  <p className="text-[#A89070] text-sm mb-5 leading-relaxed">{plan.tagline}</p>
 
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-white">${price}</span>
-                    <span className="text-sm ml-1 text-gray-400">/mo</span>
+                    <span className="text-4xl font-bold text-[#1C1917]">${price}</span>
+                    <span className="text-sm ml-1 text-[#A89070]">/mo</span>
                     {interval === 'annual' && (
-                      <p className="text-xs mt-1 text-gray-500">
+                      <p className="text-xs mt-1 text-[#A89070]">
                         ${plan.annualPrice}/yr billed annually
                       </p>
                     )}
@@ -264,7 +264,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     <button
                       onClick={handleManageBilling}
                       disabled={loading === 'portal'}
-                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-60"
+                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors bg-[#B87333] text-[#1C1917] hover:bg-[rgba(184,115,51,0.1)]0 disabled:opacity-60"
                     >
                       {loading === 'portal' ? 'Loading…' : 'Manage Billing'}
                     </button>
@@ -274,8 +274,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                       disabled={loading === plan.id}
                       className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${
                         isFeatured
-                          ? 'bg-indigo-500 text-white hover:bg-indigo-400'
-                          : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                          ? 'bg-[rgba(184,115,51,0.1)]0 text-[#1C1917] hover:bg-indigo-400'
+                          : 'bg-[#B87333] text-[#1C1917] hover:bg-[rgba(184,115,51,0.1)]0'
                       }`}
                     >
                       {loading === plan.id
@@ -290,7 +290,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
             })}
           </div>
 
-          <p className="text-center text-gray-500 text-xs mt-6">
+          <p className="text-center text-[#A89070] text-xs mt-6">
             30-day money-back guarantee on all plans. No questions asked — email us and we'll refund in full.
           </p>
         </div>
@@ -300,7 +300,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       <div className="bg-[#13151f] px-6 py-16">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold mb-8">Why not just use Surfer or Frase?</h2>
-          <div className="space-y-5 text-gray-400 leading-relaxed text-[15px]">
+          <div className="space-y-5 text-[#A89070] leading-relaxed text-[15px]">
             <p>
               Surfer SEO gives you a score and a list of keywords to add. Frase gives you a content brief. Both tell you what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, identifies specific sentences and sections that are underperforming, and rewrites them — directly inside your editor, with one click.
             </p>
@@ -323,15 +323,15 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
               <div key={i} className="border border-white/10 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-white hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-[#1C1917] hover:bg-[#231F1B]/5 transition-colors"
                 >
                   <span>{faq.q}</span>
-                  <span className="ml-4 text-gray-400 flex-shrink-0 text-base leading-none">
+                  <span className="ml-4 text-[#A89070] flex-shrink-0 text-base leading-none">
                     {openFaq === i ? '−' : '+'}
                   </span>
                 </button>
                 {openFaq === i && (
-                  <div className="px-5 pb-5 text-sm text-gray-400 leading-relaxed">
+                  <div className="px-5 pb-5 text-sm text-[#A89070] leading-relaxed">
                     {faq.a}
                   </div>
                 )}
@@ -348,7 +348,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         </h2>
         <Link
           href="/signup"
-          className="inline-flex items-center px-7 py-3 rounded-lg bg-indigo-500 text-white font-semibold hover:bg-indigo-400 transition-colors text-sm"
+          className="inline-flex items-center px-7 py-3 rounded-lg bg-[rgba(184,115,51,0.1)]0 text-[#1C1917] font-semibold hover:bg-indigo-400 transition-colors text-sm"
         >
           Get started
         </Link>
@@ -356,16 +356,4 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
 
       {/* Footer */}
       <div className="border-t border-white/10 px-6 py-8">
-        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-white/40">
-          <span>&copy; {new Date().getFullYear()} Peacock Creative Services LLC</span>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-white/70 transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-white/70 transition-colors">Terms</Link>
-            <a href="mailto:policies@bylineseo.com" className="hover:text-white/70 transition-colors">Contact</a>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  )
-}
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center ju

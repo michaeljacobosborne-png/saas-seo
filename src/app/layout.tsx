@@ -1,21 +1,28 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, DM_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
+  axes: ["opsz"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmMono = DM_Mono({
+  variable: "--font-dm-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["700", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "Byline — Content that ranks. An agent that fixes it.",
-  description:
-    "Byline is the only SEO platform with an editorial agent that reads your article, identifies what's holding it back, and rewrites the weak sections — directly inside your editor.",
+  title: "Byline — Know what ranks. Say what matters.",
+  description: "Real keyword data. AI-generated content. An editorial agent that rewrites what's holding you back. Built for serious content operators.",
 };
 
 export default function RootLayout({
@@ -24,11 +31,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${dmSans.variable} ${dmMono.variable} ${playfair.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col" style={{ background: '#1C1917', color: '#F7F3EC' }}>{children}</body>
     </html>
   );
 }
