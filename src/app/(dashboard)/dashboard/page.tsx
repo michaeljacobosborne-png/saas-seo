@@ -43,7 +43,7 @@ export default async function DashboardPage() {
     <div className="p-8 max-w-4xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          {brandProfile?.brand_name ? `Welcome back, ${brandProfile.brand_name}` : 'Welcome to SEO Studio'}
+          {brandProfile?.brand_name ? `Welcome back, ${brandProfile.brand_name}` : 'Welcome to Byline'}
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           Your AI-powered SEO content workspace

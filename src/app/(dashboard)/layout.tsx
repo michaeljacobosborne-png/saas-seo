@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* Sidebar */}
       <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <span className="text-lg font-bold text-indigo-600">SEO Studio</span>
+          <span className="text-lg font-bold text-indigo-600">Byline</span>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5">
