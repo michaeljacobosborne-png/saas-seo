@@ -22,14 +22,31 @@ export async function POST(request: Request) {
   const targetWordCount = body.target_word_count ?? 1200
   if (!articleId) return NextResponse.json({ error: 'articleId is required' }, { status: 400 })
 
-  // Fetch article with brief
+  // Fetch article, profile, and subscription in parallel
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: article } = await (supabase as any)
-    .from('articles')
-    .select('id, brief, brand_profile_id, keyword_project_id, target_keyword')
-    .eq('id', articleId)
-    .eq('user_id', user.id)
-    .single()
+  const [{ data: article }, { data: profileData }, { data: subData }] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('articles')
+      .select('id, brief, brand_profile_id, keyword_project_id, target_keyword')
+      .eq('id', articleId)
+      .eq('user_id', user.id)
+      .single(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('subscriptions')
+      .select('plan, stripe_price_id, status')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle(),
+  ])
 
   if (!article) return NextResponse.json({ error: 'Article not found' }, { status: 404 })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,6 +66,27 @@ export async function POST(request: Request) {
   const brandVoice = brand?.brand_voice ?? 'professional'
   const toneNotes = brand?.tone_notes ?? 'Clear, direct, evidence-backed.'
   const audience = brand?.target_audience ?? 'readers looking to learn'
+
+  // Determine whether this user's plan unlocks the intro/conclusion polish pass.
+  // Growth (pro) and Agency plans get it; Starter and Free do not.
+  // TODO: replace GROWTH_PRICE_ID and AGENCY_PRICE_ID with real Stripe price IDs once set
+  const GROWTH_PRICE_ID = ''
+  const AGENCY_PRICE_ID = ''
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeSub = subData as { plan: string; stripe_price_id?: string | null } | null
+  const accountType = profileData?.account_type ?? null
+  let runPolishPass = false
+  if (accountType !== 'free' && activeSub) {
+    if (GROWTH_PRICE_ID || AGENCY_PRICE_ID) {
+      // Price IDs configured: use them for precise plan matching
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const priceId = (activeSub as any).stripe_price_id as string | null
+      runPolishPass = priceId === GROWTH_PRICE_ID || priceId === AGENCY_PRICE_ID
+    } else {
+      // Price IDs not yet configured — fall back to plan name (better to give too much than too little)
+      runPolishPass = activeSub.plan === 'pro' || activeSub.plan === 'agency'
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const outlineText = (brief.outline as any[] ?? []).map((s: any) => {
@@ -295,7 +333,8 @@ Write the full article now.`
     }
   }
 
-  // ─── Polish Pass: generate and select best intro/conclusion ───
+  // ─── Polish Pass: Growth/Agency plans only ───
+  if (runPolishPass) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any)
     .from('articles')
@@ -428,6 +467,7 @@ Write the full article now.`
   } catch {
     // Polish pass failed entirely — keep content as-is
   }
+  } // end runPolishPass
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)
