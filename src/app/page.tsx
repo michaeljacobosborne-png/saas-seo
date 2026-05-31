@@ -423,6 +423,18 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Footer ── */}
+      <footer className="border-t border-gray-100 px-6 py-8">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-gray-400">
+          <span>&copy; {new Date().getFullYear()} Peacock Creative Services LLC</span>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms</Link>
+            <a href="mailto:policies@bylineseo.com" className="hover:text-gray-600 transition-colors">Contact</a>
+          </div>
+        </div>
+      </footer>
+
     </div>
   )
 }

@@ -354,6 +354,18 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         </Link>
       </div>
 
+      {/* Footer */}
+      <div className="border-t border-white/10 px-6 py-8">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-white/40">
+          <span>&copy; {new Date().getFullYear()} Peacock Creative Services LLC</span>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-white/70 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-white/70 transition-colors">Terms</Link>
+            <a href="mailto:policies@bylineseo.com" className="hover:text-white/70 transition-colors">Contact</a>
+          </div>
+        </div>
+      </div>
+
     </div>
   )
 }
