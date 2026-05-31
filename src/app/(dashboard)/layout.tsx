@@ -9,7 +9,7 @@ const navItems = [
   { href: '/brand', label: 'Brand', icon: Building2 },
   { href: '/keywords', label: 'Keywords', icon: Search },
   { href: '/articles', label: 'Articles', icon: FileText },
-  { href: '/audit', label: 'Content Audit', icon: BarChart2 },
+  { href: '/content-audit', label: 'Content Audit', icon: BarChart2 },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
