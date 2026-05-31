@@ -195,6 +195,9 @@ ANTI-SLOP EDITORIAL STANDARDS:
     brand?.signature_angles ? `SIGNATURE ANGLES (reinforce these perspectives in rewrites):\n${brand.signature_angles}` : '',
   ].filter(Boolean).join('\n\n')
 
+  const nudgeAlreadyShown = accountMemory.some((m) => m.content === 'expertise_nudge_shown')
+  const shouldNudge = !brand?.expertise_notes && !nudgeAlreadyShown
+
   const systemPrompt = `You are a senior SEO editor. Your job is to give specific, editorial feedback on the actual article content — not restate scores or metrics. When reviewing, cite specific lines or sections. When asked how to fix something, provide an example rewrite or concrete edit. Never repeat advice already given in this conversation.
 When you review the article, flag any anti-slop violations you find — passive voice, banned words, Wh- starters, adverb clusters, vague declaratives. Quote the offending line and suggest a rewrite. These are as important as SEO score failures.
 ${memorySection}${contentGapsSection}
@@ -251,6 +254,17 @@ ANTI-SLOP EDITORIAL STANDARDS:
             fullResponse += event.delta.text
             controller.enqueue(encoder.encode(event.delta.text))
           }
+        }
+        // Expertise nudge — append once if brand has no expertise notes and nudge not yet shown
+        if (shouldNudge && fullResponse) {
+          const nudgeText = '\n\n---\n*One thing that would improve every article I write for you: add your personal expertise and signature angles to your brand profile. Even rough notes work — it\'s the difference between content that ranks and content that actually sounds like you.*'
+          controller.enqueue(encoder.encode(nudgeText))
+          await supabaseAny.from('agent_memory').insert({
+            user_id: user.id,
+            article_id: id,
+            memory_type: 'account',
+            content: 'expertise_nudge_shown',
+          })
         }
         // Save session memory after all tokens are streamed
         if (fullResponse && messages.length > 0) {
