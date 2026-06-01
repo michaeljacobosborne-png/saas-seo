@@ -57,7 +57,7 @@ function StepIndicator({ current }: { current: number }) {
           <div key={label} className="flex items-center gap-2">
             <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-colors ${
               done ? 'bg-[#B87333] text-[#F7F3EC]' :
-              active ? 'bg-[rgba(184,115,51,0.12)] text-[#A0622A] ring-2 ring-[#B87333]' :
+              active ? 'bg-[rgba(184,115,51,0.12)] text-[#A0622A] ring-2 ring-indigo-600' :
               'bg-[#2A2420] text-[#7A6555]'
             }`}>
               {done ? <CheckCircle2 className="w-4 h-4" /> : n}
@@ -66,7 +66,7 @@ function StepIndicator({ current }: { current: number }) {
               {label}
             </span>
             {i < steps.length - 1 && (
-              <div className={`w-8 h-px mx-1 ${done ? 'bg-[rgba(184,115,51,0.4)]' : 'bg-[#2A2420]'}`} />
+              <div className={`w-8 h-px mx-1 ${done ? 'bg-indigo-300' : 'bg-[#2A2420]'}`} />
             )}
           </div>
         )
@@ -604,9 +604,50 @@ export default function NewArticlePage() {
 
       {/* ─── Step 4: Generating ─── */}
       {step === 4 && (
-        <div className="border-2 border-dashed border-[rgba(184,115,51,0.25)] rounded-2xl p-14 text-center">
+        <div className="border-2 border-dashed border-[rgba(184,115,51,0.15)] rounded-2xl p-14 text-center">
           <Loader2 className="w-10 h-10 animate-spin text-[#D4954A] mx-auto mb-5" />
           {generatingStatus === 'expanding' ? (
             <>
               <h3 className="text-base font-semibold text-[#A89070] mb-2">Article came in short — running a second research pass to fill it out…</h3>
-              <p className="text-sm text-[#7A6555] max-w-xs mx-auto">Pulling related questions from 
+              <p className="text-sm text-[#7A6555] max-w-xs mx-auto">Pulling related questions from DataForSEO and expanding with real substance.</p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-base font-semibold text-[#A89070] mb-2">Generating your article…</h3>
+              <p className="text-sm text-[#7A6555] max-w-xs mx-auto">GPT-4o is generating a full draft in your brand voice. This takes 30–60 seconds.</p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ─── Step 5: Done ─── */}
+      {step === 5 && articleId && (
+        <div className="text-center">
+          <div className="inline-flex p-4 bg-green-50 rounded-2xl mb-5">
+            <CheckCircle2 className="w-10 h-10 text-green-500" />
+          </div>
+          <h2 className="text-xl font-bold text-[#F7F3EC] mb-2">
+            {generatingStatus === 'expanded' ? 'Done — article expanded to target length' : 'Article generated and scored'}
+          </h2>
+          <p className="text-sm text-[#A89070] mb-7 max-w-sm mx-auto">
+            {generatingStatus === 'expanded'
+              ? 'A second research pass added real substance to hit your target word count.'
+              : 'Your article is ready. View the full content, SEO scores, and ranking predictions.'}
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link href="/articles" className="px-4 py-2 text-sm text-[#A89070] border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] transition-colors">
+              Back to Articles
+            </Link>
+            <Link
+              href={`/articles/${articleId}`}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              View Article &amp; Scores
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
