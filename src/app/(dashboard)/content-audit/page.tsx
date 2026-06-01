@@ -268,14 +268,14 @@ export default function DashboardAuditPage() {
 
           {/* Saved keywords cross-reference */}
           {unwrittenSaved.length > 0 && (
-            <div className="rounded-xl p-5 border border-[rgba(184,115,51,0.25)]" style={{background:"rgba(184,115,51,0.07)""}}>
+            <div className="rounded-xl p-5 border border-[rgba(184,115,51,0.25)]" style={{background:"rgba(184,115,51,0.07)"}}>
               <h2 className="text-sm font-semibold text-[#F7F3EC] mb-1">
                 You&apos;ve saved these keywords but haven&apos;t written about them yet
               </h2>
               <p className="text-xs text-[#A89070] mb-3">
                 These are already in your research pipeline — write them first.
               </p>
-              <div className="flex flex-wrap gap-2}}>
+              <div className="flex flex-wrap gap-2">
                 {unwrittenSaved.map((kw) => (
                   <Link
                     key={kw}
