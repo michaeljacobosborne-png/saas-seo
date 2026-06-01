@@ -92,10 +92,10 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span className="text-sm font-medium text-[#A89070]">{label}</span>
         <span className="text-sm font-bold tabular-nums" style={{ color: COPPER }}>{score}</span>
       </div>
-      <div className="w-full bg-gray-100 rounded-full h-2.5">
+      <div className="w-full bg-[#2A2420] rounded-full h-2.5">
         <div className={`h-2.5 rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${score}%` }} />
       </div>
     </div>
@@ -114,10 +114,10 @@ function ConfidenceChip({ confidence }: { confidence: 'low' | 'medium' | 'high' 
 function CriteriaRow({ label, passed }: { label: string; passed: boolean }) {
   return (
     <div className="flex items-start gap-2.5 py-1.5">
-      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-gray-100'}`}>
-        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
+      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[#2A2420]'}`}>
+        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-[#2A2420]'}`} />
       </div>
-      <span className={`text-xs flex-1 ${passed ? 'text-gray-700' : 'text-gray-400'}`}>{label}</span>
+      <span className={`text-xs flex-1 ${passed ? 'text-[#A89070]' : 'text-[#7A6555]'}`}>{label}</span>
     </div>
   )
 }
@@ -125,11 +125,11 @@ function CriteriaRow({ label, passed }: { label: string; passed: boolean }) {
 function SEOCriteriaRow({ label, passed, points, max }: { label: string; passed: boolean; points: number; max: number }) {
   return (
     <div className="flex items-start gap-2.5 py-1.5">
-      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-gray-100'}`}>
-        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
+      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[#2A2420]'}`}>
+        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-[#2A2420]'}`} />
       </div>
-      <span className={`text-xs flex-1 ${passed ? 'text-gray-700' : 'text-gray-400'}`}>{label}</span>
-      <span className="text-xs tabular-nums font-medium text-gray-500 shrink-0">{points}/{max}</span>
+      <span className={`text-xs flex-1 ${passed ? 'text-[#A89070]' : 'text-[#7A6555]'}`}>{label}</span>
+      <span className="text-xs tabular-nums font-medium text-[#A89070] shrink-0">{points}/{max}</span>
     </div>
   )
 }
@@ -368,7 +368,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
       </div>
     )
   }
@@ -376,10 +376,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   if (!article) {
     return (
       <div className="p-8">
-        <Link href="/articles" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-4">
+        <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[#7A6555] hover:text-[#A89070] mb-4">
           <ArrowLeft className="w-4 h-4" /> Articles
         </Link>
-        <p className="text-gray-500">Article not found.</p>
+        <p className="text-[#A89070]">Article not found.</p>
       </div>
     )
   }
@@ -394,22 +394,22 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div className="min-w-0 flex-1">
-            <Link href="/articles" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-3 transition-colors w-fit">
+            <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[#7A6555] hover:text-[#A89070] mb-3 transition-colors w-fit">
               <ArrowLeft className="w-4 h-4" />
               Articles
             </Link>
-            <h1 className="text-xl font-bold text-gray-900 leading-snug">
+            <h1 className="text-xl font-bold text-[#F7F3EC] leading-snug">
               {article.title ?? article.target_keyword ?? 'Untitled'}
             </h1>
             {article.target_keyword && article.title && (
-              <p className="text-sm text-gray-400 mt-0.5">Target: <span className="font-medium text-gray-600">{article.target_keyword}</span></p>
+              <p className="text-sm text-[#7A6555] mt-0.5">Target: <span className="font-medium text-[#A89070]">{article.target_keyword}</span></p>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-4">
             {article.content && (
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] text-[#A89070] transition-colors"
               >
                 {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copied!' : 'Copy Markdown'}
@@ -419,7 +419,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={handleScore}
                 disabled={scoring}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-[#B87333] text-[#F7F3EC] rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
               >
                 {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {scores ? 'Re-score' : 'Score Article'}
@@ -430,8 +430,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 onClick={() => agentOpen ? setAgentOpen(false) : openAgent(article)}
                 className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
                   agentOpen
-                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.3)] text-[#A0622A]'
+                    : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
                 }`}
               >
                 <Bot className="w-4 h-4" />
@@ -448,38 +448,38 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           </div>
         )}
 
-        <div className="flex items-center gap-4 mb-4 text-xs text-gray-400">
+        <div className="flex items-center gap-4 mb-4 text-xs text-[#7A6555]">
           <span className="capitalize">{article.status}</span>
         </div>
 
         {/* Meta description */}
         <div className="mb-6">
-          <label className="block text-xs font-medium text-gray-500 mb-1.5">Meta Description</label>
+          <label className="block text-xs font-medium text-[#A89070] mb-1.5">Meta Description</label>
           <textarea
             value={metaDesc}
             onChange={(e) => setMetaDesc(e.target.value)}
             onBlur={handleMetaDescBlur}
             placeholder="Write a compelling meta description (150–160 characters)…"
             rows={2}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-700 placeholder-gray-400"
+            className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none text-[#A89070] placeholder-[#7A6555]"
           />
           <div className="flex items-center justify-between mt-1">
-            <span className={`text-xs tabular-nums ${metaDesc.length > 160 ? 'text-red-500' : 'text-gray-400'}`}>
+            <span className={`text-xs tabular-nums ${metaDesc.length > 160 ? 'text-red-500' : 'text-[#7A6555]'}`}>
               {metaDesc.length}/160
             </span>
-            {metaSaving && <span className="text-xs text-gray-400">Saving…</span>}
+            {metaSaving && <span className="text-xs text-[#7A6555]">Saving…</span>}
           </div>
         </div>
 
         {/* Tabs */}
         {article.content && (
-          <div className="flex gap-1 mb-5 border-b border-gray-200">
+          <div className="flex gap-1 mb-5 border-b border-[rgba(184,115,51,0.2)]">
             {(['content', 'scores'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-                  activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  activeTab === tab ? 'border-[#B87333] text-[#B87333]' : 'border-transparent text-[#A89070] hover:text-[#A89070]'
                 }`}
               >
                 {tab}
@@ -501,10 +501,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 onSelectionChange={handleSelectionChange}
               />
             ) : (
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
-                <p className="text-sm text-gray-500 mb-3">No content yet.</p>
+              <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
+                <p className="text-sm text-[#A89070] mb-3">No content yet.</p>
                 {article.status === 'brief_ready' && (
-                  <Link href="/articles/new" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+                  <Link href="/articles/new" className="text-sm text-[#B87333] hover:text-[#A0622A] font-medium">
                     Continue in article wizard →
                   </Link>
                 )}
@@ -517,13 +517,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         {activeTab === 'scores' && article.content && (
           <div>
             {!scores ? (
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
-                <BarChart2 className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500 mb-4">No scores yet. Click &quot;Score Article&quot; to analyze this content.</p>
+              <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
+                <BarChart2 className="w-8 h-8 text-[#A89070] mx-auto mb-3" />
+                <p className="text-sm text-[#A89070] mb-4">No scores yet. Click &quot;Score Article&quot; to analyze this content.</p>
                 <button
                   onClick={handleScore}
                   disabled={scoring}
-                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
                 >
                   {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   Score Article
@@ -538,10 +538,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     { label: 'GEO', score: scores.geo.score },
                     { label: 'AEO', score: scores.aeo.score },
                   ].map(({ label, score }) => (
-                    <div key={label} className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+                    <div key={label} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
                       <div className="text-2xl font-bold mb-1" style={{ color: COPPER }}>{score}</div>
-                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</div>
-                      <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5">
+                      <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide">{label}</div>
+                      <div className="mt-2 w-full bg-[#2A2420] rounded-full h-1.5">
                         <div
                           className={`h-1.5 rounded-full ${score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-400' : 'bg-red-400'}`}
                           style={{ width: `${score}%` }}
@@ -551,8 +551,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   ))}
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-xl p-5">
-                  <h3 className="font-semibold text-gray-800 text-sm mb-4">Score Overview</h3>
+                <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                  <h3 className="font-semibold text-[#F7F3EC] text-sm mb-4">Score Overview</h3>
                   <div className="space-y-3">
                     <ScoreBar label="SEO" score={scores.seo.score} />
                     <ScoreBar label="Readability" score={scores.readability.score} />
@@ -562,9 +562,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-800 text-sm">SEO Breakdown</h3>
+                      <h3 className="font-semibold text-[#F7F3EC] text-sm">SEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.seo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
@@ -574,9 +574,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
 
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-800 text-sm">AEO Breakdown</h3>
+                      <h3 className="font-semibold text-[#F7F3EC] text-sm">AEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.aeo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
@@ -586,9 +586,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
 
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-800 text-sm">GEO Breakdown</h3>
+                      <h3 className="font-semibold text-[#F7F3EC] text-sm">GEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.geo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
@@ -598,33 +598,33 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
 
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-800 text-sm">Readability</h3>
+                      <h3 className="font-semibold text-[#F7F3EC] text-sm">Readability</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.readability.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
                       {Object.values(scores.readability.breakdown).map((c, i) => (
-                        <div key={i} className="py-1.5 text-xs text-gray-600">{c.label}</div>
+                        <div key={i} className="py-1.5 text-xs text-[#A89070]">{c.label}</div>
                       ))}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
-                      <TrendingUp className="w-4 h-4 text-indigo-500" />
-                      <h3 className="font-semibold text-gray-800 text-sm">Ranking Prediction</h3>
+                      <TrendingUp className="w-4 h-4 text-[#D4954A]" />
+                      <h3 className="font-semibold text-[#F7F3EC] text-sm">Ranking Prediction</h3>
                     </div>
-                    <p className="text-sm text-gray-700 mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
+                    <p className="text-sm text-[#A89070] mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
                     <ConfidenceChip confidence={scores.ranking_prediction.confidence} />
                   </div>
 
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
-                      <BarChart2 className="w-4 h-4 text-indigo-500" />
-                      <h3 className="font-semibold text-gray-800 text-sm">Traffic Prediction (monthly)</h3>
+                      <BarChart2 className="w-4 h-4 text-[#D4954A]" />
+                      <h3 className="font-semibold text-[#F7F3EC] text-sm">Traffic Prediction (monthly)</h3>
                     </div>
                     <table className="w-full text-xs">
                       <tbody className="divide-y divide-gray-50">
@@ -635,10 +635,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           { rank: 10, visits: scores.traffic_prediction.at_rank_10, ctr: '2%' },
                         ]).map(({ rank, visits, ctr }) => (
                           <tr key={rank}>
-                            <td className="py-1.5 text-gray-500">Position {rank}</td>
-                            <td className="py-1.5 text-gray-400 text-right">{ctr} CTR</td>
-                            <td className="py-1.5 font-semibold text-gray-700 text-right tabular-nums">
-                              {visits.toLocaleString()} <span className="font-normal text-gray-400">visits</span>
+                            <td className="py-1.5 text-[#A89070]">Position {rank}</td>
+                            <td className="py-1.5 text-[#7A6555] text-right">{ctr} CTR</td>
+                            <td className="py-1.5 font-semibold text-[#A89070] text-right tabular-nums">
+                              {visits.toLocaleString()} <span className="font-normal text-[#7A6555]">visits</span>
                             </td>
                           </tr>
                         ))}
@@ -654,13 +654,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Agent panel */}
       {agentOpen && (
-        <div className="w-96 shrink-0 border-l border-gray-200 bg-white flex flex-col" style={{ height: '100vh', position: 'sticky', top: 0 }}>
+        <div className="w-96 shrink-0 border-l border-[rgba(184,115,51,0.2)] bg-[#1C1917] flex flex-col" style={{ height: '100vh', position: 'sticky', top: 0 }}>
           {/* Panel header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(184,115,51,0.15)] shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-2 h-2 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 animate-pulse" />
-              <span className="font-semibold text-gray-800 text-sm">Byline Agent</span>
-              <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+              <span className="font-semibold text-[#F7F3EC] text-sm">Byline Agent</span>
+              <div className="flex gap-0.5 bg-[#2A2420] rounded-lg p-0.5">
                 {(['review', 'assist'] as const).map((m) => (
                   <button
                     key={m}
@@ -674,8 +674,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     }}
                     className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
                       (agentMode === m && !showAssistUpgrade) || (m === 'review' && showAssistUpgrade)
-                        ? 'bg-white text-gray-800 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-[#1C1917] text-[#F7F3EC] shadow-sm'
+                        : 'text-[#A89070] hover:text-[#A89070]'
                     }`}
                   >
                     {m === 'review' ? 'Review' : (
@@ -690,7 +690,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </div>
             <button
               onClick={() => setAgentOpen(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-[#7A6555] hover:text-[#A89070] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -699,28 +699,28 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           {/* Assist upgrade prompt for free users */}
           {showAssistUpgrade ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                <Lock className="w-5 h-5 text-gray-400" />
+              <div className="w-12 h-12 rounded-full bg-[#2A2420] flex items-center justify-center mb-3">
+                <Lock className="w-5 h-5 text-[#7A6555]" />
               </div>
-              <h3 className="font-semibold text-gray-800 text-sm mb-2">Assist mode is a paid feature</h3>
-              <p className="text-sm text-gray-500 mb-5 leading-relaxed">
+              <h3 className="font-semibold text-[#F7F3EC] text-sm mb-2">Assist mode is a paid feature</h3>
+              <p className="text-sm text-[#A89070] mb-5 leading-relaxed">
                 Upgrade to let the agent rewrite sections of your article directly.
               </p>
               <Link
                 href="/pricing"
-                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
               >
                 View plans
               </Link>
             </div>
           ) : !scores ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <Bot className="w-10 h-10 text-gray-300 mb-3" />
-              <p className="text-sm text-gray-500 mb-4">Score the article first to unlock the agent.</p>
+              <Bot className="w-10 h-10 text-[#A89070] mb-3" />
+              <p className="text-sm text-[#A89070] mb-4">Score the article first to unlock the agent.</p>
               <button
                 onClick={handleScore}
                 disabled={scoring}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
               >
                 {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Score Article
@@ -730,21 +730,21 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             <>
               {/* Assist mode context bar */}
               {agentMode === 'assist' && (
-                <div className="shrink-0 border-b border-gray-100 px-4 py-3">
+                <div className="shrink-0 border-b border-[rgba(184,115,51,0.15)] px-4 py-3">
                   {selectedText ? (
                     <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                       <p className="text-xs font-semibold text-amber-700 mb-1">&#9999;&#65039; Selected</p>
-                      <p className="text-xs text-gray-600 line-clamp-2">
+                      <p className="text-xs text-[#A89070] line-clamp-2">
                         &ldquo;{selectedText.slice(0, 80)}{selectedText.length > 80 ? '…' : ''}&rdquo;
                       </p>
                     </div>
                   ) : scoreFailures.length > 0 ? (
                     <div>
-                      <p className="text-xs font-semibold text-gray-500 mb-2">Top issues to fix</p>
+                      <p className="text-xs font-semibold text-[#A89070] mb-2">Top issues to fix</p>
                       <div className="space-y-2">
                         {scoreFailures.map((f, i) => (
                           <div key={i} className="flex items-start justify-between gap-3">
-                            <span className="text-xs text-gray-600 flex-1 leading-snug">{f.label}</span>
+                            <span className="text-xs text-[#A89070] flex-1 leading-snug">{f.label}</span>
                             <button
                               onClick={() => {
                                 if (!agentStreaming) {
@@ -752,7 +752,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                                 }
                               }}
                               disabled={agentStreaming}
-                              className="shrink-0 text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-40 whitespace-nowrap"
+                              className="shrink-0 text-xs font-semibold text-[#B87333] hover:text-[#A0622A] disabled:opacity-40 whitespace-nowrap"
                             >
                               Fix with Agent &rarr;
                             </button>
@@ -761,7 +761,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400 text-center py-1">
+                    <p className="text-xs text-[#7A6555] text-center py-1">
                       Select text in the editor to rewrite it, or pick a score issue to fix.
                     </p>
                   )}
@@ -771,10 +771,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               {/* Messages */}
               <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                 {agentMessages.length === 0 && !agentStreaming && agentMode === 'review' && (
-                  <div className="text-center text-xs text-gray-400 py-8">Starting review&hellip;</div>
+                  <div className="text-center text-xs text-[#7A6555] py-8">Starting review&hellip;</div>
                 )}
                 {agentMessages.length === 0 && !agentStreaming && agentMode === 'assist' && (
-                  <div className="text-center text-xs text-gray-400 py-8">
+                  <div className="text-center text-xs text-[#7A6555] py-8">
                     {selectedText ? 'Edit the instruction below, then send.' : 'Use the controls above to pick a fix.'}
                   </div>
                 )}
@@ -786,14 +786,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   return (
                     <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                       {msg.role === 'user' ? (
-                        <div className="max-w-[85%] px-3.5 py-2.5 bg-indigo-600 text-white text-sm rounded-2xl rounded-tr-sm leading-relaxed">
+                        <div className="max-w-[85%] px-3.5 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm rounded-2xl rounded-tr-sm leading-relaxed">
                           {msg.content}
                         </div>
                       ) : (
-                        <div className="max-w-[92%] px-3.5 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
+                        <div className="max-w-[92%] px-3.5 py-2.5 bg-[#231F1B] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
                           {msg.content}
                           {isStreamingThis && (
-                            <span className="inline-block w-0.5 h-3.5 bg-indigo-500 ml-0.5 animate-pulse align-middle" />
+                            <span className="inline-block w-0.5 h-3.5 bg-[rgba(184,115,51,0.08)]0 ml-0.5 animate-pulse align-middle" />
                           )}
                         </div>
                       )}
@@ -801,7 +801,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       {applicable && (
                         <button
                           onClick={() => applyContentRef.current?.(applicable)}
-                          className="mt-1 text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
+                          className="mt-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.08)] text-[#B87333] rounded-lg hover:bg-[rgba(184,115,51,0.12)] transition-colors border border-[rgba(184,115,51,0.25)]"
                         >
                           Apply to article
                         </button>
@@ -822,7 +822,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
               {/* Input — Review mode */}
               {agentMode === 'review' && (
-                <div className="shrink-0 border-t border-gray-100 px-3 py-3">
+                <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-3 py-3">
                   <div className="flex items-end gap-2">
                     <textarea
                       value={agentInput}
@@ -839,7 +839,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       placeholder="Ask for specific fixes, examples, or ideas…"
                       disabled={agentStreaming}
                       rows={1}
-                      className="flex-1 resize-none text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 placeholder-gray-400"
+                      className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-[#7A6555]"
                       style={{ maxHeight: '120px', overflowY: 'auto' }}
                     />
                     <button
@@ -850,56 +850,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         }
                       }}
                       disabled={!agentInput.trim() || agentStreaming}
-                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-[#F7F3EC] rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
                     >
                       {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
-                </div>
-              )}
-
-              {/* Input — Assist mode with selected text */}
-              {agentMode === 'assist' && selectedText && (
-                <div className="shrink-0 border-t border-gray-100 px-3 py-3">
-                  <div className="flex items-end gap-2">
-                    <textarea
-                      value={assistInput}
-                      onChange={(e) => setAssistInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          const trimmed = assistInput.trim()
-                          if (trimmed && !agentStreaming) {
-                            sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
-                          }
-                        }
-                      }}
-                      placeholder="Rewrite this to be more specific and include the primary keyword"
-                      disabled={agentStreaming}
-                      rows={2}
-                      className="flex-1 resize-none text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 placeholder-gray-400"
-                    />
-                    <button
-                      onClick={() => {
-                        const trimmed = assistInput.trim()
-                        if (trimmed && !agentStreaming) {
-                          sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
-                        }
-                      }}
-                      disabled={!assistInput.trim() || agentStreaming}
-                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-40 transition-colors"
-                    >
-                      {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+                  <p className="text-xs text-gra

@@ -33,14 +33,14 @@ function suggestWordCount(keyword: string): WordCountOption {
 }
 
 function DifficultyBar({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-gray-300">—</span>
+  if (value === null) return <span className="text-[#A89070]">—</span>
   const color = value < 30 ? 'bg-green-400' : value < 60 ? 'bg-amber-400' : 'bg-red-400'
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="w-16 h-1.5 bg-[#2A2420] rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${value}%` }} />
       </div>
-      <span className="text-xs text-gray-600 tabular-nums">{value}</span>
+      <span className="text-xs text-[#A89070] tabular-nums">{value}</span>
     </div>
   )
 }
@@ -56,17 +56,17 @@ function StepIndicator({ current }: { current: number }) {
         return (
           <div key={label} className="flex items-center gap-2">
             <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-colors ${
-              done ? 'bg-indigo-600 text-white' :
-              active ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-600' :
-              'bg-gray-100 text-gray-400'
+              done ? 'bg-[#B87333] text-[#F7F3EC]' :
+              active ? 'bg-[rgba(184,115,51,0.12)] text-[#A0622A] ring-2 ring-[#B87333]' :
+              'bg-[#2A2420] text-[#7A6555]'
             }`}>
               {done ? <CheckCircle2 className="w-4 h-4" /> : n}
             </div>
-            <span className={`text-xs font-medium ${active ? 'text-indigo-700' : done ? 'text-gray-500' : 'text-gray-400'}`}>
+            <span className={`text-xs font-medium ${active ? 'text-[#A0622A]' : done ? 'text-[#A89070]' : 'text-[#7A6555]'}`}>
               {label}
             </span>
             {i < steps.length - 1 && (
-              <div className={`w-8 h-px mx-1 ${done ? 'bg-indigo-300' : 'bg-gray-200'}`} />
+              <div className={`w-8 h-px mx-1 ${done ? 'bg-[rgba(184,115,51,0.4)]' : 'bg-[#2A2420]'}`} />
             )}
           </div>
         )
@@ -84,11 +84,11 @@ function SortBtn({
 }) {
   const active = sortField === field
   return (
-    <button onClick={() => onSort(field)} className="flex items-center gap-1 font-medium text-gray-500 hover:text-gray-700 group">
+    <button onClick={() => onSort(field)} className="flex items-center gap-1 font-medium text-[#A89070] hover:text-[#A89070] group">
       {label}
       <span className="flex flex-col -space-y-1">
-        <ChevronUp className={`w-3 h-3 ${active && sortDir === 'asc' ? 'text-indigo-600' : 'text-gray-300 group-hover:text-gray-400'}`} />
-        <ChevronDown className={`w-3 h-3 ${active && sortDir === 'desc' ? 'text-indigo-600' : 'text-gray-300 group-hover:text-gray-400'}`} />
+        <ChevronUp className={`w-3 h-3 ${active && sortDir === 'asc' ? 'text-[#B87333]' : 'text-[#A89070] group-hover:text-[#7A6555]'}`} />
+        <ChevronDown className={`w-3 h-3 ${active && sortDir === 'desc' ? 'text-[#B87333]' : 'text-[#A89070] group-hover:text-[#7A6555]'}`} />
       </span>
     </button>
   )
@@ -299,24 +299,24 @@ export default function NewArticlePage() {
       {/* Free tier upgrade modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-sm w-full mx-4 text-center">
-            <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-6 h-6 text-indigo-500" />
+          <div className="bg-[#1C1917] rounded-2xl shadow-xl border border-[rgba(184,115,51,0.2)] p-8 max-w-sm w-full mx-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-[rgba(184,115,51,0.08)] flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-6 h-6 text-[#D4954A]" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Free article used</h2>
-            <p className="text-sm text-gray-500 mb-6">
+            <h2 className="text-lg font-bold text-[#F7F3EC] mb-2">Free article used</h2>
+            <p className="text-sm text-[#A89070] mb-6">
               You&apos;ve used your free article. Upgrade to write unlimited articles.
             </p>
             <div className="flex flex-col gap-2">
               <Link
                 href="/pricing"
-                className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                className="w-full py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-semibold rounded-lg hover:bg-[#A0622A] transition-colors"
               >
                 View plans
               </Link>
               <button
                 onClick={() => setShowUpgradeModal(false)}
-                className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="w-full py-2.5 text-sm text-[#A89070] hover:text-[#A89070] transition-colors"
               >
                 Cancel
               </button>
@@ -326,13 +326,13 @@ export default function NewArticlePage() {
       )}
 
       <div className="flex items-center gap-2 mb-6">
-        <Link href="/articles" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+        <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[#7A6555] hover:text-[#A89070] transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Articles
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">New Article</h1>
+      <h1 className="text-2xl font-bold text-[#F7F3EC] mb-6">New Article</h1>
       <StepIndicator current={step} />
 
       {error && (
@@ -345,33 +345,33 @@ export default function NewArticlePage() {
       {/* ─── Step 1: Pick project ─── */}
       {step === 1 && (
         <div>
-          <h2 className="text-base font-semibold text-gray-900 mb-1">Pick a keyword project</h2>
-          <p className="text-sm text-gray-500 mb-5">Only projects with completed keyword research appear here.</p>
+          <h2 className="text-base font-semibold text-[#F7F3EC] mb-1">Pick a keyword project</h2>
+          <p className="text-sm text-[#A89070] mb-5">Only projects with completed keyword research appear here.</p>
 
           {projectsLoading ? (
             <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
             </div>
           ) : projects.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
-              <p className="text-sm text-gray-500 mb-3">No completed keyword projects yet.</p>
-              <Link href="/keywords" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+            <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
+              <p className="text-sm text-[#A89070] mb-3">No completed keyword projects yet.</p>
+              <Link href="/keywords" className="text-sm text-[#B87333] hover:text-[#A0622A] font-medium">
                 Run keyword research first →
               </Link>
             </div>
           ) : (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
               {projects.map((p, i) => (
                 <button
                   key={p.id}
                   onClick={() => { setSelectedProject(p); setStep(2) }}
-                  className={`w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-indigo-50 transition-colors ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                  className={`w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-[rgba(184,115,51,0.08)] transition-colors ${i > 0 ? 'border-t border-[rgba(184,115,51,0.15)]' : ''}`}
                 >
                   <div>
-                    <div className="font-medium text-gray-900 text-sm">{p.name}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">Seed: {p.seed_topic}</div>
+                    <div className="font-medium text-[#F7F3EC] text-sm">{p.name}</div>
+                    <div className="text-xs text-[#7A6555] mt-0.5">Seed: {p.seed_topic}</div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-gray-300" />
+                  <ArrowRight className="w-4 h-4 text-[#A89070]" />
                 </button>
               ))}
             </div>
@@ -390,30 +390,30 @@ export default function NewArticlePage() {
       {step === 2 && (
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <button onClick={() => setStep(1)} className="text-sm text-gray-400 hover:text-gray-600">
+            <button onClick={() => setStep(1)} className="text-sm text-[#7A6555] hover:text-[#A89070]">
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <h2 className="text-base font-semibold text-gray-900">Select target keywords</h2>
+            <h2 className="text-base font-semibold text-[#F7F3EC]">Select target keywords</h2>
           </div>
-          <p className="text-sm text-gray-500 mb-1 ml-7">
-            Project: <span className="font-medium text-gray-700">{selectedProject?.name}</span>
+          <p className="text-sm text-[#A89070] mb-1 ml-7">
+            Project: <span className="font-medium text-[#A89070]">{selectedProject?.name}</span>
           </p>
           {brandProfile && (
-            <div className="ml-7 mb-5 text-xs text-gray-400">
-              Brand: <span className="font-medium text-gray-600">{brandProfile.brand_name}</span>
+            <div className="ml-7 mb-5 text-xs text-[#7A6555]">
+              Brand: <span className="font-medium text-[#A89070]">{brandProfile.brand_name}</span>
             </div>
           )}
 
           {kwLoading ? (
             <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
             </div>
           ) : (
             <>
-              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-4">
+              <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden mb-4">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50">
+                    <tr className="border-b border-[rgba(184,115,51,0.15)] bg-[#231F1B]">
                       <th className="px-3 py-2.5 w-10" />
                       <th className="px-3 py-2.5 text-left">
                         <SortBtn field="keyword" label="Keyword" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
@@ -431,18 +431,18 @@ export default function NewArticlePage() {
                       <tr
                         key={kw.id}
                         onClick={() => toggleKw(kw.keyword)}
-                        className={`cursor-pointer transition-colors ${selectedKws.has(kw.keyword) ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
+                        className={`cursor-pointer transition-colors ${selectedKws.has(kw.keyword) ? 'bg-[rgba(184,115,51,0.08)]' : 'hover:bg-[#231F1B]'}`}
                       >
                         <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedKws.has(kw.keyword)}
                             onChange={() => toggleKw(kw.keyword)}
-                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            className="rounded border-[rgba(184,115,51,0.25)] text-[#B87333] focus:ring-[#B87333]"
                           />
                         </td>
-                        <td className="px-3 py-2.5 font-medium text-gray-800">{kw.keyword}</td>
-                        <td className="px-3 py-2.5 tabular-nums text-gray-600 text-xs">
+                        <td className="px-3 py-2.5 font-medium text-[#F7F3EC]">{kw.keyword}</td>
+                        <td className="px-3 py-2.5 tabular-nums text-[#A89070] text-xs">
                           {kw.avg_monthly_searches?.toLocaleString() ?? '—'}
                         </td>
                         <td className="px-3 py-2.5">
@@ -452,18 +452,18 @@ export default function NewArticlePage() {
                     ))}
                   </tbody>
                 </table>
-                <div className="px-3 py-2.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between text-xs text-gray-400">
+                <div className="px-3 py-2.5 border-t border-[rgba(184,115,51,0.15)] bg-[#231F1B] flex items-center justify-between text-xs text-[#7A6555]">
                   <span>{keywords.length} keywords</span>
-                  {selectedKws.size > 0 && <span className="text-indigo-600 font-medium">{selectedKws.size} selected</span>}
+                  {selectedKws.size > 0 && <span className="text-[#B87333] font-medium">{selectedKws.size} selected</span>}
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-400">Select 2-10 keywords to build the brief around.</p>
+                <p className="text-xs text-[#7A6555]">Select 2-10 keywords to build the brief around.</p>
                 <button
                   onClick={handleGenerateBrief}
                   disabled={selectedKws.size === 0 || !brandProfile || loading}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
                 >
                   {loading ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Generating brief…</>
@@ -480,63 +480,63 @@ export default function NewArticlePage() {
       {/* ─── Step 3: Brief review ─── */}
       {step === 3 && brief && (
         <div>
-          <h2 className="text-base font-semibold text-gray-900 mb-1">Review your brief</h2>
-          <p className="text-sm text-gray-500 mb-5">GPT-4o analyzed your keywords and brand profile to build this content plan.</p>
+          <h2 className="text-base font-semibold text-[#F7F3EC] mb-1">Review your brief</h2>
+          <p className="text-sm text-[#A89070] mb-5">GPT-4o analyzed your keywords and brand profile to build this content plan.</p>
 
           <div className="space-y-4">
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Target Keyword</div>
-              <div className="text-sm font-semibold text-indigo-700">{brief.target_keyword}</div>
-              {brief.url_slug && <div className="text-xs text-gray-400 mt-1">/{brief.url_slug}</div>}
+            <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
+              <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide mb-2">Target Keyword</div>
+              <div className="text-sm font-semibold text-[#A0622A]">{brief.target_keyword}</div>
+              {brief.url_slug && <div className="text-xs text-[#7A6555] mt-1">/{brief.url_slug}</div>}
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">H1 Options</div>
+            <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
+              <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide mb-2">H1 Options</div>
               <ul className="space-y-1.5">
                 {(brief.h1_options as string[] ?? []).map((h: string, i: number) => (
-                  <li key={i} className="text-sm text-gray-700 flex gap-2">
-                    <span className="text-gray-300 shrink-0">{i + 1}.</span>
+                  <li key={i} className="text-sm text-[#A89070] flex gap-2">
+                    <span className="text-[#A89070] shrink-0">{i + 1}.</span>
                     {h}
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
+              <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide mb-2">
                 Meta Description <span className="normal-case font-normal">({String(brief.meta_description ?? '').length} chars)</span>
               </div>
-              <p className="text-sm text-gray-700">{brief.meta_description}</p>
+              <p className="text-sm text-[#A89070]">{brief.meta_description}</p>
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Outline</div>
+            <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
+              <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide mb-3">Outline</div>
               <div className="space-y-2">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {(brief.outline as any[] ?? []).map((s: any, i: number) => (
                   <div key={i} className={`flex items-start gap-2 ${s.heading_level === 'H3' ? 'pl-5' : ''}`}>
-                    <span className="text-xs text-gray-400 shrink-0 mt-0.5 tabular-nums w-6">{s.heading_level}</span>
+                    <span className="text-xs text-[#7A6555] shrink-0 mt-0.5 tabular-nums w-6">{s.heading_level}</span>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-800">{s.heading}</div>
-                      {s.notes && <div className="text-xs text-gray-400 mt-0.5">{s.notes}</div>}
+                      <div className="text-sm font-medium text-[#F7F3EC]">{s.heading}</div>
+                      {s.notes && <div className="text-xs text-[#7A6555] mt-0.5">{s.notes}</div>}
                     </div>
-                    <span className="text-xs text-gray-300 shrink-0">~{s.word_count_target}w</span>
+                    <span className="text-xs text-[#A89070] shrink-0">~{s.word_count_target}w</span>
                   </div>
                 ))}
               </div>
-              <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400 flex justify-between">
+              <div className="mt-3 pt-3 border-t border-[rgba(184,115,51,0.15)] text-xs text-[#7A6555] flex justify-between">
                 <span>Target total</span>
-                <span className="font-medium text-gray-600">{brief.word_count_target} words</span>
+                <span className="font-medium text-[#A89070]">{brief.word_count_target} words</span>
               </div>
             </div>
 
             {(brief.competitor_gaps as string[] ?? []).length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Competitor Gaps</div>
+              <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
+                <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide mb-2">Competitor Gaps</div>
                 <ul className="space-y-1">
                   {(brief.competitor_gaps as string[]).map((g: string, i: number) => (
-                    <li key={i} className="text-sm text-gray-700 flex gap-2">
-                      <span className="text-indigo-400">→</span> {g}
+                    <li key={i} className="text-sm text-[#A89070] flex gap-2">
+                      <span className="text-[#D4954A]">→</span> {g}
                     </li>
                   ))}
                 </ul>
@@ -548,14 +548,14 @@ export default function NewArticlePage() {
           {(() => {
             const suggested = suggestWordCount(brief.target_keyword ?? '')
             return (
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
                 <div className="flex items-center gap-1.5 mb-3">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Target Word Count</div>
-                  <Info className="w-3.5 h-3.5 text-gray-300" />
+                  <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide">Target Word Count</div>
+                  <Info className="w-3.5 h-3.5 text-[#A89070]" />
                 </div>
-                <p className="text-xs text-gray-500 mb-3">
+                <p className="text-xs text-[#A89070] mb-3">
                   Recommended:{' '}
-                  <span className="font-semibold text-gray-700">{suggested.toLocaleString()} words</span>
+                  <span className="font-semibold text-[#A89070]">{suggested.toLocaleString()} words</span>
                   {' '}based on your keyword
                 </p>
                 <div className="flex gap-2">
@@ -568,14 +568,14 @@ export default function NewArticlePage() {
                         onClick={() => setTargetWordCount(n)}
                         className={`relative flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
                           isSelected
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                            ? 'bg-[#B87333] text-[#F7F3EC] border-[#B87333]'
+                            : 'bg-[#1C1917] text-[#A89070] border-[rgba(184,115,51,0.2)] hover:border-[#B87333] hover:text-[#B87333]'
                         }`}
                       >
                         {n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : n}
                         {isRecommended && (
                           <span className={`absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
-                            isSelected ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-600'
+                            isSelected ? 'bg-[rgba(184,115,51,0.12)] text-[#A0622A]' : 'bg-[rgba(184,115,51,0.08)] text-[#B87333]'
                           }`}>
                             rec
                           </span>
@@ -589,11 +589,11 @@ export default function NewArticlePage() {
           })()}
 
           <div className="mt-6 flex items-center justify-between">
-            <p className="text-xs text-gray-400">SERP intent: <span className="font-medium text-gray-600">{brief.serp_intent}</span></p>
+            <p className="text-xs text-[#7A6555]">SERP intent: <span className="font-medium text-[#A89070]">{brief.serp_intent}</span></p>
             <button
               onClick={handleGenerateDraft}
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
             >
               <Sparkles className="w-4 h-4" />
               Generate Full Draft
@@ -604,50 +604,9 @@ export default function NewArticlePage() {
 
       {/* ─── Step 4: Generating ─── */}
       {step === 4 && (
-        <div className="border-2 border-dashed border-indigo-100 rounded-2xl p-14 text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-indigo-400 mx-auto mb-5" />
+        <div className="border-2 border-dashed border-[rgba(184,115,51,0.25)] rounded-2xl p-14 text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-[#D4954A] mx-auto mb-5" />
           {generatingStatus === 'expanding' ? (
             <>
-              <h3 className="text-base font-semibold text-gray-700 mb-2">Article came in short — running a second research pass to fill it out…</h3>
-              <p className="text-sm text-gray-400 max-w-xs mx-auto">Pulling related questions from DataForSEO and expanding with real substance.</p>
-            </>
-          ) : (
-            <>
-              <h3 className="text-base font-semibold text-gray-700 mb-2">Generating your article…</h3>
-              <p className="text-sm text-gray-400 max-w-xs mx-auto">GPT-4o is generating a full draft in your brand voice. This takes 30–60 seconds.</p>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ─── Step 5: Done ─── */}
-      {step === 5 && articleId && (
-        <div className="text-center">
-          <div className="inline-flex p-4 bg-green-50 rounded-2xl mb-5">
-            <CheckCircle2 className="w-10 h-10 text-green-500" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            {generatingStatus === 'expanded' ? 'Done — article expanded to target length' : 'Article generated and scored'}
-          </h2>
-          <p className="text-sm text-gray-500 mb-7 max-w-sm mx-auto">
-            {generatingStatus === 'expanded'
-              ? 'A second research pass added real substance to hit your target word count.'
-              : 'Your article is ready. View the full content, SEO scores, and ranking predictions.'}
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <Link href="/articles" className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              Back to Articles
-            </Link>
-            <Link
-              href={`/articles/${articleId}`}
-              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <FileText className="w-4 h-4" />
-              View Article &amp; Scores
-            </Link>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+              <h3 className="text-base font-semibold text-[#A89070] mb-2">Article came in short — running a second research pass to fill it out…</h3>
+              <p className="text-sm text-[#7A6555] max-w-xs mx-auto">Pulling related questions from 
