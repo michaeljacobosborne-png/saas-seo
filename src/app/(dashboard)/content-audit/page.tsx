@@ -245,7 +245,7 @@ export default function DashboardAuditPage() {
       {status === 'error' && error && (
         <div className="flex items-start gap-3 rounded-xl" style={{background:"rgba(220,60,60,0.08)",border:"1px solid rgba(220,60,60,0.25)" px-4 py-3">
           <AlertCircle className="w-4 h-4 text-[#f87171] mt-0.5 shrink-0" />
-          <p className="text-sm text-[#f87171]">{error}</p>
+          <p className="text-sm text-[#f87171]}}>{error}</p>
         </div>
       )}
 
@@ -275,7 +275,7 @@ export default function DashboardAuditPage() {
               <p className="text-xs text-[#A89070] mb-3">
                 These are already in your research pipeline — write them first.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2}}>
                 {unwrittenSaved.map((kw) => (
                   <Link
                     key={kw}
