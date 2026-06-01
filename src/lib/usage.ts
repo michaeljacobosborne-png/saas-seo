@@ -1,7 +1,7 @@
 export const PLAN_LIMITS = {
   starter: { articles: 8, keywordSessions: 10, brandProfiles: 1 },
-  pro: { articles: 25, keywordSessions: 40, brandProfiles: 3 },
-  agency: { articles: 80, keywordSessions: Infinity, brandProfiles: 10 },
+  pro: { articles: 30, keywordSessions: 60, brandProfiles: 1 },
+  agency: { articles: 100, keywordSessions: 200, brandProfiles: 3 },
 }
 
 export async function checkArticleLimit(

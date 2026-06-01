@@ -25,10 +25,10 @@ const PLANS = [
     features: [
       'AI keyword discovery agent',
       '8 articles per month',
+      '10 keyword sessions per month',
       'SEO, Readability, GEO + AEO scoring',
-      '5 agent review sessions/month',
+      'Agent review mode',
       'Global keyword cache',
-      'Save for later keyword library',
       'Email support',
     ],
   },
@@ -42,8 +42,8 @@ const PLANS = [
     popular: true,
     features: [
       'Everything in Starter',
-      'Unlimited articles',
-      'Unlimited agent sessions',
+      '30 articles per month',
+      '60 keyword sessions per month',
       'Agent Assist mode — select text, agent rewrites it in-place',
       'Score-based one-click fixes',
       'Persistent agent memory across sessions',
@@ -53,18 +53,19 @@ const PLANS = [
   {
     id: 'agency' as Plan,
     name: 'Agency',
-    tagline: 'For teams managing multiple clients or content operations.',
-    cta: 'Talk to us',
+    tagline: 'For small teams and multi-client content operations.',
+    cta: 'Get in touch',
     monthlyPrice: 249,
     annualPrice: 2390,
     popular: false,
     features: [
       'Everything in Growth',
-      'Multiple brand profiles',
-      'Team seat (2 users included)',
-      'Custom keyword research volume',
-      'Dedicated onboarding',
-      'SLA support',
+      '100 articles per month',
+      '200 keyword sessions per month',
+      'Up to 3 brand profiles',
+      '2 team seats included',
+      'Dedicated onboarding call',
+      'Priority email + chat support',
     ],
   },
 ]
@@ -260,7 +261,14 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     ))}
                   </ul>
 
-                  {hasActiveSubscription && isCurrentPlan ? (
+                  {plan.id === 'agency' ? (
+                    <a
+                      href="mailto:hi@bylineseo.com?subject=Agency%20Plan%20Inquiry"
+                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors border border-[#B87333] text-[#B87333] hover:bg-[rgba(184,115,51,0.08)] text-center block"
+                    >
+                      Get in touch
+                    </a>
+                  ) : hasActiveSubscription && isCurrentPlan ? (
                     <button
                       onClick={handleManageBilling}
                       disabled={loading === 'portal'}
@@ -274,7 +282,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                       disabled={loading === plan.id}
                       className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${
                         isFeatured
-                          ? 'bg-[rgba(184,115,51,0.08)]0 text-[#F7F3EC] hover:bg-[#B87333]'
+                          ? 'bg-[#B87333] text-[#1C1917] hover:bg-[#A0622A]'
                           : 'border border-[#B87333] text-[#B87333] hover:bg-[rgba(184,115,51,0.08)]'
                       }`}
                     >
@@ -293,6 +301,20 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           <p className="text-center text-[#A89070] text-xs mt-6">
             30-day money-back guarantee on all plans. No questions asked — email us and we'll refund in full.
           </p>
+
+          {/* Enterprise strip */}
+          <div className="mt-10 rounded-2xl border border-[rgba(184,115,51,0.2)] px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#231F1B' }}>
+            <div>
+              <p className="text-sm font-semibold text-[#F7F3EC] mb-0.5">Need more capacity?</p>
+              <p className="text-sm text-[#A89070]">Custom brand profiles, higher article and keyword limits, team seats, and white-glove onboarding for larger operations.</p>
+            </div>
+            <a
+              href="mailto:hi@bylineseo.com?subject=Enterprise%20Inquiry"
+              className="shrink-0 px-6 py-2.5 rounded-lg text-sm font-semibold border border-[rgba(184,115,51,0.4)] text-[#D4954A] hover:border-[#B87333] hover:text-[#B87333] transition-colors whitespace-nowrap"
+            >
+              Contact for enterprise
+            </a>
+          </div>
         </div>
       </div>
 
