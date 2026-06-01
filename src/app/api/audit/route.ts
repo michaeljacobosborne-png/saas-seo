@@ -183,13 +183,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const cleaned = rawText
-      .replace(/^```(?:json)?\n?/m, '')
-      .replace(/\n?```$/m, '')
-      .trim()
-    const analysis = JSON.parse(cleaned)
+    // Extract JSON object — handles preamble text and code fences
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('No JSON object in response')
+    const analysis = JSON.parse(jsonMatch[0])
     return NextResponse.json({ ...analysis, pageCount: pages.length })
-  } catch {
+  } catch (err) {
+    console.error('Audit parse error:', err, '\nRaw:', rawText?.slice(0, 500))
     return NextResponse.json({ error: 'Failed to parse analysis response' }, { status: 500 })
   }
 }
