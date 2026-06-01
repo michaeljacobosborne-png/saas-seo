@@ -153,9 +153,9 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
   const wordCount: number = (editor.storage.characterCount as { words: () => number })?.words() ?? 0
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-3 py-2 border-b border-gray-100 flex-wrap">
+      <div className="flex items-center gap-0.5 px-3 py-2 border-b border-[rgba(184,115,51,0.15)] flex-wrap">
         <ToolbarBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold">
           <Bold className="w-4 h-4" />
         </ToolbarBtn>
@@ -183,7 +183,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
           <Quote className="w-4 h-4" />
         </ToolbarBtn>
         <div className="flex-1" />
-        {saveStatus === 'saving' && <span className="text-xs text-gray-400">Saving…</span>}
+        {saveStatus === 'saving' && <span className="text-xs text-[#7A6555]">Saving…</span>}
         {saveStatus === 'saved' && <span className="text-xs text-green-600">Saved</span>}
         {saveStatus === 'error' && <span className="text-xs text-red-500">Save failed</span>}
       </div>
@@ -192,7 +192,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
       <EditorContent editor={editor} className="px-5 py-4 min-h-96 max-h-[70vh] overflow-y-auto" />
 
       {/* Footer: word count */}
-      <div className="px-5 py-2 border-t border-gray-100 text-xs text-gray-400">
+      <div className="px-5 py-2 border-t border-[rgba(184,115,51,0.15)] text-xs text-[#7A6555]">
         {wordCount.toLocaleString()} words · ~{Math.ceil(wordCount / 200)} min read
       </div>
     </div>
@@ -213,7 +213,7 @@ function ToolbarBtn({
       onClick={onClick}
       title={title}
       className={`p-1.5 rounded transition-colors ${
-        active ? 'bg-gray-200 text-gray-900' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+        active ? 'bg-[#2A2420] text-[#F7F3EC]' : 'text-[#A89070] hover:bg-[#2A2420] hover:text-[#A89070]'
       }`}
     >
       {children}
@@ -222,5 +222,5 @@ function ToolbarBtn({
 }
 
 function Divider() {
-  return <span className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
+  return <span className="w-px h-4 bg-[#2A2420] mx-1 shrink-0" />
 }

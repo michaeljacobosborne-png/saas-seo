@@ -11,14 +11,14 @@ import {
 } from 'lucide-react'
 
 function DifficultyBar({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-gray-300">—</span>
+  if (value === null) return <span className="text-[#A89070]">—</span>
   const color = value < 30 ? 'bg-green-400' : value < 60 ? 'bg-amber-400' : 'bg-red-400'
   return (
     <div className="flex items-center gap-2">
-      <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="w-14 h-1.5 bg-[#2A2420] rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${value}%` }} />
       </div>
-      <span className="text-xs text-gray-600 tabular-nums">{value}</span>
+      <span className="text-xs text-[#A89070] tabular-nums">{value}</span>
     </div>
   )
 }
@@ -142,16 +142,16 @@ export default function SavedKeywordsPage() {
     <div className="p-8 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Saved Keywords</h1>
-          <p className="mt-1 text-sm text-gray-500">Keywords saved for future articles, organised by folder.</p>
+          <h1 className="text-2xl font-bold text-[#F7F3EC]">Saved Keywords</h1>
+          <p className="mt-1 text-sm text-[#A89070]">Keywords saved for future articles, organised by folder.</p>
           <div className="flex gap-1 mt-3">
             <Link
               href="/keywords"
-              className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              className="px-3 py-1 text-xs font-medium rounded-full bg-[#2A2420] text-[#A89070] hover:bg-[#2A2420] transition-colors"
             >
               Projects
             </Link>
-            <span className="px-3 py-1 text-xs font-medium rounded-full bg-indigo-600 text-white">
+            <span className="px-3 py-1 text-xs font-medium rounded-full bg-[#B87333] text-[#F7F3EC]">
               <Bookmark className="w-3 h-3 inline mr-1 -mt-px" />
               Saved Keywords
             </span>
@@ -161,25 +161,25 @@ export default function SavedKeywordsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+          <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
         </div>
       ) : error ? (
         <div className="flex items-center gap-2 text-red-600 text-sm">
           <AlertCircle className="w-4 h-4" /> {error}
         </div>
       ) : folderEntries.length === 0 ? (
-        <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center">
+        <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-2xl p-12 text-center">
           <div className="inline-flex p-3 bg-violet-50 rounded-xl mb-4">
             <Bookmark className="w-6 h-6 text-violet-500" />
           </div>
-          <h3 className="text-base font-semibold text-gray-700 mb-2">No saved keywords yet</h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <h3 className="text-base font-semibold text-[#A89070] mb-2">No saved keywords yet</h3>
+          <p className="text-sm text-[#A89070] mb-4">
             Run a keyword research project and bookmark keywords using the
             {' '}<Bookmark className="w-3.5 h-3.5 inline" />{' '}icon on each row.
           </p>
           <Link
             href="/keywords"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
           >
             Go to Projects
           </Link>
@@ -187,10 +187,10 @@ export default function SavedKeywordsPage() {
       ) : (
         <div className="space-y-3">
           {folderEntries.map(([folder, kws]) => (
-            <div key={folder} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div key={folder} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
               {/* Folder header */}
               <div
-                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#231F1B] transition-colors"
                 onClick={() => toggleFolder(folder)}
               >
                 <div className="flex items-center gap-2">
@@ -204,26 +204,26 @@ export default function SavedKeywordsPage() {
                         autoFocus
                         value={renameValue}
                         onChange={(e) => setRenameValue(e.target.value)}
-                        className="px-2 py-1 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-40"
+                        className="px-2 py-1 text-sm border border-[rgba(184,115,51,0.3)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B87333] w-40"
                       />
                       <button type="submit" disabled={renaming} className="p-1 text-green-600 hover:text-green-700">
                         {renaming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                       </button>
-                      <button type="button" onClick={() => setRenamingFolder(null)} className="p-1 text-gray-400 hover:text-gray-600">
+                      <button type="button" onClick={() => setRenamingFolder(null)} className="p-1 text-[#7A6555] hover:text-[#A89070]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </form>
                   ) : (
                     <>
-                      <span className="font-semibold text-sm text-gray-800">{folder}</span>
-                      <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{kws.length}</span>
+                      <span className="font-semibold text-sm text-[#F7F3EC]">{folder}</span>
+                      <span className="text-xs text-[#7A6555] bg-[#2A2420] px-1.5 py-0.5 rounded-full">{kws.length}</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           setRenamingFolder(folder)
                           setRenameValue(folder)
                         }}
-                        className="p-1 text-gray-300 hover:text-gray-500 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1 text-[#A89070] hover:text-[#A89070] transition-colors opacity-0 group-hover:opacity-100"
                         title="Rename folder"
                       >
                         <Pencil className="w-3 h-3" />
@@ -232,36 +232,36 @@ export default function SavedKeywordsPage() {
                   )}
                 </div>
                 {openFolders.has(folder)
-                  ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                  : <ChevronDown className="w-4 h-4 text-gray-400" />
+                  ? <ChevronUp className="w-4 h-4 text-[#7A6555]" />
+                  : <ChevronDown className="w-4 h-4 text-[#7A6555]" />
                 }
               </div>
 
               {/* Keywords table */}
               {openFolders.has(folder) && (
-                <table className="w-full text-sm border-t border-gray-100">
+                <table className="w-full text-sm border-t border-[rgba(184,115,51,0.15)]">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="text-left px-4 py-2.5 font-medium text-gray-500">Keyword</th>
-                      <th className="text-left px-4 py-2.5 font-medium text-gray-500">Volume</th>
-                      <th className="text-left px-4 py-2.5 font-medium text-gray-500">Difficulty</th>
-                      <th className="text-left px-4 py-2.5 font-medium text-gray-500">CPC</th>
-                      <th className="text-left px-4 py-2.5 font-medium text-gray-500">Status</th>
+                    <tr className="bg-[#231F1B]">
+                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">Keyword</th>
+                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">Volume</th>
+                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">Difficulty</th>
+                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">CPC</th>
+                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">Status</th>
                       <th className="w-24" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {kws.map((kw) => (
-                      <tr key={kw.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-2.5 font-medium text-gray-800">{kw.keyword}</td>
-                        <td className="px-4 py-2.5 tabular-nums text-gray-600">
-                          {kw.volume != null ? kw.volume.toLocaleString() : <span className="text-gray-300">—</span>}
+                      <tr key={kw.id} className="hover:bg-[#231F1B] transition-colors">
+                        <td className="px-4 py-2.5 font-medium text-[#F7F3EC]">{kw.keyword}</td>
+                        <td className="px-4 py-2.5 tabular-nums text-[#A89070]">
+                          {kw.volume != null ? kw.volume.toLocaleString() : <span className="text-[#A89070]">—</span>}
                         </td>
                         <td className="px-4 py-2.5">
                           <DifficultyBar value={kw.difficulty} />
                         </td>
-                        <td className="px-4 py-2.5 tabular-nums text-gray-600">
-                          {kw.cpc != null ? `$${Number(kw.cpc).toFixed(2)}` : <span className="text-gray-300">—</span>}
+                        <td className="px-4 py-2.5 tabular-nums text-[#A89070]">
+                          {kw.cpc != null ? `$${Number(kw.cpc).toFixed(2)}` : <span className="text-[#A89070]">—</span>}
                         </td>
                         <td className="px-4 py-2.5">
                           {kw.has_article ? (
@@ -270,7 +270,7 @@ export default function SavedKeywordsPage() {
                               Has article
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-400">No article yet</span>
+                            <span className="text-xs text-[#7A6555]">No article yet</span>
                           )}
                         </td>
                         <td className="px-3 py-2.5">
@@ -280,7 +280,7 @@ export default function SavedKeywordsPage() {
                                 onClick={() => handleWriteArticle(kw)}
                                 disabled={writingId === kw.id}
                                 title="Write article for this keyword"
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-indigo-600 border border-indigo-200 hover:bg-indigo-50 disabled:opacity-50 transition-colors"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-[#B87333] border border-[rgba(184,115,51,0.25)] hover:bg-[rgba(184,115,51,0.08)] disabled:opacity-50 transition-colors"
                               >
                                 {writingId === kw.id
                                   ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -293,7 +293,7 @@ export default function SavedKeywordsPage() {
                               <button
                                 onClick={() => router.push(`/articles/${kw.article_id}`)}
                                 title="View article"
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-[#A89070] border border-[rgba(184,115,51,0.2)] hover:bg-[#231F1B] transition-colors"
                               >
                                 <FileText className="w-3 h-3" />
                                 View
@@ -303,7 +303,7 @@ export default function SavedKeywordsPage() {
                               onClick={() => handleDelete(kw.id)}
                               disabled={deletingId === kw.id}
                               title="Remove"
-                              className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded disabled:opacity-50"
+                              className="p-1.5 text-[#A89070] hover:text-red-500 transition-colors rounded disabled:opacity-50"
                             >
                               {deletingId === kw.id
                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
