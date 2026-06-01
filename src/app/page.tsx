@@ -23,7 +23,7 @@ function PrimaryCta({ light = false }: { light?: boolean }) {
         href="/pricing"
         className={`inline-flex items-center px-8 py-4 rounded-xl text-base font-semibold transition-colors ${
           light
-            ? 'bg-[#1C1917] text-[#A0622A] hover:bg-[#231F1B]'
+            ? 'bg-[#1C1917] text-[#B87333] hover:bg-[#231F1B]'
             : 'bg-[#B87333] text-[#F7F3EC] hover:bg-[#A0622A]'
         }`}
       >
@@ -100,7 +100,7 @@ export default function HomePage() {
               {/* Left: Editor */}
               <div className="p-5 bg-[#1C1917] min-h-52">
                 <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[rgba(184,115,51,0.15)]">
-                  <div className="h-2.5 w-2.5 rounded bg-[#2A2420]" />
+                  <div className="h-2.5 w-2.5 rounded bg-[rgba(184,115,51,0.08)]0" />
                   <span className="text-xs font-medium text-[#A89070]">Article Editor</span>
                   <div className="ml-auto flex gap-2">
                     <div className="h-2 w-8 rounded bg-[#2A2420]" />
@@ -124,7 +124,7 @@ export default function HomePage() {
               {/* Right: Agent chat */}
               <div className="p-5 bg-[#231F1B] min-h-52">
                 <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[rgba(184,115,51,0.15)]">
-                  <div className="h-2.5 w-2.5 rounded-full bg-[#2A2420]" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-[rgba(184,115,51,0.08)]0" />
                   <span className="text-xs font-medium text-[#A89070]">Editorial Agent</span>
                 </div>
                 <div className="space-y-3 text-xs">
@@ -163,7 +163,7 @@ export default function HomePage() {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
-              <div className="w-12 h-12 rounded-xl bg-[#231F1B] flex items-center justify-center mb-5">
+              <div className="w-12 h-12 rounded-xl bg-[rgba(184,115,51,0.08)] flex items-center justify-center mb-5">
                 <Search className="w-6 h-6 text-[#B87333]" />
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
@@ -176,7 +176,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
-              <div className="w-12 h-12 rounded-xl bg-[#231F1B] flex items-center justify-center mb-5">
+              <div className="w-12 h-12 rounded-xl bg-[rgba(184,115,51,0.08)] flex items-center justify-center mb-5">
                 <FileText className="w-6 h-6 text-[#B87333]" />
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
@@ -189,7 +189,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
-              <div className="w-12 h-12 rounded-xl bg-[#231F1B] flex items-center justify-center mb-5">
+              <div className="w-12 h-12 rounded-xl bg-[rgba(184,115,51,0.08)] flex items-center justify-center mb-5">
                 <Sparkles className="w-6 h-6 text-[#B87333]" />
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
@@ -249,18 +249,18 @@ export default function HomePage() {
             {/* Assist mode mockup */}
             <div className="bg-[#1C1917] rounded-2xl border border-[rgba(184,115,51,0.2)] shadow-lg p-6">
               <div className="flex items-center gap-2 mb-5 pb-4 border-b border-[rgba(184,115,51,0.15)]">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#2A2420]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[rgba(184,115,51,0.08)]0" />
                 <span className="text-xs font-medium text-[#A89070]">Assist mode — paragraph selected</span>
               </div>
               {/* Selected / highlighted text block */}
-              <div className="rounded-lg bg-[rgba(184,115,51,0.1)] border border-[rgba(184,115,51,0.35)] px-4 py-3 mb-4">
-                <div className="h-2.5 w-full rounded bg-[rgba(184,115,51,0.25)] mb-2" />
-                <div className="h-2.5 w-5/6 rounded bg-[rgba(184,115,51,0.25)] mb-2" />
-                <div className="h-2.5 w-4/5 rounded bg-[rgba(184,115,51,0.25)]" />
+              <div className="rounded-lg bg-[rgba(184,115,51,0.08)] border border-blue-200 px-4 py-3 mb-4">
+                <div className="h-2.5 w-full rounded bg-blue-200 mb-2" />
+                <div className="h-2.5 w-5/6 rounded bg-blue-200 mb-2" />
+                <div className="h-2.5 w-4/5 rounded bg-blue-200" />
               </div>
               {/* Instruction */}
               <div className="flex items-start gap-3 bg-[#231F1B] rounded-lg px-4 py-3 mb-4 border border-[rgba(184,115,51,0.15)]">
-                <div className="w-5 h-5 rounded-full bg-[#2A2420] flex-shrink-0 flex items-center justify-center mt-0.5">
+                <div className="w-5 h-5 rounded-full bg-[rgba(184,115,51,0.12)] flex-shrink-0 flex items-center justify-center mt-0.5">
                   <div className="w-2 h-2 rounded-full bg-[#B87333]" />
                 </div>
                 <p className="text-xs text-[#A89070] leading-relaxed">
@@ -332,7 +332,7 @@ export default function HomePage() {
                 <div className="px-5 py-3.5 text-sm text-[#A89070] flex items-center">
                   {typeof row.other === 'boolean' ? (
                     row.other
-                      ? <Check className="w-4 h-4 text-[#D4954A]" />
+                      ? <Check className="w-4 h-4 text-emerald-500" />
                       : <X className="w-4 h-4 text-[#A89070]" />
                   ) : row.other === 'partial' ? (
                     <span className="text-amber-500 text-xs font-medium">Partial</span>
@@ -363,15 +363,15 @@ export default function HomePage() {
               </p>
               <Link
                 href="/pricing"
-                className="block w-full text-center py-2.5 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[#231F1B] transition-colors"
+                className="block w-full text-center py-2.5 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[rgba(184,115,51,0.08)] transition-colors"
               >
                 Get started
               </Link>
             </div>
             {/* Growth */}
-            <div className="rounded-2xl border-2 border-[#B87333] p-7 text-left relative shadow-lg" style={{ boxShadow: '0 0 0 1px rgba(184,115,51,0.3), 0 8px 32px rgba(184,115,51,0.12)' }}>
+            <div className="rounded-2xl border-2 border-[#B87333] p-7 text-left relative shadow-lg">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <span className="bg-[#B87333] text-[#1C1917] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
+                <span className="bg-[rgba(184,115,51,0.08)]0 text-[#F7F3EC] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
                   MOST POPULAR
                 </span>
               </div>
@@ -400,7 +400,7 @@ export default function HomePage() {
               </p>
               <Link
                 href="/pricing"
-                className="block w-full text-center py-2.5 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[#231F1B] transition-colors"
+                className="block w-full text-center py-2.5 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[rgba(184,115,51,0.08)] transition-colors"
               >
                 Get started
               </Link>
@@ -423,4 +423,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* �
+      {/* ── Footer ── */}
+      <footer className="border-t border-[rgba(184,115,51,0.15)] px-6 py-8">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-[#7A6555]">
+          <span>&copy; {new Date().getFullYear()} Peacock Creative Services LLC</span>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-[#A89070] transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-[#A89070] transition-colors">Terms</Link>
+            <a href="mailto:policies@bylineseo.com" className="hover:text-[#A89070] transition-colors">Contact</a>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  )
+}

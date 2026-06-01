@@ -115,7 +115,7 @@ function CriteriaRow({ label, passed }: { label: string; passed: boolean }) {
   return (
     <div className="flex items-start gap-2.5 py-1.5">
       <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[#2A2420]'}`}>
-        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-[#2A2420]'}`} />
+        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
       </div>
       <span className={`text-xs flex-1 ${passed ? 'text-[#A89070]' : 'text-[#7A6555]'}`}>{label}</span>
     </div>
@@ -126,7 +126,7 @@ function SEOCriteriaRow({ label, passed, points, max }: { label: string; passed:
   return (
     <div className="flex items-start gap-2.5 py-1.5">
       <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[#2A2420]'}`}>
-        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-[#2A2420]'}`} />
+        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
       </div>
       <span className={`text-xs flex-1 ${passed ? 'text-[#A89070]' : 'text-[#7A6555]'}`}>{label}</span>
       <span className="text-xs tabular-nums font-medium text-[#A89070] shrink-0">{points}/{max}</span>
@@ -430,7 +430,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 onClick={() => agentOpen ? setAgentOpen(false) : openAgent(article)}
                 className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
                   agentOpen
-                    ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.3)] text-[#A0622A]'
+                    ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.25)] text-[#A0622A]'
                     : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
                 }`}
               >
@@ -461,7 +461,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             onBlur={handleMetaDescBlur}
             placeholder="Write a compelling meta description (150–160 characters)…"
             rows={2}
-            className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none text-[#A89070] placeholder-[#7A6555]"
+            className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none text-[#A89070] placeholder-gray-400"
           />
           <div className="flex items-center justify-between mt-1">
             <span className={`text-xs tabular-nums ${metaDesc.length > 160 ? 'text-red-500' : 'text-[#7A6555]'}`}>
@@ -752,7 +752,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                                 }
                               }}
                               disabled={agentStreaming}
-                              className="shrink-0 text-xs font-semibold text-[#B87333] hover:text-[#A0622A] disabled:opacity-40 whitespace-nowrap"
+                              className="shrink-0 text-xs font-semibold text-[#B87333] hover:text-indigo-800 disabled:opacity-40 whitespace-nowrap"
                             >
                               Fix with Agent &rarr;
                             </button>
@@ -839,7 +839,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       placeholder="Ask for specific fixes, examples, or ideas…"
                       disabled={agentStreaming}
                       rows={1}
-                      className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-[#7A6555]"
+                      className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-gray-400"
                       style={{ maxHeight: '120px', overflowY: 'auto' }}
                     />
                     <button
@@ -855,4 +855,51 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-gra
+                  <p className="text-xs text-[#7A6555] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
+                </div>
+              )}
+
+              {/* Input — Assist mode with selected text */}
+              {agentMode === 'assist' && selectedText && (
+                <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-3 py-3">
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      value={assistInput}
+                      onChange={(e) => setAssistInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          const trimmed = assistInput.trim()
+                          if (trimmed && !agentStreaming) {
+                            sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
+                          }
+                        }
+                      }}
+                      placeholder="Rewrite this to be more specific and include the primary keyword"
+                      disabled={agentStreaming}
+                      rows={2}
+                      className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-gray-400"
+                    />
+                    <button
+                      onClick={() => {
+                        const trimmed = assistInput.trim()
+                        if (trimmed && !agentStreaming) {
+                          sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
+                        }
+                      }}
+                      disabled={!assistInput.trim() || agentStreaming}
+                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-[#F7F3EC] rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                    >
+                      {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-[#7A6555] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
