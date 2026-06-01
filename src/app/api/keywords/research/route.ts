@@ -13,15 +13,19 @@ interface ClusterResult {
   keywords: string[]
 }
 
-async function clusterKeywords(keywords: string[]): Promise<ClusterResult[]> {
+async function clusterKeywords(keywords: string[], context?: string): Promise<ClusterResult[]> {
   if (keywords.length === 0) return []
+
+  const contextNote = context
+    ? `\n\nUser context / intent: "${context}"\nUse this context to guide how you name and group clusters (e.g. prioritise beginner-friendly clusters if the user targets beginners).`
+    : ''
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
       {
         role: 'user',
-        content: `Group these SEO keywords into 4–6 meaningful topic clusters based on search intent and theme. Be concise with cluster names (2–4 words).
+        content: `Group these SEO keywords into 4–6 meaningful topic clusters based on search intent and theme. Be concise with cluster names (2–4 words).${contextNote}
 
 Keywords: ${keywords.join(', ')}
 
@@ -47,11 +51,12 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { project_id, seed_topic, seeds, brief } = body as {
+  const { project_id, seed_topic, seeds, brief, context } = body as {
     project_id: string
     seed_topic?: string
     seeds?: string[]
     brief?: Record<string, unknown>
+    context?: string
   }
 
   const seedsToUse: string[] = seeds?.length ? seeds : seed_topic ? [seed_topic] : []
@@ -151,8 +156,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No keyword ideas returned' }, { status: 502 })
     }
 
-    // Cluster keywords with AI
-    const clusters = await clusterKeywords(ideas.map((k) => k.keyword))
+    // Cluster keywords with AI (pass optional user context for smarter grouping)
+    const clusters = await clusterKeywords(ideas.map((k) => k.keyword), context)
 
     const clusterMap = new Map<string, string>()
     clusters.forEach((c) => {
@@ -194,14 +199,4 @@ export async function POST(request: Request) {
       .eq('id', project_id)
 
     return NextResponse.json({ success: true, count: rows.length })
-  } catch (err) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
-      .from('keyword_projects')
-      .update({ status: 'error' })
-      .eq('id', project_id)
-
-    const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: message }, { status: 500 })
-  }
-}
+  } ca

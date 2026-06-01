@@ -168,7 +168,7 @@ export default function BrandPage() {
       const res = await fetch('/api/brand/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: msgs, ...(isUpdate && existingProfile ? { existingProfile } : {}) }),
+        body: JSON.stringify({ messages: msgs }),
       })
 
       if (!res.ok || !res.body) throw new Error('API error')
@@ -198,7 +198,7 @@ export default function BrandPage() {
     } finally {
       setIsStreaming(false)
     }
-  }, [isUpdate, existingProfile])
+  }, [])
 
   // Fire first message on mount for new users
   useEffect(() => {

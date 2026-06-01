@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, BarChart2, X, Globe } from 'lucide-react'
+import { LayoutDashboard, Building2, Search, FileText, BarChart2, X, Globe, Settings, MessageCircle } from 'lucide-react'
 import SignOutButton from './SignOutButton'
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/keywords', label: 'Keywords', icon: Search },
   { href: '/articles', label: 'Articles', icon: FileText },
   { href: '/content-audit', label: 'Content Audit', icon: BarChart2 },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -80,9 +81,4 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto" style={{ background: '#1C1917' }}>
-        {children}
-      </main>
-    </div>
-  )
-}
+      <main className="flex-1 overflow-y-auto" style
