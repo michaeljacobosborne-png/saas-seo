@@ -243,7 +243,7 @@ export default function DashboardAuditPage() {
 
       {/* Error */}
       {status === 'error' && error && (
-        <div className="flex items-start gap-3 rounded-xl" style={{background:"rgba(220,60,60,0.08)",border:"1px solid rgba(220,60,60,0.25)" px-4 py-3">
+        <div className="flex items-start gap-3 rounded-xl" style={{background:"rgba(220,60,60,0.08)",border:"1px solid rgba(220,60,60,0.25)" }}px-4 py-3">
           <AlertCircle className="w-4 h-4 text-[#f87171] mt-0.5 shrink-0" />
           <p className="text-sm text-[#f87171]}}>{error}</p>
         </div>
@@ -268,7 +268,7 @@ export default function DashboardAuditPage() {
 
           {/* Saved keywords cross-reference */}
           {unwrittenSaved.length > 0 && (
-            <div className="rounded-xl p-5 border border-[rgba(184,115,51,0.25)]" style={{background:"rgba(184,115,51,0.07)"">
+            <div className="rounded-xl p-5 border border-[rgba(184,115,51,0.25)]" style={{background:"rgba(184,115,51,0.07)""}}>
               <h2 className="text-sm font-semibold text-[#F7F3EC] mb-1">
                 You&apos;ve saved these keywords but haven&apos;t written about them yet
               </h2>
