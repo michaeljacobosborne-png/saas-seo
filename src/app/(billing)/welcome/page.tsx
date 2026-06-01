@@ -1,7 +1,42 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function WelcomePage() {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    let attempts = 0
+    const max = 15
+
+    async function poll() {
+      attempts++
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setReady(true); return }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: sub } = await (supabase as any)
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing'])
+        .limit(1)
+        .maybeSingle()
+
+      if (sub || attempts >= max) {
+        setReady(true)
+      } else {
+        setTimeout(poll, 1000)
+      }
+    }
+
+    poll()
+  }, [])
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="text-center max-w-md">
@@ -20,19 +55,29 @@ export default function WelcomePage() {
         <p className="text-base mb-8" style={{ color: '#A89070' }}>
           Your Byline subscription is active. Time to start ranking.
         </p>
-        <Link
-          href="/brand"
-          className="inline-block px-8 py-3 rounded-lg text-sm font-semibold transition-colors"
-          style={{ background: '#B87333', color: '#1C1917' }}
-        >
-          Set up your brand →
-        </Link>
-        <p className="mt-4 text-xs" style={{ color: '#7A6555' }}>
-          Or{' '}
-          <Link href="/dashboard" style={{ color: '#A89070' }} className="underline underline-offset-2">
-            go to your dashboard
-          </Link>
-        </p>
+
+        {ready ? (
+          <>
+            <Link
+              href="/brand"
+              className="inline-block px-8 py-3 rounded-lg text-sm font-semibold transition-colors"
+              style={{ background: '#B87333', color: '#1C1917' }}
+            >
+              Set up your brand &#8594;
+            </Link>
+            <p className="mt-4 text-xs" style={{ color: '#7A6555' }}>
+              Or{' '}
+              <Link href="/dashboard" style={{ color: '#A89070' }} className="underline underline-offset-2">
+                go to your dashboard
+              </Link>
+            </p>
+          </>
+        ) : (
+          <div className="flex items-center justify-center gap-2" style={{ color: '#7A6555' }}>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Activating your account...</span>
+          </div>
+        )}
       </div>
     </div>
   )
