@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, BarChart2, Twitter, Facebook } from 'lucide-react'
+import { LayoutDashboard, Building2, Search, FileText, BarChart2, X, Globe } from 'lucide-react'
 import SignOutButton from './SignOutButton'
 
 const navItems = [
@@ -68,10 +68,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {/* Social links */}
           <div className="flex items-center gap-3 px-3 mb-3">
             <a href="https://x.com/bylineseo" target="_blank" rel="noopener noreferrer" style={{ color: '#7A6555' }} className="hover:text-[#A89070] transition-colors">
-              <Twitter className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5" />
             </a>
             <a href="https://facebook.com/bylineseo" target="_blank" rel="noopener noreferrer" style={{ color: '#7A6555' }} className="hover:text-[#A89070] transition-colors">
-              <Facebook className="w-3.5 h-3.5" />
+              <Globe className="w-3.5 h-3.5" />
             </a>
           </div>
           <div className="px-3 py-1 text-xs truncate mb-1" style={{ color: '#7A6555' }}>{user.email}</div>

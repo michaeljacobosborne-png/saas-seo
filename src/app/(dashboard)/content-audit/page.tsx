@@ -222,7 +222,7 @@ export default function DashboardAuditPage() {
       )}
 
       {!brand?.website_url && !auditUrl && status === 'idle' && (
-        <div className="rounded-xl px-4 py-3 mb-6 text-sm text-[#D4954A] border border-[rgba(184,115,51,0.3)]" style={{background:"rgba(184,115,51,0.08)"">
+        <div className="rounded-xl px-4 py-3 mb-6 text-sm text-[#D4954A] border border-[rgba(184,115,51,0.3)]" style={{background:"rgba(184,115,51,0.08)"}}>
           <span className="font-medium">No website URL in your brand profile.</span>{' '}
           <Link href="/brand" className="underline hover:text-[#D4954A]">
             Set it up first →
