@@ -211,26 +211,35 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
     if (selected.size === 0) return
     setSaving(true)
 
-    const ids = Array.from(selected)
+    const selectedKws = keywords.filter((k) => selected.has(k.id))
 
-    // Mark selected=true for checked, false for unchecked
+    // Save each selected keyword to the saved_keywords library
+    await Promise.all(
+      selectedKws.map((kw) =>
+        fetch('/api/keywords/saved', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            keyword: kw.keyword,
+            volume: kw.avg_monthly_searches,
+            difficulty: kw.keyword_difficulty,
+            cpc: kw.cpc,
+            folder: 'General',
+          }),
+        })
+      )
+    )
+
+    // Also mark as selected in the project
+    const ids = Array.from(selected)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
       .from('keywords')
       .update({ selected: true })
       .in('id', ids)
 
-    // Unmark any previously selected that are now unchecked
-    const unselectedIds = keywords.filter((k) => !selected.has(k.id)).map((k) => k.id)
-    if (unselectedIds.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from('keywords')
-        .update({ selected: false })
-        .in('id', unselectedIds)
-    }
-
-    setSavedCount(ids.length)
+    setSavedKwIds((prev) => new Set([...prev, ...ids]))
+    setSavedCount(selectedKws.length)
     setSaving(false)
     setTimeout(() => setSavedCount(0), 3000)
   }
