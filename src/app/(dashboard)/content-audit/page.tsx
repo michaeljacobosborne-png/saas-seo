@@ -33,8 +33,8 @@ const LS_KEY = 'byline_audit_last_run'
 
 function PriorityBadge({ priority }: { priority: Gap['priority'] }) {
   const map = {
-    high: 'bg-red-50 text-red-700 border-red-200',
-    medium: 'bg-amber-50 text-amber-700 border-amber-200',
+    high: 'bg-[rgba(220,60,60,0.12)] text-[#f87171] border-[rgba(220,60,60,0.3)]',
+    medium: 'bg-[rgba(184,115,51,0.12)] text-[#D4954A] border-[rgba(184,115,51,0.3)]',
     low: 'bg-[#231F1B] text-[#A89070] border-[rgba(184,115,51,0.2)]',
   }
   return (
@@ -156,16 +156,14 @@ export default function DashboardAuditPage() {
   return (
     <div className="p-8 max-w-4xl">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-2">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <BarChart2 className="w-5 h-5 text-[#D4954A]" />
             <h1 className="text-2xl font-bold text-[#F7F3EC]">Content Audit</h1>
           </div>
           <p className="text-sm text-[#A89070]">
-            {auditUrl
-              ? `Scanning ${auditUrl}`
-              : 'Find content gaps and coverage opportunities across your site.'}
+            {auditUrl ? `Scanning ${auditUrl}` : 'See exactly where your content strategy has gaps.'}
           </p>
           {lastRun && (
             <p className="text-xs text-[#7A6555] mt-1 flex items-center gap-1">
@@ -192,6 +190,16 @@ export default function DashboardAuditPage() {
         </div>
       </div>
 
+      {/* Intro blurb — shown before first run */}
+      {status === 'idle' && !result && (
+        <div className="mb-8 rounded-xl px-5 py-4 border border-[rgba(184,115,51,0.18)]" style={{ background: '#231F1B' }}>
+          <p className="text-sm text-[#A89070] leading-relaxed">
+            Byline scans your site, cross-references your published content against search demand in your niche, and surfaces the topics your competitors are ranking for that you haven&apos;t touched yet. You&apos;ll see your coverage broken down by topic cluster, a prioritized list of gaps worth writing, and the keywords already sitting in your research library that still need articles. Most audits take under 15 seconds.
+          </p>
+        </div>
+      )}
+      {status !== 'idle' && <div className="mb-8" />}
+
       {/* URL override */}
       {(showUrlInput || (!brand?.website_url && !auditUrl)) && (
         <div className="mb-6 flex gap-2">
@@ -214,9 +222,9 @@ export default function DashboardAuditPage() {
       )}
 
       {!brand?.website_url && !auditUrl && status === 'idle' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-sm text-amber-800">
+        <div className="rounded-xl px-4 py-3 mb-6 text-sm text-[#D4954A] border border-[rgba(184,115,51,0.3)]" style={{background:"rgba(184,115,51,0.08)"">
           <span className="font-medium">No website URL in your brand profile.</span>{' '}
-          <Link href="/brand" className="underline hover:text-amber-900">
+          <Link href="/brand" className="underline hover:text-[#D4954A]">
             Set it up first →
           </Link>
         </div>
@@ -235,9 +243,9 @@ export default function DashboardAuditPage() {
 
       {/* Error */}
       {status === 'error' && error && (
-        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="flex items-start gap-3 rounded-xl" style={{background:"rgba(220,60,60,0.08)",border:"1px solid rgba(220,60,60,0.25)" px-4 py-3">
+          <AlertCircle className="w-4 h-4 text-[#f87171] mt-0.5 shrink-0" />
+          <p className="text-sm text-[#f87171]">{error}</p>
         </div>
       )}
 
@@ -249,7 +257,7 @@ export default function DashboardAuditPage() {
             {[
               { value: result.pageCount, label: 'Pages scanned', color: 'text-[#F7F3EC]' },
               { value: result.gaps.length, label: 'Content gaps', color: 'text-[#B87333]' },
-              { value: unwrittenSaved.length, label: 'Saved keywords not yet written', color: 'text-amber-600' },
+              { value: unwrittenSaved.length, label: 'Saved keywords not yet written', color: 'text-[#D4954A]' },
             ].map(({ value, label, color }) => (
               <div key={label} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
                 <div className={`text-2xl font-bold ${color}`}>{value}</div>
@@ -260,11 +268,11 @@ export default function DashboardAuditPage() {
 
           {/* Saved keywords cross-reference */}
           {unwrittenSaved.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-              <h2 className="text-sm font-semibold text-amber-900 mb-1">
+            <div className="rounded-xl p-5 border border-[rgba(184,115,51,0.25)]" style={{background:"rgba(184,115,51,0.07)"">
+              <h2 className="text-sm font-semibold text-[#F7F3EC] mb-1">
                 You&apos;ve saved these keywords but haven&apos;t written about them yet
               </h2>
-              <p className="text-xs text-amber-700 mb-3">
+              <p className="text-xs text-[#A89070] mb-3">
                 These are already in your research pipeline — write them first.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -272,7 +280,7 @@ export default function DashboardAuditPage() {
                   <Link
                     key={kw}
                     href="/articles/new"
-                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#1C1917] border border-amber-200 text-amber-800 rounded-full hover:border-amber-400 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#1C1917] border border-[rgba(184,115,51,0.3)] text-[#D4954A] rounded-full hover:border-[#B87333] transition-colors"
                   >
                     {kw}
                     <ArrowRight className="w-3 h-3" />
@@ -286,7 +294,7 @@ export default function DashboardAuditPage() {
           {result.quickWins?.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-[#F7F3EC] mb-3 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 text-[#D4954A]" />
                 Quick Wins
               </h2>
               <ul className="space-y-2">
@@ -295,7 +303,7 @@ export default function DashboardAuditPage() {
                     key={i}
                     className="flex items-start gap-2 text-sm text-[#A89070] bg-[#1C1917] border border-[rgba(184,115,51,0.15)] rounded-lg px-4 py-2.5"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-[#D4954A] mt-0.5 shrink-0" />
                     {w}
                   </li>
                 ))}
@@ -374,10 +382,10 @@ export default function DashboardAuditPage() {
                       >
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="text-sm font-medium text-[#F7F3EC]">{tc.cluster}</span>
-                          <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-[#D4954A] bg-[rgba(184,115,51,0.1)] px-2 py-0.5 rounded-full border border-[rgba(184,115,51,0.2)]">
                             {tc.covered.length} covered
                           </span>
-                          <span className="text-xs text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-[#f87171] bg-[rgba(220,60,60,0.1)] px-2 py-0.5 rounded-full border border-[rgba(220,60,60,0.2)]">
                             {tc.missing.length} missing
                           </span>
                         </div>
@@ -390,11 +398,11 @@ export default function DashboardAuditPage() {
                         <div className="border-t border-[rgba(184,115,51,0.15)] px-4 py-3 grid grid-cols-2 gap-4">
                           {tc.covered.length > 0 && (
                             <div>
-                              <p className="text-xs font-semibold text-green-700 mb-2">Covered</p>
+                              <p className="text-xs font-semibold text-[#D4954A] mb-2">Covered</p>
                               <ul className="space-y-1">
                                 {tc.covered.map((c) => (
                                   <li key={c} className="flex items-start gap-1.5 text-xs text-[#A89070]">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-[#D4954A] mt-0.5 shrink-0" />
                                     {c}
                                   </li>
                                 ))}
@@ -403,11 +411,11 @@ export default function DashboardAuditPage() {
                           )}
                           {tc.missing.length > 0 && (
                             <div>
-                              <p className="text-xs font-semibold text-red-700 mb-2">Missing</p>
+                              <p className="text-xs font-semibold text-[#f87171] mb-2">Missing</p>
                               <ul className="space-y-1">
                                 {tc.missing.map((m) => (
                                   <li key={m} className="flex items-start gap-1.5 text-xs text-[#A89070]">
-                                    <div className="w-3.5 h-3.5 rounded-full border border-red-300 mt-0.5 shrink-0 flex-shrink-0" />
+                                    <div className="w-3.5 h-3.5 rounded-full border border-[rgba(220,60,60,0.4)] mt-0.5 shrink-0 flex-shrink-0" />
                                     {m}
                                   </li>
                                 ))}
