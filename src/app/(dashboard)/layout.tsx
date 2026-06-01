@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, Building2, Search, FileText, BarChart2, Twitter, Facebook } from 'lucide-react'
 import SignOutButton from './SignOutButton'
 
 const navItems = [
@@ -38,34 +38,49 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen" style={{ background: '#1C1917' }}>
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <span className="text-lg font-bold text-indigo-600">Byline</span>
+      <aside className="w-60 flex flex-col flex-shrink-0" style={{ background: '#231F1B', borderRight: '1px solid rgba(184,115,51,0.18)' }}>
+        {/* Logo */}
+        <div className="h-16 flex items-center px-6" style={{ borderBottom: '1px solid rgba(184,115,51,0.18)' }}>
+          <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '22px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>
+            byline<span style={{ color: '#B87333' }}>.</span>
+          </span>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors group"
+              className="flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors group"
+              style={{ color: '#A89070' }}
             >
-              <Icon className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+              <Icon className="w-4 h-4 flex-shrink-0" style={{ color: '#B87333' }} />
               {label}
             </Link>
           ))}
         </nav>
 
-        <div className="px-3 py-4 border-t border-gray-200">
-          <div className="px-3 py-2 text-xs text-gray-400 truncate mb-1">{user.email}</div>
+        {/* Footer */}
+        <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(184,115,51,0.18)' }}>
+          {/* Social links */}
+          <div className="flex items-center gap-3 px-3 mb-3">
+            <a href="https://x.com/bylineseo" target="_blank" rel="noopener noreferrer" style={{ color: '#7A6555' }} className="hover:text-[#A89070] transition-colors">
+              <Twitter className="w-3.5 h-3.5" />
+            </a>
+            <a href="https://facebook.com/bylineseo" target="_blank" rel="noopener noreferrer" style={{ color: '#7A6555' }} className="hover:text-[#A89070] transition-colors">
+              <Facebook className="w-3.5 h-3.5" />
+            </a>
+          </div>
+          <div className="px-3 py-1 text-xs truncate mb-1" style={{ color: '#7A6555' }}>{user.email}</div>
           <SignOutButton />
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto" style={{ background: '#1C1917' }}>
         {children}
       </main>
     </div>

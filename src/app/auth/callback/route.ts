@@ -21,8 +21,33 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error && data.user) {
+      // Check if this user has an active subscription
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: sub } = await (supabase as any)
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .in('status', ['active', 'trialing'])
+        .limit(1)
+        .maybeSingle()
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('account_type')
+        .eq('user_id', data.user.id)
+        .maybeSingle()
+
+      const isFree = profile?.account_type === 'free'
+      const hasSub = !!sub
+
+      // New users (no sub, not free) go to pricing; existing users go to next
+      if (!hasSub && !isFree) {
+        return NextResponse.redirect(`${origin}/pricing`)
+      }
+
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
