@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
 
-type Plan = 'starter' | 'pro' | 'agency'
+type Plan = 'starter' | 'pro' | 'team'
 type Interval = 'monthly' | 'annual'
 
 interface PricingCardsProps {
@@ -51,8 +51,8 @@ const PLANS = [
     ],
   },
   {
-    id: 'agency' as Plan,
-    name: 'Agency',
+    id: 'team' as Plan,
+    name: 'Team',
     tagline: 'For small teams and multi-client content operations.',
     cta: 'Get in touch',
     monthlyPrice: 249,
@@ -261,9 +261,9 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     ))}
                   </ul>
 
-                  {plan.id === 'agency' ? (
+                  {plan.id === 'team' ? (
                     <a
-                      href="mailto:hi@bylineseo.com?subject=Agency%20Plan%20Inquiry"
+                      href="mailto:hi@bylineseo.com?subject=Team%20Plan%20Inquiry"
                       className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors border border-[#B87333] text-[#B87333] hover:bg-[rgba(184,115,51,0.08)] text-center block"
                     >
                       Get in touch

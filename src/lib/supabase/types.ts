@@ -5,7 +5,7 @@ export interface Subscription {
   user_id: string
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
-  plan: 'starter' | 'pro' | 'agency'
+  plan: 'starter' | 'pro' | 'team'
   billing_interval: 'monthly' | 'annual'
   status: 'active' | 'cancelled' | 'past_due' | 'trialing'
   current_period_end: string | null

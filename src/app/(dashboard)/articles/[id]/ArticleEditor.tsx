@@ -5,6 +5,7 @@ import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Typography from '@tiptap/extension-typography'
 import CharacterCount from '@tiptap/extension-character-count'
+import { Placeholder } from '@tiptap/extensions'
 import { Plugin } from '@tiptap/pm/state'
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model'
 import { marked } from 'marked'
@@ -12,7 +13,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Bold, Italic, Heading1, Heading2, Heading3,
-  List, ListOrdered, Quote,
+  List, ListOrdered, Quote, Minus,
 } from 'lucide-react'
 
 function prepareContent(content: string): string {
@@ -69,9 +70,18 @@ interface ArticleEditorProps {
   applyContentRef?: React.MutableRefObject<((markdown: string) => void) | null>
   applyAtRangeRef?: React.MutableRefObject<((from: number, to: number, html: string) => void) | null>
   onSelectionChange?: (text: string, from: number, to: number) => void
+  readOnly?: boolean
 }
 
-export default function ArticleEditor({ articleId, initialContent, getTextRef, applyContentRef, applyAtRangeRef, onSelectionChange }: ArticleEditorProps) {
+export default function ArticleEditor({
+  articleId,
+  initialContent,
+  getTextRef,
+  applyContentRef,
+  applyAtRangeRef,
+  onSelectionChange,
+  readOnly = false,
+}: ArticleEditorProps) {
   const supabase = createClient()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
@@ -87,9 +97,18 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
   }, [])
 
   const editor = useEditor({
-    extensions: [StarterKit, Typography, CharacterCount, HeadingEnterExit, MarkdownPaste],
+    extensions: [
+      StarterKit,
+      Typography,
+      CharacterCount,
+      HeadingEnterExit,
+      MarkdownPaste,
+      Placeholder.configure({ placeholder: 'Start writing your article...' }),
+    ],
     content: prepareContent(initialContent),
+    editable: !readOnly,
     onUpdate: ({ editor }) => {
+      if (readOnly) return
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       if (isMountedRef.current) setSaveStatus('idle')
       saveTimerRef.current = setTimeout(async () => {
@@ -147,53 +166,57 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
     }
   }, [editor, getTextRef, applyContentRef, applyAtRangeRef])
 
-
   if (!editor) return null
 
   const wordCount: number = (editor.storage.characterCount as { words: () => number })?.words() ?? 0
 
   return (
     <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-3 py-2 border-b border-[rgba(184,115,51,0.15)] flex-wrap">
-        <ToolbarBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold">
-          <Bold className="w-4 h-4" />
-        </ToolbarBtn>
-        <ToolbarBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic">
-          <Italic className="w-4 h-4" />
-        </ToolbarBtn>
-        <Divider />
-        <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1">
-          <Heading1 className="w-4 h-4" />
-        </ToolbarBtn>
-        <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Heading 2">
-          <Heading2 className="w-4 h-4" />
-        </ToolbarBtn>
-        <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3">
-          <Heading3 className="w-4 h-4" />
-        </ToolbarBtn>
-        <Divider />
-        <ToolbarBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet list">
-          <List className="w-4 h-4" />
-        </ToolbarBtn>
-        <ToolbarBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Ordered list">
-          <ListOrdered className="w-4 h-4" />
-        </ToolbarBtn>
-        <ToolbarBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote">
-          <Quote className="w-4 h-4" />
-        </ToolbarBtn>
-        <div className="flex-1" />
-        {saveStatus === 'saving' && <span className="text-xs text-[#7A6555]">Saving…</span>}
-        {saveStatus === 'saved' && <span className="text-xs text-green-600">Saved</span>}
-        {saveStatus === 'error' && <span className="text-xs text-red-500">Save failed</span>}
-      </div>
+      {/* Toolbar -- hidden in read-only mode */}
+      {!readOnly && (
+        <div className="flex items-center gap-0.5 px-3 py-2 border-b border-[rgba(184,115,51,0.15)] flex-wrap">
+          <ToolbarBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold">
+            <Bold className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic">
+            <Italic className="w-4 h-4" />
+          </ToolbarBtn>
+          <Divider />
+          <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1">
+            <Heading1 className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Heading 2">
+            <Heading2 className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3">
+            <Heading3 className="w-4 h-4" />
+          </ToolbarBtn>
+          <Divider />
+          <ToolbarBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet list">
+            <List className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Ordered list">
+            <ListOrdered className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote">
+            <Quote className="w-4 h-4" />
+          </ToolbarBtn>
+          <ToolbarBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} active={false} title="Horizontal rule">
+            <Minus className="w-4 h-4" />
+          </ToolbarBtn>
+          <div className="flex-1" />
+          {saveStatus === 'saving' && <span className="text-xs text-[#7A6555]">Saving...</span>}
+          {saveStatus === 'saved' && <span className="text-xs text-green-600">Saved</span>}
+          {saveStatus === 'error' && <span className="text-xs text-red-500">Save failed</span>}
+        </div>
+      )}
 
       {/* Editor body */}
       <EditorContent editor={editor} className="px-5 py-4 min-h-96 max-h-[70vh] overflow-y-auto" />
 
       {/* Footer: word count */}
       <div className="px-5 py-2 border-t border-[rgba(184,115,51,0.15)] text-xs text-[#7A6555]">
-        {wordCount.toLocaleString()} words · ~{Math.ceil(wordCount / 200)} min read
+        {wordCount.toLocaleString()} words &middot; ~{Math.ceil(wordCount / 200)} min read
       </div>
     </div>
   )
@@ -213,7 +236,9 @@ function ToolbarBtn({
       onClick={onClick}
       title={title}
       className={`p-1.5 rounded transition-colors ${
-        active ? 'bg-[#2A2420] text-[#F7F3EC]' : 'text-[#A89070] hover:bg-[#2A2420] hover:text-[#A89070]'
+        active
+          ? 'bg-[#B87333] text-[#F7F3EC]'
+          : 'text-[#A89070] hover:bg-[#2A2420] hover:text-[#F7F3EC]'
       }`}
     >
       {children}

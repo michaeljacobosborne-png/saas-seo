@@ -9,7 +9,7 @@ export async function GET() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (supabase as any)
     .from('subscriptions')
-    .select('status, plan_name, current_period_end')
+    .select('status, plan, current_period_end')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -17,7 +17,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: data?.status ?? null,
-    plan_name: data?.plan_name ?? null,
+    plan_name: data?.plan ?? null,
     current_period_end: data?.current_period_end ?? null,
   })
 }

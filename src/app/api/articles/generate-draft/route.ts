@@ -197,7 +197,7 @@ Write the full article now.`
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
       .from('articles')
-      .update({ status: 'expanding' })
+      .update({ status: 'generating' })
       .eq('id', articleId)
       .eq('user_id', user.id)
 
@@ -328,7 +328,7 @@ Write the full article now.`
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any)
     .from('articles')
-    .update({ status: 'polishing' })
+    .update({ status: 'generating' })
     .eq('id', articleId)
     .eq('user_id', user.id)
 
@@ -462,7 +462,7 @@ Write the full article now.`
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)
     .from('articles')
-    .update({ content, word_count: wordCount, status: 'ready', target_word_count: targetWordCount })
+    .update({ content, word_count: wordCount, status: 'complete', target_word_count: targetWordCount })
     .eq('id', articleId)
     .eq('user_id', user.id)
 
