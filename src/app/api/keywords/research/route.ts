@@ -199,14 +199,4 @@ export async function POST(request: Request) {
       .eq('id', project_id)
 
     return NextResponse.json({ success: true, count: rows.length })
-  } catch (err) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
-      .from('keyword_projects')
-      .update({ status: 'error' })
-      .eq('id', project_id)
-
-    const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: message }, { status: 500 })
-  }
-}
+  } ca
