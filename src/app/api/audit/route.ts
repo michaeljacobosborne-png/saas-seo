@@ -1,4 +1,4 @@
-export const maxDuration = 30
+export const maxDuration = 60
 
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
@@ -168,17 +168,20 @@ export async function POST(request: Request) {
 
   let rawText: string
   try {
+    // Pre-fill the assistant turn with '{' to guarantee JSON-only output — no preamble possible
     const res = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
-      system: `You are a content strategist auditing a website's content gaps. Analyze the provided page list and identify specific gaps — topics missing from the site, questions the audience likely has that aren't answered, content pillars that are incomplete or absent. Be specific and actionable.
+      system: `You are a content strategist auditing a website's content gaps. Analyze the provided page list and identify specific gaps — topics the site is missing, questions the audience has that aren't answered, content pillars that are incomplete or absent. Be specific and actionable. Output ONLY the JSON object continuation (no closing brace needed — just the content after the opening brace that was already started).
 
-CRITICAL: Respond with ONLY a raw JSON object. No markdown, no code fences, no explanation, no preamble. Start your response with { and end with }.
-
-Required shape: { "gaps": [{"title": string, "description": string, "priority": "high"|"medium"|"low", "suggestedKeyword": string}], "topicClusters": [{"cluster": string, "covered": string[], "missing": string[]}], "quickWins": string[] }`,
-      messages: [{ role: 'user', content: userParts.join('\n') }],
+Required shape after the opening brace: "gaps": [{"title": string, "description": string, "priority": "high"|"medium"|"low", "suggestedKeyword": string}], "topicClusters": [{"cluster": string, "covered": string[], "missing": string[]}], "quickWins": string[] }`,
+      messages: [
+        { role: 'user', content: userParts.join('\n') },
+        { role: 'assistant', content: '{' },
+      ],
     })
-    rawText = res.content[0].type === 'text' ? res.content[0].text : ''
+    const continuation = res.content[0].type === 'text' ? res.content[0].text : ''
+    rawText = '{' + continuation
   } catch (err) {
     return NextResponse.json(
       { error: `Analysis failed: ${err instanceof Error ? err.message : String(err)}` },
@@ -187,10 +190,11 @@ Required shape: { "gaps": [{"title": string, "description": string, "priority": 
   }
 
   try {
-    // Extract JSON object — handles preamble text and code fences
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('No JSON object in response')
-    const analysis = JSON.parse(jsonMatch[0])
+    // Trim to the outermost JSON object in case of any trailing text
+    const start = rawText.indexOf('{')
+    const end = rawText.lastIndexOf('}')
+    if (start === -1 || end === -1) throw new Error('No JSON object in response')
+    const analysis = JSON.parse(rawText.slice(start, end + 1))
     return NextResponse.json({ ...analysis, pageCount: pages.length })
   } catch (err) {
     console.error('Audit parse error:', err, '\nRaw:', rawText?.slice(0, 500))
