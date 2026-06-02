@@ -22,9 +22,9 @@ export async function POST(request: Request) {
   const targetWordCount = body.target_word_count ?? 1200
   if (!articleId) return NextResponse.json({ error: 'articleId is required' }, { status: 400 })
 
-  // Fetch article, profile, and subscription in parallel
+  // Fetch article and subscription in parallel
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [{ data: article }, { data: profileData }, { data: subData }] = await Promise.all([
+  const [{ data: article }, { data: subData }] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from('articles')
@@ -34,16 +34,11 @@ export async function POST(request: Request) {
       .single(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
-      .from('profiles')
-      .select('account_type')
-      .eq('user_id', user.id)
-      .maybeSingle(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any)
       .from('subscriptions')
       .select('plan, stripe_price_id, status')
       .eq('user_id', user.id)
-      .eq('status', 'active')
+      .in('status', ['active', 'trialing'])
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
   ])
@@ -73,16 +68,12 @@ export async function POST(request: Request) {
   const AGENCY_PRICE_ID = 'price_1Td2ZHB6USGnItpr5Y0SpVBn'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeSub = subData as { plan: string; stripe_price_id?: string | null } | null
-  const accountType = profileData?.account_type ?? null
   let runPolishPass = false
-  if (accountType !== 'free' && activeSub) {
-    if (GROWTH_PRICE_ID || AGENCY_PRICE_ID) {
-      // Price IDs configured: use them for precise plan matching
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const priceId = (activeSub as any).stripe_price_id as string | null
+  if (activeSub) {
+    const priceId = (activeSub as any).stripe_price_id as string | null
+    if (priceId) {
       runPolishPass = priceId === GROWTH_PRICE_ID || priceId === AGENCY_PRICE_ID
     } else {
-      // Price IDs not yet configured — fall back to plan name (better to give too much than too little)
       runPolishPass = activeSub.plan === 'pro' || activeSub.plan === 'team' || activeSub.plan === 'agency'
     }
   }
