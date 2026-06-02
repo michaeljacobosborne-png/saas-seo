@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       runPolishPass = priceId === GROWTH_PRICE_ID || priceId === AGENCY_PRICE_ID
     } else {
       // Price IDs not yet configured — fall back to plan name (better to give too much than too little)
-      runPolishPass = activeSub.plan === 'pro' || activeSub.plan === 'agency'
+      runPolishPass = activeSub.plan === 'pro' || activeSub.plan === 'team' || activeSub.plan === 'agency'
     }
   }
 

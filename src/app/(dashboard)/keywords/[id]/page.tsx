@@ -672,36 +672,4 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
               ) : (
                 <Loader2 className="w-4 h-4 text-[#D4954A] animate-spin shrink-0" />
               )}
-              <span className="text-sm font-semibold text-[#F7F3EC]">Keyword Research</span>
-            </div>
-            <button
-              onClick={() => setToastVisible(false)}
-              className="text-[#7A6555] hover:text-[#A89070] transition-colors"
-              aria-label="Dismiss"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <p className={`text-xs mb-3 ${
-            toastStage === 'error' ? 'text-red-600' :
-            toastStage === 'complete' ? 'text-green-600' : 'text-[#A89070]'
-          }`}>
-            {TOAST_CONFIG[toastStage].label}
-            {toastStage === 'error' && toastErrorMsg ? `: ${toastErrorMsg}` : ''}
-          </p>
-
-          <div className="w-full h-1.5 bg-[#2A2420] rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-700 ease-out ${
-                toastStage === 'error' ? 'bg-red-400' :
-                toastStage === 'complete' ? 'bg-green-400' : 'bg-[#B87333]'
-              }`}
-              style={{ width: `${TOAST_CONFIG[toastStage].progress}%` }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+        
