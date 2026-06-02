@@ -8,7 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CheckCircle2, Loader2, Sparkles,
-  TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock,
+  TrendingUp, AlertCircle, BarChart2, Bot, X, Send,
+  Wand2, Pencil, Eye,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -87,6 +88,90 @@ function getScoreFailures(scores: ArticleScores, keyword: string): Array<{ label
     .map(({ label, instruction }) => ({ label, instruction }))
 }
 
+type ActionItem = { label: string; action: string }
+
+function getActionItemsPerCategory(scores: ArticleScores, keyword: string): {
+  seo: ActionItem[]
+  geo: ActionItem[]
+  aeo: ActionItem[]
+  readability: ActionItem[]
+} {
+  const seo: ActionItem[] = []
+  const geo: ActionItem[] = []
+  const aeo: ActionItem[] = []
+  const readability: ActionItem[] = []
+
+  for (const c of Object.values(scores.seo.breakdown)) {
+    if (!c.passed) {
+      const action = mapToFixInstruction(c.label, keyword)
+      if (action) seo.push({ label: c.label, action })
+    }
+  }
+
+  for (const c of Object.values(scores.geo.breakdown)) {
+    if (!c.passed) {
+      const action = mapToFixInstruction(c.label, keyword)
+      if (action) geo.push({ label: c.label, action })
+    }
+  }
+
+  for (const c of Object.values(scores.aeo.breakdown)) {
+    if (!c.passed) {
+      const action = mapToFixInstruction(c.label, keyword)
+      if (action) aeo.push({ label: c.label, action })
+    }
+  }
+
+  // Readability: convert breakdown values into actionable text
+  const rb = scores.readability.breakdown as Record<string, { label: string; value: number }>
+  if (rb.avg_sentence_len) {
+    const v = rb.avg_sentence_len.value
+    if (v > 20) readability.push({
+      label: rb.avg_sentence_len.label,
+      action: `Average sentence length is ${v.toFixed(1)} words — aim for under 20. Break long sentences into two shorter ones.`,
+    })
+  }
+  if (rb.passive_voice) {
+    const v = rb.passive_voice.value
+    if (v > 5) readability.push({
+      label: rb.passive_voice.label,
+      action: `${v} passive-voice instances found — rewrite to active voice (e.g. "Google rewards…" not "It is rewarded by Google…").`,
+    })
+  }
+  if (rb.para_density) {
+    const v = rb.para_density.value
+    if (v > 120) readability.push({
+      label: rb.para_density.label,
+      action: `Paragraphs average ${Math.round(v)} words — break dense blocks into shorter paragraphs of ~100 words or add bullet lists.`,
+    })
+  }
+
+  return { seo, geo, aeo, readability }
+}
+
+function ActionItemsList({ items, category }: { items: ActionItem[]; category: string }) {
+  if (items.length === 0) {
+    return (
+      <p className="text-xs text-green-400 flex items-center gap-1.5 py-1">
+        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+        All {category} criteria passed — no action needed.
+      </p>
+    )
+  }
+  return (
+    <ul className="space-y-2">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-2.5">
+          <div className="mt-0.5 w-4 h-4 rounded-full border border-[rgba(184,115,51,0.4)] bg-[rgba(184,115,51,0.08)] flex items-center justify-center shrink-0">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#B87333]" />
+          </div>
+          <span className="text-xs text-[#A89070] leading-snug">{item.action}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function ScoreBar({ label, score }: { label: string; score: number }) {
   const barColor = score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-400' : 'bg-red-400'
   return (
@@ -153,7 +238,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   // Agent state
   const [agentOpen, setAgentOpen] = useState(false)
-  const [agentMode, setAgentMode] = useState<'review' | 'assist'>('review')
+  const [agentMode, setAgentMode] = useState<'review' | 'assist' | 'auto'>('review')
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([])
   const [agentInput, setAgentInput] = useState('')
   const [agentStreaming, setAgentStreaming] = useState(false)
@@ -165,11 +250,15 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [selectionRange, setSelectionRange] = useState<{ from: number; to: number } | null>(null)
   const [assistInput, setAssistInput] = useState('')
   const [assistApplied, setAssistApplied] = useState(false)
-  const agentModeRef = useRef<'review' | 'assist'>('review')
+  const agentModeRef = useRef<'review' | 'assist' | 'auto'>('review')
+
+  // Auto mode state
+  const [autoConfirmOpen, setAutoConfirmOpen] = useState(false)
+  const [autoResult, setAutoResult] = useState('')
 
   // Free tier state
   const [accountType, setAccountType] = useState<string | null>(null)
-  const [showAssistUpgrade, setShowAssistUpgrade] = useState(false)
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   useEffect(() => { agentModeRef.current = agentMode }, [agentMode])
 
@@ -224,11 +313,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
   }, [selectedText])
 
-  // Clear messages when entering Assist mode
+  // Clear messages when switching into Assist or Auto mode
   useEffect(() => {
-    if (agentMode === 'assist') {
+    setAutoConfirmOpen(false)
+    if (agentMode === 'assist' || agentMode === 'auto') {
       setAgentMessages([])
       setAssistApplied(false)
+      setAutoResult('')
     }
   }, [agentMode])
 
@@ -320,6 +411,52 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
   }, [id])
 
+  const sendAutoMode = useCallback(async () => {
+    setAutoConfirmOpen(false)
+    setAgentMessages([])
+    setAutoResult('')
+    setAgentStreaming(true)
+
+    const res = await fetch(`/api/articles/${id}/agent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [], mode: 'auto' }),
+    })
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
+      setAgentMessages([{ role: 'assistant', content: errorMsg }])
+      setAgentStreaming(false)
+      return
+    }
+    if (!res.body) {
+      setAgentMessages([{ role: 'assistant', content: 'Something went wrong. Please try again.' }])
+      setAgentStreaming(false)
+      return
+    }
+
+    setAgentMessages([{ role: 'assistant', content: '' }])
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let fullResult = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const text = decoder.decode(value)
+      fullResult += text
+      setAgentMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { ...updated[updated.length - 1], content: updated[updated.length - 1].content + text }
+        return updated
+      })
+    }
+
+    setAgentStreaming(false)
+    setAutoResult(fullResult)
+  }, [id])
+
   function openAgent(currentArticle: Article) {
     setAgentOpen(true)
     const hasScores = !!currentArticle.scores
@@ -386,6 +523,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   const scores = article.scores as ArticleScores | null
   const scoreFailures = scores ? getScoreFailures(scores, article.target_keyword ?? '') : []
+  const actionItems = scores ? getActionItemsPerCategory(scores, article.target_keyword ?? '') : null
 
   return (
     <div className={`flex gap-0 h-full min-h-screen ${agentOpen ? 'pr-0' : ''}`}>
@@ -561,6 +699,28 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
 
+                {/* Action Items */}
+                {actionItems && (
+                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                    <h3 className="font-semibold text-[#F7F3EC] text-sm mb-4">Action Items</h3>
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      {(
+                        [
+                          { key: 'seo', label: 'SEO', items: actionItems.seo },
+                          { key: 'geo', label: 'GEO', items: actionItems.geo },
+                          { key: 'aeo', label: 'AEO', items: actionItems.aeo },
+                          { key: 'readability', label: 'Readability', items: actionItems.readability },
+                        ] as const
+                      ).map(({ key, label, items }) => (
+                        <div key={key}>
+                          <p className="text-xs font-semibold text-[#D4954A] uppercase tracking-wide mb-2">{label}</p>
+                          <ActionItemsList items={items} category={label} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
@@ -660,33 +820,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex items-center gap-2.5">
               <div className="w-2 h-2 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 animate-pulse" />
               <span className="font-semibold text-[#F7F3EC] text-sm">Byline Agent</span>
-              <div className="flex gap-0.5 bg-[#2A2420] rounded-lg p-0.5">
-                {(['review', 'assist'] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      if (m === 'assist' && accountType === 'free') {
-                        setShowAssistUpgrade(true)
-                        return
-                      }
-                      setShowAssistUpgrade(false)
-                      setAgentMode(m)
-                    }}
-                    className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                      (agentMode === m && !showAssistUpgrade) || (m === 'review' && showAssistUpgrade)
-                        ? 'bg-[#1C1917] text-[#F7F3EC] shadow-sm'
-                        : 'text-[#A89070] hover:text-[#A89070]'
-                    }`}
-                  >
-                    {m === 'review' ? 'Review' : (
-                      <>
-                        Assist
-                        {accountType === 'free' && <Lock className="w-2.5 h-2.5" />}
-                      </>
-                    )}
-                  </button>
-                ))}
-              </div>
             </div>
             <button
               onClick={() => setAgentOpen(false)}
@@ -696,24 +829,59 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </button>
           </div>
 
-          {/* Assist upgrade prompt for free users */}
-          {showAssistUpgrade ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-[#2A2420] flex items-center justify-center mb-3">
-                <Lock className="w-5 h-5 text-[#7A6555]" />
-              </div>
-              <h3 className="font-semibold text-[#F7F3EC] text-sm mb-2">Assist mode is a paid feature</h3>
-              <p className="text-sm text-[#A89070] mb-5 leading-relaxed">
-                Upgrade to let the agent rewrite sections of your article directly.
-              </p>
-              <Link
-                href="/pricing"
-                className="px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+          {/* Mode selector */}
+          <div className="shrink-0 px-3 py-2.5 border-b border-[rgba(184,115,51,0.15)]">
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={() => {
+                  setShowUpgradePrompt(false)
+                  setAgentMode('auto')
+                }}
+                className={`relative flex flex-col items-start px-2.5 py-2 rounded-lg border text-left transition-colors ${
+                  agentMode === 'auto'
+                    ? 'bg-[#B87333] border-[#B87333] text-[#F7F3EC]'
+                    : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+                }`}
               >
-                View plans
-              </Link>
+                                <Wand2 className="w-3.5 h-3.5 mb-1" />
+                <span className="text-xs font-semibold leading-none">Auto</span>
+                <span className={`text-[10px] leading-tight mt-1 ${agentMode === 'auto' ? 'text-[#F7F3EC]/70' : 'text-[#7A6555]'}`}>Fix everything</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowUpgradePrompt(false)
+                  setAgentMode('assist')
+                }}
+                className={`relative flex flex-col items-start px-2.5 py-2 rounded-lg border text-left transition-colors ${
+                  agentMode === 'assist'
+                    ? 'bg-[#231F1B] border-[rgba(184,115,51,0.5)] text-[#F7F3EC]'
+                    : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+                }`}
+              >
+                                <Pencil className="w-3.5 h-3.5 mb-1" />
+                <span className="text-xs font-semibold leading-none">Assist</span>
+                <span className={`text-[10px] leading-tight mt-1 ${agentMode === 'assist' ? 'text-[#F7F3EC]/70' : 'text-[#7A6555]'}`}>Fix one thing</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowUpgradePrompt(false)
+                  setAgentMode('review')
+                }}
+                className={`relative flex flex-col items-start px-2.5 py-2 rounded-lg border text-left transition-colors ${
+                  agentMode === 'review'
+                    ? 'bg-[#231F1B] border-[rgba(184,115,51,0.5)] text-[#F7F3EC]'
+                    : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5 mb-1" />
+                <span className="text-xs font-semibold leading-none">Review</span>
+                <span className={`text-[10px] leading-tight mt-1 ${agentMode === 'review' ? 'text-[#F7F3EC]/70' : 'text-[#7A6555]'}`}>Second opinion</span>
+              </button>
             </div>
-          ) : !scores ? (
+          </div>
+
+          {/* Upgrade prompt for free users */}
+          {!scores ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
               <Bot className="w-10 h-10 text-[#A89070] mb-3" />
               <p className="text-sm text-[#A89070] mb-4">Score the article first to unlock the agent.</p>
@@ -728,97 +896,152 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </div>
           ) : (
             <>
-              {/* Assist mode context bar */}
-              {agentMode === 'assist' && (
-                <div className="shrink-0 border-b border-[rgba(184,115,51,0.15)] px-4 py-3">
-                  {selectedText ? (
-                    <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                      <p className="text-xs font-semibold text-amber-700 mb-1">&#9999;&#65039; Selected</p>
-                      <p className="text-xs text-[#A89070] line-clamp-2">
-                        &ldquo;{selectedText.slice(0, 80)}{selectedText.length > 80 ? '…' : ''}&rdquo;
+              {/* Auto mode panel */}
+              {agentMode === 'auto' && (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {autoConfirmOpen ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                      <div className="w-12 h-12 rounded-full bg-[rgba(184,115,51,0.12)] flex items-center justify-center mb-4">
+                        <Wand2 className="w-6 h-6 text-[#B87333]" />
+                      </div>
+                      <h3 className="font-semibold text-[#F7F3EC] text-sm mb-2">Rewrite full article?</h3>
+                      <p className="text-xs text-[#A89070] text-center mb-6 leading-relaxed max-w-xs">
+                        Auto mode will rewrite your full article applying all audit improvements. This replaces your current content — make sure you have a copy first.
                       </p>
-                    </div>
-                  ) : scoreFailures.length > 0 ? (
-                    <div>
-                      <p className="text-xs font-semibold text-[#A89070] mb-2">Top issues to fix</p>
-                      <div className="space-y-2">
-                        {scoreFailures.map((f, i) => (
-                          <div key={i} className="flex items-start justify-between gap-3">
-                            <span className="text-xs text-[#A89070] flex-1 leading-snug">{f.label}</span>
-                            <button
-                              onClick={() => {
-                                if (!agentStreaming) {
-                                  sendAgentMessage('', [], { fixInstruction: f.instruction, selectionRange: null })
-                                }
-                              }}
-                              disabled={agentStreaming}
-                              className="shrink-0 text-xs font-semibold text-[#B87333] hover:text-indigo-800 disabled:opacity-40 whitespace-nowrap"
-                            >
-                              Fix with Agent &rarr;
-                            </button>
-                          </div>
-                        ))}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setAutoConfirmOpen(false)}
+                          className="px-4 py-2 text-sm text-[#A89070] border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={sendAutoMode}
+                          className="px-4 py-2 text-sm bg-[#B87333] text-[#F7F3EC] rounded-lg hover:bg-[#A0622A] transition-colors font-medium"
+                        >
+                          Yes, rewrite it
+                        </button>
                       </div>
                     </div>
+                  ) : agentStreaming ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-[#B87333] mb-3" />
+                      <p className="text-sm text-[#A89070]">Rewriting your article&hellip;</p>
+                      {agentMessages[0] && (
+                        <p className="text-xs text-[#7A6555] mt-1.5 tabular-nums">
+                          {agentMessages[0].content.length.toLocaleString()} characters written
+                        </p>
+                      )}
+                    </div>
+                  ) : autoResult ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                      <CheckCircle2 className="w-8 h-8 text-green-500 mb-3" />
+                      <p className="text-sm font-semibold text-[#F7F3EC] mb-1">Rewrite ready</p>
+                      <p className="text-xs text-[#A89070] mb-6">
+                        ~{autoResult.trim().split(/\s+/).length.toLocaleString()} words generated
+                      </p>
+                      <button
+                        onClick={() => {
+                          applyContentRef.current?.(autoResult)
+                          setAutoResult('')
+                          setAgentMessages([])
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors mb-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Apply to article
+                      </button>
+                      <button
+                        onClick={() => { setAutoResult(''); setAgentMessages([]) }}
+                        className="text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                      >
+                        Discard
+                      </button>
+                    </div>
+                  ) : agentMessages.length > 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                      <AlertCircle className="w-6 h-6 text-red-400 mb-3" />
+                      <p className="text-xs text-[#A89070] leading-relaxed">{agentMessages[0]?.content}</p>
+                      <button
+                        onClick={() => setAgentMessages([])}
+                        className="mt-4 text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   ) : (
-                    <p className="text-xs text-[#7A6555] text-center py-1">
-                      Select text in the editor to rewrite it, or pick a score issue to fix.
-                    </p>
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                      <div className="w-12 h-12 rounded-full bg-[rgba(184,115,51,0.1)] flex items-center justify-center mb-4">
+                        <Wand2 className="w-6 h-6 text-[#B87333]" />
+                      </div>
+                      <p className="text-sm font-semibold text-[#F7F3EC] mb-2">One-pass rewrite</p>
+                      <p className="text-xs text-[#A89070] mb-6 leading-relaxed max-w-xs">
+                        The agent reads your full article, audit scores, and brand profile — then applies every failing criterion in a single pass. No back-and-forth.
+                      </p>
+                      <button
+                        onClick={() => setAutoConfirmOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+                      >
+                        <Wand2 className="w-4 h-4" />
+                        Run Auto Mode
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
 
-              {/* Messages */}
-              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                {agentMessages.length === 0 && !agentStreaming && agentMode === 'review' && (
-                  <div className="text-center text-xs text-[#7A6555] py-8">Starting review&hellip;</div>
-                )}
-                {agentMessages.length === 0 && !agentStreaming && agentMode === 'assist' && (
-                  <div className="text-center text-xs text-[#7A6555] py-8">
-                    {selectedText ? 'Edit the instruction below, then send.' : 'Use the controls above to pick a fix.'}
-                  </div>
-                )}
-                {agentMessages.map((msg, i) => {
-                  const isStreamingThis = agentStreaming && i === agentMessages.length - 1
-                  const applicable = !isStreamingThis && msg.role === 'assistant' && agentMode === 'review'
-                    ? extractApplicableContent(msg.content)
-                    : null
-                  return (
-                    <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      {msg.role === 'user' ? (
-                        <div className="max-w-[85%] px-3.5 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm rounded-2xl rounded-tr-sm leading-relaxed">
+              {/* Assist mode context bar */}
+              {agentMode === 'assist' && (
+                <div className="shrink-0 border-b border-[rgba(184,115,51,0.15)] px-4 py-3">
+                  {selectedText ? (
+                    <div className="rounded-lg px-3 py-2" style={{ background: 'rgba(184,115,51,0.08)', border: '1px solid rgba(184,115,51,0.2)' }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: '#D4954A' }}>Selected text</p>
+                      <p className="text-xs truncate" style={{ color: '#A89070' }}>{selectedText.slice(0, 80)}{selectedText.length > 80 ? '…' : ''}</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs" style={{ color: '#7A6555' }}>Select text in the article to use Assist mode, or describe what to fix below.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Message thread — Review + Assist */}
+              {(agentMode === 'review' || agentMode === 'assist') && (
+                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0" ref={messagesContainerRef}>
+                  {agentMessages.map((msg, i) => {
+                    const applicable = msg.role === 'assistant' ? extractApplicableContent(msg.content) : null
+                    return (
+                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className="rounded-xl px-3 py-2.5 text-sm max-w-[85%] whitespace-pre-wrap leading-relaxed"
+                          style={msg.role === 'user'
+                            ? { background: 'rgba(184,115,51,0.15)', color: '#F7F3EC' }
+                            : { background: '#2A2520', color: '#E8E0D5' }}
+                        >
                           {msg.content}
-                        </div>
-                      ) : (
-                        <div className="max-w-[92%] px-3.5 py-2.5 bg-[#231F1B] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
-                          {msg.content}
-                          {isStreamingThis && (
-                            <span className="inline-block w-0.5 h-3.5 bg-[rgba(184,115,51,0.08)]0 ml-0.5 animate-pulse align-middle" />
+                          {applicable && (
+                            <button
+                              onClick={() => applyContentRef.current?.(applicable)}
+                              className="mt-2 block text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors"
+                              style={{ background: 'rgba(184,115,51,0.08)', color: '#B87333', borderColor: 'rgba(184,115,51,0.25)' }}
+                            >
+                              Apply to article
+                            </button>
                           )}
                         </div>
-                      )}
-                      {/* TODO: gate Apply button behind premium check */}
-                      {applicable && (
-                        <button
-                          onClick={() => applyContentRef.current?.(applicable)}
-                          className="mt-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.08)] text-[#B87333] rounded-lg hover:bg-[rgba(184,115,51,0.12)] transition-colors border border-[rgba(184,115,51,0.25)]"
-                        >
-                          Apply to article
-                        </button>
-                      )}
+                      </div>
+                    )
+                  })}
+                  {assistApplied && (
+                    <div className="flex justify-center">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                        <span className="text-xs font-medium text-green-700">Applied ✓</span>
+                      </div>
                     </div>
-                  )
-                })}
-                {assistApplied && (
-                  <div className="flex justify-center">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                      <span className="text-xs font-medium text-green-700">Applied &#10003;</span>
-                    </div>
-                  </div>
-                )}
-                <div />
-              </div>
+                  )}
+                  <div />
+                </div>
+              )}
 
               {/* Input — Review mode */}
               {agentMode === 'review' && (
@@ -831,36 +1054,30 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault()
                           const trimmed = agentInput.trim()
-                          if (trimmed && !agentStreaming) {
-                            sendAgentMessage(trimmed, agentMessages)
-                          }
+                          if (trimmed && !agentStreaming) sendAgentMessage(trimmed, agentMessages)
                         }
                       }}
                       placeholder="Ask for specific fixes, examples, or ideas…"
                       disabled={agentStreaming}
                       rows={1}
                       className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-gray-400"
-                      style={{ maxHeight: '120px', overflowY: 'auto' }}
+                      style={{ maxHeight: '120px', overflowY: 'auto', background: '#1C1917', color: '#F7F3EC' }}
                     />
                     <button
-                      onClick={() => {
-                        const trimmed = agentInput.trim()
-                        if (trimmed && !agentStreaming) {
-                          sendAgentMessage(trimmed, agentMessages)
-                        }
-                      }}
+                      onClick={() => { const t = agentInput.trim(); if (t && !agentStreaming) sendAgentMessage(t, agentMessages) }}
                       disabled={!agentInput.trim() || agentStreaming}
-                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-[#F7F3EC] rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                      className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                      style={{ background: '#B87333', color: '#F7F3EC' }}
                     >
                       {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-[#7A6555] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
+                  <p className="text-xs mt-1.5 px-1" style={{ color: '#7A6555' }}>Enter to send · Shift+Enter for newline</p>
                 </div>
               )}
 
-              {/* Input — Assist mode with selected text */}
-              {agentMode === 'assist' && selectedText && (
+              {/* Input — Assist mode */}
+              {agentMode === 'assist' && (
                 <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-3 py-3">
                   <div className="flex items-end gap-2">
                     <textarea
@@ -870,30 +1087,25 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault()
                           const trimmed = assistInput.trim()
-                          if (trimmed && !agentStreaming) {
-                            sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
-                          }
+                          if (trimmed && !agentStreaming) sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
                         }
                       }}
-                      placeholder="Rewrite this to be more specific and include the primary keyword"
+                      placeholder={selectedText ? 'Rewrite this to be more specific and include the primary keyword' : 'Describe what to fix or improve…'}
                       disabled={agentStreaming}
                       rows={2}
                       className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-gray-400"
+                      style={{ background: '#1C1917', color: '#F7F3EC' }}
                     />
                     <button
-                      onClick={() => {
-                        const trimmed = assistInput.trim()
-                        if (trimmed && !agentStreaming) {
-                          sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
-                        }
-                      }}
+                      onClick={() => { const t = assistInput.trim(); if (t && !agentStreaming) sendAgentMessage('', [], { selectedText, fixInstruction: t, selectionRange }) }}
                       disabled={!assistInput.trim() || agentStreaming}
-                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-[#F7F3EC] rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                      className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                      style={{ background: '#B87333', color: '#F7F3EC' }}
                     >
                       {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-[#7A6555] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
+                  <p className="text-xs mt-1.5 px-1" style={{ color: '#7A6555' }}>Enter to send · Shift+Enter for newline</p>
                 </div>
               )}
             </>
