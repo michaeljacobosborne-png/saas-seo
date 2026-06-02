@@ -119,6 +119,7 @@ export default function NewArticlePage() {
   // Step 1 — Concept
   const [conceptTopic, setConceptTopic] = useState('')
   const [conceptAngle, setConceptAngle] = useState('')
+  const [prefillKeyword, setPrefillKeyword] = useState('')  // raw keyword from audit, used as research seed
   const conceptRef = useRef<HTMLTextAreaElement>(null)
 
   // Step 2 — Keywords
@@ -148,7 +149,10 @@ export default function NewArticlePage() {
     if (kw || topic) {
       prefillDone.current = true
       setConceptTopic(topic ?? kw ?? '')
-      setConceptAngle(kw ? `Target keyword: ${kw}` : '')
+      if (kw) {
+        setPrefillKeyword(kw)  // stored separately so research seeds from exact keyword, not topic title
+        setConceptAngle(`Writing about: ${topic ?? kw}. Target keyword: ${kw}`)
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -218,10 +222,11 @@ export default function NewArticlePage() {
     setLoading(false)
 
     // Run keyword research in the background
+    // If coming from audit, use the exact keyword as seed (not the full topic title)
     setResearchLoading(true)
     const resBody: Record<string, unknown> = {
       project_id: proj.id,
-      seed_topic: conceptTopic.trim(),
+      seed_topic: prefillKeyword.trim() || conceptTopic.trim(),
     }
     if (conceptAngle.trim()) resBody.context = conceptAngle.trim()
 

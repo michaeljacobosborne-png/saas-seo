@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       runPolishPass = priceId === GROWTH_PRICE_ID || priceId === AGENCY_PRICE_ID
     } else {
       // Price IDs not yet configured — fall back to plan name (better to give too much than too little)
-      runPolishPass = activeSub.plan === 'pro' || activeSub.plan === 'agency'
+      runPolishPass = activeSub.plan === 'pro' || activeSub.plan === 'team' || activeSub.plan === 'agency'
     }
   }
 
@@ -471,7 +471,7 @@ Write the full article now.`
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)
     .from('articles')
-    .update({ content, word_count: wordCount, status: 'ready', target_word_count: targetWordCount, pass_count: passCount })
+    .update({ content, word_count: wordCount, status: 'ready', target_word_count: targetWordCount })
     .eq('id', articleId)
     .eq('user_id', user.id)
 
