@@ -87,6 +87,90 @@ function getScoreFailures(scores: ArticleScores, keyword: string): Array<{ label
     .map(({ label, instruction }) => ({ label, instruction }))
 }
 
+type ActionItem = { label: string; action: string }
+
+function getActionItemsPerCategory(scores: ArticleScores, keyword: string): {
+  seo: ActionItem[]
+  geo: ActionItem[]
+  aeo: ActionItem[]
+  readability: ActionItem[]
+} {
+  const seo: ActionItem[] = []
+  const geo: ActionItem[] = []
+  const aeo: ActionItem[] = []
+  const readability: ActionItem[] = []
+
+  for (const c of Object.values(scores.seo.breakdown)) {
+    if (!c.passed) {
+      const action = mapToFixInstruction(c.label, keyword)
+      if (action) seo.push({ label: c.label, action })
+    }
+  }
+
+  for (const c of Object.values(scores.geo.breakdown)) {
+    if (!c.passed) {
+      const action = mapToFixInstruction(c.label, keyword)
+      if (action) geo.push({ label: c.label, action })
+    }
+  }
+
+  for (const c of Object.values(scores.aeo.breakdown)) {
+    if (!c.passed) {
+      const action = mapToFixInstruction(c.label, keyword)
+      if (action) aeo.push({ label: c.label, action })
+    }
+  }
+
+  // Readability: convert breakdown values into actionable text
+  const rb = scores.readability.breakdown as Record<string, { label: string; value: number }>
+  if (rb.avg_sentence_len) {
+    const v = rb.avg_sentence_len.value
+    if (v > 20) readability.push({
+      label: rb.avg_sentence_len.label,
+      action: `Average sentence length is ${v.toFixed(1)} words — aim for under 20. Break long sentences into two shorter ones.`,
+    })
+  }
+  if (rb.passive_voice) {
+    const v = rb.passive_voice.value
+    if (v > 5) readability.push({
+      label: rb.passive_voice.label,
+      action: `${v} passive-voice instances found — rewrite to active voice (e.g. "Google rewards…" not "It is rewarded by Google…").`,
+    })
+  }
+  if (rb.para_density) {
+    const v = rb.para_density.value
+    if (v > 120) readability.push({
+      label: rb.para_density.label,
+      action: `Paragraphs average ${Math.round(v)} words — break dense blocks into shorter paragraphs of ~100 words or add bullet lists.`,
+    })
+  }
+
+  return { seo, geo, aeo, readability }
+}
+
+function ActionItemsList({ items, category }: { items: ActionItem[]; category: string }) {
+  if (items.length === 0) {
+    return (
+      <p className="text-xs text-green-400 flex items-center gap-1.5 py-1">
+        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+        All {category} criteria passed — no action needed.
+      </p>
+    )
+  }
+  return (
+    <ul className="space-y-2">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-2.5">
+          <div className="mt-0.5 w-4 h-4 rounded-full border border-[rgba(184,115,51,0.4)] bg-[rgba(184,115,51,0.08)] flex items-center justify-center shrink-0">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#B87333]" />
+          </div>
+          <span className="text-xs text-[#A89070] leading-snug">{item.action}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function ScoreBar({ label, score }: { label: string; score: number }) {
   const barColor = score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-400' : 'bg-red-400'
   return (
@@ -386,6 +470,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   const scores = article.scores as ArticleScores | null
   const scoreFailures = scores ? getScoreFailures(scores, article.target_keyword ?? '') : []
+  const actionItems = scores ? getActionItemsPerCategory(scores, article.target_keyword ?? '') : null
 
   return (
     <div className={`flex gap-0 h-full min-h-screen ${agentOpen ? 'pr-0' : ''}`}>
@@ -560,6 +645,28 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     <ScoreBar label="AEO (Answer Engine)" score={scores.aeo.score} />
                   </div>
                 </div>
+
+                {/* Action Items */}
+                {actionItems && (
+                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                    <h3 className="font-semibold text-[#F7F3EC] text-sm mb-4">Action Items</h3>
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      {(
+                        [
+                          { key: 'seo', label: 'SEO', items: actionItems.seo },
+                          { key: 'geo', label: 'GEO', items: actionItems.geo },
+                          { key: 'aeo', label: 'AEO', items: actionItems.aeo },
+                          { key: 'readability', label: 'Readability', items: actionItems.readability },
+                        ] as const
+                      ).map(({ key, label, items }) => (
+                        <div key={key}>
+                          <p className="text-xs font-semibold text-[#D4954A] uppercase tracking-wide mb-2">{label}</p>
+                          <ActionItemsList items={items} category={label} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
