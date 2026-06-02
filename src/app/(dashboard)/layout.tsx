@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, BarChart2, X, Globe, Settings, MessageCircle } from 'lucide-react'
+import { LayoutDashboard, Building2, Search, FileText, BarChart2, X, Globe, Settings } from 'lucide-react'
 import SignOutButton from './SignOutButton'
+import ChatWidget from '@/components/ChatWidget'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -85,15 +86,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </main>
 
-      {/* Floating chat bubble */}
-      <Link
-        href="/brand"
-        className="fixed bottom-6 right-6 z-50 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110"
-        style={{ background: '#B87333', width: '52px', height: '52px' }}
-        title="Go to Brand"
-      >
-        <MessageCircle className="w-6 h-6" style={{ color: '#F7F3EC' }} />
-      </Link>
+      <ChatWidget />
     </div>
   )
 }

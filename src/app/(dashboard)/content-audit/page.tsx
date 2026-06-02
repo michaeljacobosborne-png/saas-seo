@@ -30,6 +30,13 @@ type AuditResult = {
 }
 
 const LS_KEY = 'byline_audit_last_run'
+const LS_RESULT_KEY = 'byline_audit_result_v2'
+
+type CachedAudit = {
+  result: AuditResult
+  url: string
+  runAt: string // ISO string
+}
 
 function PriorityBadge({ priority }: { priority: Gap['priority'] }) {
   const map = {
@@ -71,9 +78,21 @@ export default function DashboardAuditPage() {
   const [pageLoaded, setPageLoaded] = useState(false)
   const [urlForRun, setUrlForRun] = useState<string | null>(null)
 
+  // Restore cached audit from localStorage on first mount
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY)
     if (stored) setLastRun(new Date(stored))
+
+    try {
+      const raw = localStorage.getItem(LS_RESULT_KEY)
+      if (raw) {
+        const cached = JSON.parse(raw) as CachedAudit
+        setResult(cached.result)
+        setStatus('done')
+        setAuditUrl(cached.url)
+        setLastRun(new Date(cached.runAt))
+      }
+    } catch { /* malformed cache — ignore */ }
   }, [])
 
   useEffect(() => {
@@ -94,17 +113,33 @@ export default function DashboardAuditPage() {
           .limit(100),
       ])
       if (!active) return
-      const profile = brandRes.data as BrandProfile | null
+      const profile = brandRes.data as (BrandProfile & { last_audit?: CachedAudit | null }) | null
       setBrand(profile)
       const brandUrl = profile?.website_url ?? ''
-      setAuditUrl(brandUrl)
       setSavedKeywords((kwRes.data ?? []).map((k: { keyword: string }) => k.keyword))
       setWrittenKeywords(
         (artRes.data ?? [])
           .map((a: { target_keyword: string | null }) => a.target_keyword)
           .filter(Boolean) as string[]
       )
-      if (brandUrl) setUrlForRun(brandUrl)
+
+      // If there's no locally-cached result, check DB for a saved audit
+      const hasCachedLocally = !!localStorage.getItem(LS_RESULT_KEY)
+      if (!hasCachedLocally && profile?.last_audit) {
+        const dbAudit = profile.last_audit
+        setResult(dbAudit.result)
+        setStatus('done')
+        setAuditUrl(dbAudit.url || brandUrl)
+        setLastRun(new Date(dbAudit.runAt))
+      } else {
+        // Only set the URL input if we don't already have a result loaded
+        if (brandUrl) setAuditUrl(brandUrl)
+        // Only queue an auto-run if there's no result at all
+        if (!hasCachedLocally && !profile?.last_audit && brandUrl) {
+          setUrlForRun(brandUrl)
+        }
+      }
+
       setPageLoaded(true)
     }
     load()
@@ -134,14 +169,29 @@ export default function DashboardAuditPage() {
       setStatus('done')
       const now = new Date()
       setLastRun(now)
+
+      // Persist to localStorage
+      const cached: CachedAudit = { result: data, url: targetUrl.trim(), runAt: now.toISOString() }
       localStorage.setItem(LS_KEY, now.toISOString())
+      localStorage.setItem(LS_RESULT_KEY, JSON.stringify(cached))
+
+      // Best-effort save to DB (requires last_audit column on brand_profiles)
+      if (userId) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('brand_profiles')
+            .update({ last_audit: cached })
+            .eq('user_id', userId)
+        } catch { /* column may not exist — non-fatal */ }
+      }
     } catch {
       setError('Network error. Please try again.')
       setStatus('error')
     }
-  }, [userId])
+  }, [userId, supabase])
 
-  // Auto-run once brand URL is resolved
+  // Auto-run only when page loads with no cached result and a URL is available
   useEffect(() => {
     if (pageLoaded && urlForRun) {
       runAudit(urlForRun)
@@ -434,4 +484,4 @@ export default function DashboardAuditPage() {
       )}
     </div>
   )
-}
+}
