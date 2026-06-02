@@ -50,12 +50,47 @@ Rules:
 - Never say "Great!" or "Absolutely!" or other filler affirmations.
 - Start immediately with: "Let's get your brand set up. What does [company/product] do, and who are you trying to reach with your content?"`
 
+const UPDATE_SYSTEM_PROMPT = (profile: Record<string, unknown>) => `You are a brand strategist helping a user update their existing Byline brand profile. You already have their profile on file:
+
+${JSON.stringify(profile, null, 2)}
+
+Your job:
+1. Ask what they want to update — one focused question: "What would you like to change about your brand profile?"
+2. Have a natural conversation only about what they want to change. Don't re-ask about things they don't mention.
+3. When you have everything you need, output ONLY this JSON block with ALL fields filled in (preserve existing values for anything they didn't change):
+
+<brand_profile>
+{
+  "company_name": "...",
+  "industry": "...",
+  "target_audience": "...",
+  "brand_voice": "...",
+  "content_goals": "...",
+  "competitors": ["...", "..."],
+  "avoid_topics": "...",
+  "tone_examples": "...",
+  "expertise_notes": "...",
+  "signature_angles": "...",
+  "avoid_phrases": "...",
+  "expertise_skipped": false
+}
+</brand_profile>
+
+Rules:
+- Ask ONE question at a time.
+- Keep responses under 3 sentences.
+- Sound like a smart colleague, not a chatbot.
+- Never say "Great!" or "Absolutely!" or other filler.
+- Start with: "What would you like to update about your brand profile?"`
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { messages } = await request.json() as { messages: Message[] }
+  const { messages, existingProfile } = await request.json() as { messages: Message[]; existingProfile?: Record<string, unknown> }
+
+  const systemPrompt = existingProfile ? UPDATE_SYSTEM_PROMPT(existingProfile) : SYSTEM_PROMPT
 
   // Anthropic requires the first message to have role 'user'
   let apiMessages: Message[]
@@ -72,7 +107,7 @@ export async function POST(request: Request) {
         const anthropicStream = anthropic.messages.stream({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
-          system: SYSTEM_PROMPT,
+          system: systemPrompt,
           messages: apiMessages,
         })
         for await (const event of anthropicStream) {

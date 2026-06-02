@@ -51,11 +51,18 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 bg-[#1C1917]/95 backdrop-blur border-b border-[rgba(184,115,51,0.15)]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '22px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>byline<span style={{ color: '#B87333' }}>.</span></span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link href="/pricing" className="text-sm text-[#A89070] hover:text-[#F7F3EC] transition-colors hidden sm:block">
               Pricing
             </Link>
-            <Link href="/login" className="text-sm text-[#A89070] hover:text-[#F7F3EC] transition-colors hidden sm:block">
+            {/* Log in: ghost outline button on mobile, plain text link on desktop */}
+            <Link
+              href="/login"
+              className="sm:hidden px-3 py-1.5 text-sm font-medium rounded-lg border border-[rgba(184,115,51,0.35)] text-[#A89070] hover:text-[#F7F3EC] hover:border-[rgba(184,115,51,0.6)] transition-colors"
+            >
+              Log in
+            </Link>
+            <Link href="/login" className="hidden sm:block text-sm text-[#A89070] hover:text-[#F7F3EC] transition-colors">
               Log in
             </Link>
             <Link
@@ -389,9 +396,9 @@ export default function HomePage() {
                 Get started
               </Link>
             </div>
-            {/* Agency */}
+            {/* Team */}
             <div className="rounded-2xl border border-[rgba(184,115,51,0.2)] p-7 text-left">
-              <div className="text-sm font-semibold text-[#A89070] mb-1">Agency</div>
+              <div className="text-sm font-semibold text-[#A89070] mb-1">Team</div>
               <div className="text-3xl font-bold text-[#F7F3EC] mb-4">
                 $249<span className="text-base font-normal text-[#7A6555]">/mo</span>
               </div>
