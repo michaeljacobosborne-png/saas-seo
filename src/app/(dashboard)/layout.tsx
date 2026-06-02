@@ -81,19 +81,4 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto" style={{ background: '#1C1917' }}>
-        {children}
-      </main>
-
-      {/* Floating chat bubble */}
-      <Link
-        href="/brand"
-        className="fixed bottom-6 right-6 z-50 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110"
-        style={{ background: '#B87333', width: '52px', height: '52px' }}
-        title="Go to Brand"
-      >
-        <MessageCircle className="w-6 h-6" style={{ color: '#F7F3EC' }} />
-      </Link>
-    </div>
-  )
-}
+      <main className="flex-1 overflow-y-auto" style

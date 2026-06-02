@@ -171,7 +171,11 @@ export async function POST(request: Request) {
     const res = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
-      system: `You are a content strategist auditing a website's content gaps. Analyze the provided page list and identify specific gaps — topics missing from the site, questions the audience likely has that aren't answered, content pillars that are incomplete or absent. Be specific and actionable. Return a JSON object with: { gaps: [{title, description, priority: 'high'|'medium'|'low', suggestedKeyword}], topicClusters: [{cluster, covered: string[], missing: string[]}], quickWins: string[] }`,
+      system: `You are a content strategist auditing a website's content gaps. Analyze the provided page list and identify specific gaps — topics missing from the site, questions the audience likely has that aren't answered, content pillars that are incomplete or absent. Be specific and actionable.
+
+CRITICAL: Respond with ONLY a raw JSON object. No markdown, no code fences, no explanation, no preamble. Start your response with { and end with }.
+
+Required shape: { "gaps": [{"title": string, "description": string, "priority": "high"|"medium"|"low", "suggestedKeyword": string}], "topicClusters": [{"cluster": string, "covered": string[], "missing": string[]}], "quickWins": string[] }`,
       messages: [{ role: 'user', content: userParts.join('\n') }],
     })
     rawText = res.content[0].type === 'text' ? res.content[0].text : ''
