@@ -31,7 +31,7 @@ export async function POST(
   const { id } = await params
   const { messages, mode, selectedText, fixInstruction } = await request.json() as {
     messages: Message[]
-    mode?: 'review' | 'assist'
+    mode?: 'review' | 'assist' | 'auto'
     selectedText?: string
     fixInstruction?: string
   }
@@ -49,6 +49,12 @@ export async function POST(
   if (isFree && mode === 'assist') {
     return NextResponse.json({
       error: 'Assist mode is available on paid plans. Upgrade to let the agent rewrite sections of your article directly.',
+    }, { status: 403 })
+  }
+
+  if (isFree && mode === 'auto') {
+    return NextResponse.json({
+      error: 'Auto mode is available on paid plans. Upgrade to let the agent rewrite your full article automatically.',
     }, { status: 403 })
   }
 
@@ -190,6 +196,72 @@ ANTI-SLOP EDITORIAL STANDARDS:
     })
   }
 
+  if (mode === 'auto') {
+    const autoSystem = `You are a professional SEO editor performing a comprehensive article rewrite. Apply ALL failing audit criteria and fix ALL weak areas in one pass. Return ONLY the complete revised article in clean markdown — no preamble, no commentary, no explanation before or after.
+
+ARTICLE CONTEXT:
+Title: ${articleTitle}
+Target keyword: "${article.target_keyword ?? '(none set)'}"
+${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice ?? 'professional'}` : ''}
+${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
+${brand?.expertise_notes ? `\nAUTHOR EXPERTISE (preserve this voice and perspective throughout):\n${brand.expertise_notes}` : ''}
+${brand?.signature_angles ? `\nSIGNATURE ANGLES (reinforce these throughout the rewrite):\n${brand.signature_angles}` : ''}
+${weakAreasSection}
+
+FULL ARTICLE TO REWRITE:
+${fullContent}
+
+REWRITE INSTRUCTIONS:
+- Fix every failing criterion listed in the weak areas above
+- Preserve the author's voice, tone, sentence rhythm, and formatting style throughout
+- Keep all sections and structural elements that are already working
+- Add or strengthen sections needed to pass failing criteria
+- Do not add a preamble, intro, or any commentary — return the article content only
+ANTI-SLOP STANDARDS (apply throughout the rewrite):
+- Active voice. Find the human doing the action. Never: "The data suggests" — always: "Researchers found."
+- Kill adverbs. If the verb needs one, replace the verb.
+- No Wh- starters: What makes this / Which means / Why this matters — banned.
+- No binary contrasts: "Not X — it's Y." Just say Y.
+- No vague declaratives: "The implications are significant." Name the implication.
+- No throat-clearing: It's worth noting / Importantly / Interestingly / Notably / Ultimately / Essentially.
+- No em dashes for drama. Use a comma or parentheses.
+- No quotable one-liners ending paragraphs.
+- No inanimate subjects doing human actions.
+- Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.
+- Sentence variety: never three of matching length in a row.`
+
+    const autoStream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder()
+        try {
+          const anthropicStream = anthropic.messages.stream({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 8192,
+            system: autoSystem,
+            messages: [{ role: 'user', content: 'Rewrite the article now, applying all failing criteria and returning the complete revised article.' }],
+          })
+          for await (const event of anthropicStream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text))
+            }
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Stream error'
+          controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`))
+        } finally {
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(autoStream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  }
+
   const expertiseSection = [
     brand?.expertise_notes ? `AUTHOR EXPERTISE (use this to ground the article in real experience):\n${brand.expertise_notes}` : '',
     brand?.signature_angles ? `SIGNATURE ANGLES (reinforce these perspectives in rewrites):\n${brand.signature_angles}` : '',
@@ -232,12 +304,11 @@ ANTI-SLOP EDITORIAL STANDARDS:
 - No quotable one-liners ending paragraphs.
 - No inanimate subjects doing human actions.
 - Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.
-- Sentence variety: never three of matching length in a row.
-- Every rewrite must sound like it was written by someone who knows this subject cold — not by a model following instructions.`
+- Sentence variety: never three of matching length in a row.`
 
+  let fullResponse = ''
   const stream = new ReadableStream({
     async start(controller) {
-      let fullResponse = ''
       const encoder = new TextEncoder()
       try {
         const anthropicStream = anthropic.messages.stream({
@@ -247,36 +318,24 @@ ANTI-SLOP EDITORIAL STANDARDS:
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
         })
         for await (const event of anthropicStream) {
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
             fullResponse += event.delta.text
             controller.enqueue(encoder.encode(event.delta.text))
           }
         }
-        // Expertise nudge — append once if brand has no expertise notes and nudge not yet shown
         if (shouldNudge && fullResponse) {
-          const nudgeText = '\n\n---\n*One thing that would improve every article I write for you: add your personal expertise and signature angles to your brand profile. Even rough notes work — it\'s the difference between content that ranks and content that actually sounds like you.*'
+          const nudgeText = "\n\n---\n*One thing that would improve every article I write for you: add your personal expertise and signature angles to your brand profile. Even rough notes work — it's the difference between content that ranks and content that actually sounds like you.*"
           controller.enqueue(encoder.encode(nudgeText))
           await supabaseAny.from('agent_memory').insert({
-            user_id: user.id,
-            article_id: id,
-            memory_type: 'account',
-            content: 'expertise_nudge_shown',
+            user_id: user.id, article_id: id, memory_type: 'account', content: 'expertise_nudge_shown',
           })
         }
-        // Save session memory after all tokens are streamed
         if (fullResponse && messages.length > 0) {
           const note = buildMemoryNote(articleTitle, messages, fullResponse)
           await supabaseAny.from('agent_memory').insert({
-            user_id: user.id,
-            article_id: id,
-            memory_type: 'article',
-            content: note,
+            user_id: user.id, article_id: id, memory_type: 'article', content: note,
           })
         }
-        // Increment free tier review turn counter
         if (isFree && fullResponse) {
           const currentTurns = ((profile?.agent_turns_used as Record<string, number>) ?? {})[id] ?? 0
           await supabaseAny.from('profiles').update({
