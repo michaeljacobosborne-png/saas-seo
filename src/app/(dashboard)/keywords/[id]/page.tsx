@@ -432,30 +432,6 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
         )}
       </div>
 
-      {/* Research context input */}
-      {(project.status === 'pending' || project.status === 'complete') && (
-        <div className="mb-6">
-          <label className="block text-xs font-medium mb-1.5" style={{ color: '#A89070' }}>
-            Research context <span style={{ color: '#7A6555' }}>(optional)</span>
-          </label>
-          <input
-            type="text"
-            value={researchContext}
-            onChange={(e) => setResearchContext(e.target.value)}
-            placeholder="e.g. target beginners, focus on commercial intent, local SEO for Chicago…"
-            className="w-full px-3 py-2.5 text-sm rounded-lg outline-none focus:ring-1 focus:ring-[#B87333]"
-            style={{
-              background: '#231F1B',
-              border: '1px solid rgba(184,115,51,0.25)',
-              color: '#F7F3EC',
-            }}
-          />
-          <p className="mt-1 text-xs" style={{ color: '#7A6555' }}>
-            Tell the AI what you&apos;re looking for and results will be clustered and targeted accordingly.
-          </p>
-        </div>
-      )}
-
       {/* Error */}
       {researchError && (
         <div className="mb-6 flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
@@ -660,6 +636,43 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
         </>
       )}
 
+      {/* Refine results section — shown after keywords are loaded */}
+      {project.status === 'complete' && keywords.length > 0 && (
+        <div className="mt-6 p-4 rounded-xl" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.2)' }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: '#A89070' }}>
+            Refine these results
+          </p>
+          <p className="text-xs mb-3" style={{ color: '#7A6555' }}>
+            Re-run keyword research for &ldquo;<span style={{ color: '#A89070' }}>{project.seed_topic}</span>&rdquo; with a new focus.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={researchContext}
+              onChange={(e) => setResearchContext(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && researchContext.trim()) handleResearch() }}
+              placeholder="e.g. focus on commercial intent, target beginners, local SEO for Chicago…"
+              disabled={researching}
+              className="flex-1 px-3 py-2 text-sm rounded-lg outline-none focus:ring-1 focus:ring-[#B87333] disabled:opacity-50"
+              style={{
+                background: '#1C1917',
+                border: '1px solid rgba(184,115,51,0.2)',
+                color: '#F7F3EC',
+              }}
+            />
+            <button
+              onClick={handleResearch}
+              disabled={researching || !researchContext.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              style={{ background: '#B87333', color: '#F7F3EC' }}
+            >
+              {researching ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Refine
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Research progress toast — bottom-right fixed card */}
       {toastVisible && (
         <div className="fixed bottom-5 right-5 z-50 w-72 bg-[#1C1917] rounded-xl shadow-xl border border-[rgba(184,115,51,0.2)] p-4">
@@ -672,4 +685,36 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
               ) : (
                 <Loader2 className="w-4 h-4 text-[#D4954A] animate-spin shrink-0" />
               )}
-        
+              <span className="text-sm font-semibold text-[#F7F3EC]">Keyword Research</span>
+            </div>
+            <button
+              onClick={() => setToastVisible(false)}
+              className="text-[#7A6555] hover:text-[#A89070] transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <p className={`text-xs mb-3 ${
+            toastStage === 'error' ? 'text-red-600' :
+            toastStage === 'complete' ? 'text-green-600' : 'text-[#A89070]'
+          }`}>
+            {TOAST_CONFIG[toastStage].label}
+            {toastStage === 'error' && toastErrorMsg ? `: ${toastErrorMsg}` : ''}
+          </p>
+
+          <div className="w-full h-1.5 bg-[#2A2420] rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ease-out ${
+                toastStage === 'error' ? 'bg-red-400' :
+                toastStage === 'complete' ? 'bg-green-400' : 'bg-[#B87333]'
+              }`}
+              style={{ width: `${TOAST_CONFIG[toastStage].progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
