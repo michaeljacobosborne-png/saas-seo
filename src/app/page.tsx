@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Search, FileText, Sparkles, Check, X } from 'lucide-react'
 import type { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
   title: 'Byline — Content that ranks. An agent that fixes it.',
@@ -43,7 +45,11 @@ const COMPARISON_ROWS = [
   { feature: 'Price', byline: 'From $49', other: 'From $89' },
 ]
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) redirect('/dashboard')
+
   return (
     <div className="min-h-full bg-[#1C1917] text-[#F7F3EC]">
 
