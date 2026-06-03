@@ -269,6 +269,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [kwResults, setKwResults] = useState<Array<{ id: string; keyword: string; volume: number | null; difficulty: number | null }>>([])
   const [kwSearching, setKwSearching] = useState(false)
   const [kwRetargeting, setKwRetargeting] = useState(false)
+  const [kwSuggestions, setKwSuggestions] = useState<Array<{ keyword: string; volume: number | null; difficulty: number | null; cpc: number | null; reason: string }>>([])
+  const [kwSuggestionsLoading, setKwSuggestionsLoading] = useState(false)
+  const [kwSuggestionsLoaded, setKwSuggestionsLoaded] = useState(false)
+  const kwCardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { agentModeRef.current = agentMode }, [agentMode])
 
@@ -531,6 +535,23 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setMetaGenerating(false)
   }
 
+  async function loadKwSuggestions() {
+    if (kwSuggestionsLoading) return
+    setKwSuggestionsLoading(true)
+    setKwSuggestionsLoaded(false)
+    try {
+      const res = await fetch(`/api/articles/${id}/keyword-suggestions`, { method: 'POST' })
+      const data = await res.json()
+      setKwSuggestions(data.suggestions ?? [])
+    } catch {
+      setKwSuggestions([])
+    }
+    setKwSuggestionsLoading(false)
+    setKwSuggestionsLoaded(true)
+    // Scroll keyword card into view
+    setTimeout(() => kwCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+  }
+
   async function handleRetarget(newKeyword: string) {
     if (!article || !newKeyword.trim()) return
     setKwRetargeting(true)
@@ -541,6 +562,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setKwEditMode(false)
     setKwSearch('')
     setKwResults([])
+    setKwSuggestions([])
+    setKwSuggestionsLoaded(false)
     setKwRetargeting(false)
     setActiveTab('scores')
     setScoreError(null)
@@ -783,7 +806,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <div className="space-y-5">
 
                 {/* ── Target keyword card ─────────────────────────────── */}
-                <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                <div ref={kwCardRef} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-[#F7F3EC]">Target Keyword</span>
@@ -893,6 +916,56 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           No stats — save this keyword in{' '}
                           <a href="/keywords" style={{ color: '#B87333' }} className="hover:underline">Keyword Research</a> to see volume and difficulty.
                         </p>
+                      )}
+
+                      {/* Suggestions section */}
+                      {!kwEditMode && (
+                        <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(184,115,51,0.1)' }}>
+                          {!kwSuggestionsLoaded && (
+                            <button
+                              onClick={loadKwSuggestions}
+                              disabled={kwSuggestionsLoading}
+                              className="flex items-center gap-2 text-xs font-medium transition-colors disabled:opacity-50"
+                              style={{ color: '#B87333' }}
+                            >
+                              {kwSuggestionsLoading
+                                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Agent is analyzing alternatives…</>
+                                : <><Sparkles className="w-3.5 h-3.5" /> Find better keywords</>}
+                            </button>
+                          )}
+                          {kwSuggestionsLoaded && kwSuggestions.length === 0 && (
+                            <p className="text-xs" style={{ color: '#7A6555' }}>No saved keywords make a clearly better target. Research more keywords first.</p>
+                          )}
+                          {kwSuggestions.length > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold mb-2" style={{ color: '#A89070' }}>Agent suggestions</p>
+                              <div className="space-y-2">
+                                {kwSuggestions.map((s) => (
+                                  <button
+                                    key={s.keyword}
+                                    onClick={() => handleRetarget(s.keyword)}
+                                    disabled={kwRetargeting}
+                                    className="w-full text-left rounded-lg px-3 py-2.5 transition-colors group"
+                                    style={{ background: 'rgba(184,115,51,0.06)', border: '1px solid rgba(184,115,51,0.15)' }}
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-sm font-medium group-hover:text-[#B87333] transition-colors" style={{ color: '#F7F3EC' }}>{s.keyword}</span>
+                                      <div className="flex items-center gap-2 text-xs shrink-0 ml-2" style={{ color: '#7A6555' }}>
+                                        {s.volume !== null && <span>{s.volume >= 1000 ? `${(s.volume/1000).toFixed(1)}k` : s.volume} vol</span>}
+                                        {s.difficulty !== null && (
+                                          <span className={s.difficulty < 30 ? 'text-green-400' : s.difficulty < 60 ? 'text-amber-400' : 'text-red-400'}>
+                                            KD {s.difficulty}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <p className="text-xs" style={{ color: '#7A6555' }}>{s.reason}</p>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -1007,7 +1080,21 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <h3 className="font-semibold text-[#F7F3EC] text-sm">Ranking Prediction</h3>
                     </div>
                     <p className="text-sm text-[#A89070] mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
-                    <ConfidenceChip confidence={scores.ranking_prediction.confidence} />
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <ConfidenceChip confidence={scores.ranking_prediction.confidence} />
+                      {/keyword|competitive|different|difficult/i.test(scores.ranking_prediction.timeline) && (
+                        <button
+                          onClick={() => { loadKwSuggestions() }}
+                          disabled={kwSuggestionsLoading}
+                          className="flex items-center gap-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                          style={{ color: '#B87333' }}
+                        >
+                          {kwSuggestionsLoading
+                            ? <><Loader2 className="w-3 h-3 animate-spin" /> Finding alternatives…</>
+                            : <><Sparkles className="w-3 h-3" /> Suggest better keywords</>}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
