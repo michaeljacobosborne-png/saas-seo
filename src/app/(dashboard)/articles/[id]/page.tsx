@@ -9,7 +9,7 @@ import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send,
-  Wand2, Pencil, Eye, Lock,
+  Wand2, Pencil, Eye, Lock, Globe,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -235,6 +235,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [metaDesc, setMetaDesc] = useState('')
   const [metaSaving, setMetaSaving] = useState(false)
   const [metaGenerating, setMetaGenerating] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const metaInitialized = useRef(false)
 
   // Agent state
@@ -485,6 +486,19 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setMetaGenerating(false)
   }
 
+  async function handlePublish() {
+    if (!article) return
+    const newStatus = article.status === 'published' ? 'complete' : 'published'
+    setPublishing(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from('articles')
+      .update({ status: newStatus })
+      .eq('id', id)
+    if (!error) setArticle({ ...article, status: newStatus })
+    setPublishing(false)
+  }
+
   async function handleCopy() {
     if (!article?.content) return
     const text = getEditorTextRef.current ? getEditorTextRef.current() : article.content
@@ -570,6 +584,20 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               >
                 {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {scores ? 'Re-score' : 'Score Article'}
+              </button>
+            )}
+            {article.content && (
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                  article.status === 'published'
+                    ? 'border-[rgba(184,115,51,0.4)] text-[#B87333] bg-[rgba(184,115,51,0.08)]'
+                    : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+                }`}
+              >
+                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                {article.status === 'published' ? 'Published' : 'Publish'}
               </button>
             )}
             {article.content && (
