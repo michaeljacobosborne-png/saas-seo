@@ -45,9 +45,11 @@ export default function SettingsPage() {
         setTimeout(() => setSyncMessage(null), 6000)
         return
       }
-      if (data.synced) {
-        setSyncMessage('Subscription refreshed.')
+      if (data.synced && (data.count as number) > 0) {
+        setSyncMessage(`Subscription synced (${data.count} record${(data.count as number) > 1 ? 's' : ''}).`)
         await loadSub()
+      } else if (data.synced && (data.count as number) === 0) {
+        setSyncMessage('Synced but no subscriptions found in Stripe for this account.')
       } else {
         setSyncMessage((data.reason as string) ?? (data.error as string) ?? 'No changes found.')
       }

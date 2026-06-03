@@ -129,13 +129,27 @@ export async function POST() {
       // (prevents NOT NULL constraint violation; user can manually correct)
       payload.plan = plan ?? 'starter'
 
-      const { error } = await supabaseAny
+      // Try insert first; if the subscription already exists, update it
+      const { error: insertError } = await supabaseAny
         .from('subscriptions')
-        .upsert(payload, { onConflict: 'stripe_subscription_id' })
+        .insert(payload)
 
-      if (error) {
-        console.error('[billing/sync] upsert error:', JSON.stringify(error))
-        return NextResponse.json({ synced: false, reason: `DB write failed: ${error.message}` }, { status: 500 })
+      if (insertError) {
+        if (insertError.code === '23505') {
+          // Duplicate stripe_subscription_id — update instead
+          const { plan: _plan, user_id: _uid, ...updateFields } = payload
+          const { error: updateError } = await supabaseAny
+            .from('subscriptions')
+            .update({ ...updateFields, plan: payload.plan })
+            .eq('stripe_subscription_id', sub.id)
+          if (updateError) {
+            console.error('[billing/sync] update error:', JSON.stringify(updateError))
+            return NextResponse.json({ synced: false, reason: `DB update failed: ${updateError.message}` }, { status: 500 })
+          }
+        } else {
+          console.error('[billing/sync] insert error:', JSON.stringify(insertError))
+          return NextResponse.json({ synced: false, reason: `DB insert failed: ${insertError.message}` }, { status: 500 })
+        }
       }
 
       synced++
