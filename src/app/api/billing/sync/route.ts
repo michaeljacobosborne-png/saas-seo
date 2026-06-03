@@ -103,7 +103,13 @@ export async function POST() {
         // price details unavailable — continue without them
       }
 
-      const plan = (priceId && priceToPlan[priceId]) ? priceToPlan[priceId] : null
+      // Plan resolution order:
+      // 1. Subscription metadata (set at checkout — most reliable)
+      // 2. Price ID → env var mapping (fallback)
+      // 3. 'starter' (last resort default)
+      const metaPlan = (sub.metadata?.plan as string | undefined) ?? null
+      const pricePlan = (priceId && priceToPlan[priceId]) ? priceToPlan[priceId] : null
+      const plan = metaPlan ?? pricePlan
       const status = mapStatus(sub.status)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawPeriodEnd = (sub as any).current_period_end

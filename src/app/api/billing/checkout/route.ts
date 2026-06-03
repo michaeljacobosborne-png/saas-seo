@@ -95,7 +95,9 @@ export async function POST(request: Request) {
       allow_promotion_codes: true,
       metadata: { userId: user.id, plan, interval },
       subscription_data: {
-        metadata: { userId: user.id },
+        // Store plan + interval on the subscription itself so sync can read it
+        // without needing to match price IDs against env vars
+        metadata: { userId: user.id, plan, interval },
       },
     })
 
