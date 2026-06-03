@@ -176,12 +176,10 @@ export default async function DashboardPage() {
                     <Link
                       key={article.id}
                       href={`/articles/${article.id}`}
-                      className="flex items-center gap-3 px-5 py-3.5 transition-colors group"
+                      className="flex items-center gap-3 px-5 py-3.5 transition-colors group hover:bg-[#2A2420]"
                       style={{
                         borderTop: i > 0 ? '1px solid rgba(184,115,51,0.1)' : undefined,
                       }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(184,115,51,0.04)' }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                     >
                       {/* Status dot */}
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ background: statusCfg.style.color as string }} />
