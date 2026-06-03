@@ -257,8 +257,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const agentModeRef = useRef<'review' | 'assist' | 'auto'>('review')
 
   // Auto mode state
-  const [autoConfirmOpen, setAutoConfirmOpen] = useState(false)
+  const [autoInstruction, setAutoInstruction] = useState('')
   const [autoResult, setAutoResult] = useState('')
+  const [autoApplied, setAutoApplied] = useState(false)
+  const autoStreamRef = useRef<HTMLDivElement>(null)
 
   // Plan state
   const [userPlan, setUserPlan] = useState<string>('starter')
@@ -325,6 +327,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     if (isNearBottom) el.scrollTop = el.scrollHeight
   }, [agentMessages])
 
+  // Auto-scroll live auto mode output
+  useEffect(() => {
+    if (autoStreamRef.current) {
+      autoStreamRef.current.scrollTop = autoStreamRef.current.scrollHeight
+    }
+  }, [agentMessages])
+
   // Load keyword stats from saved_keywords when article loads
   useEffect(() => {
     if (!article?.target_keyword) return
@@ -371,11 +380,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   // Clear messages when switching into Assist or Auto mode
   useEffect(() => {
-    setAutoConfirmOpen(false)
     if (agentMode === 'assist' || agentMode === 'auto') {
       setAgentMessages([])
       setAssistApplied(false)
       setAutoResult('')
+      setAutoApplied(false)
     }
   }, [agentMode])
 
@@ -469,18 +478,18 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
   }, [id])
 
-  const sendAutoMode = useCallback(async () => {
-    setAutoConfirmOpen(false)
+  const sendAutoMode = useCallback(async (instruction?: string) => {
     setAgentMessages([])
     setAutoResult('')
+    setAutoApplied(false)
     setAgentStreaming(true)
-    // Auto-snapshot before overwriting
+    // Auto-snapshot before overwriting — versioning means no confirmation needed
     await saveSnapshot('Before Auto mode', 'agent_auto')
 
     const res = await fetch(`/api/articles/${id}/agent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [], mode: 'auto' }),
+      body: JSON.stringify({ messages: [], mode: 'auto', userInstruction: instruction?.trim() || undefined }),
     })
 
     if (!res.ok) {
@@ -514,7 +523,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
 
     setAgentStreaming(false)
-    setAutoResult(fullResult)
+    if (fullResult) {
+      // Auto-apply immediately — user can revert via History if needed
+      applyContentRef.current?.(fullResult)
+      setAutoResult(fullResult)
+      setAutoApplied(true)
+    }
   }, [id])
 
   function openAgent(currentArticle: Article) {
@@ -1309,92 +1323,90 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               {/* Auto mode panel */}
               {agentMode === 'auto' && (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  {autoConfirmOpen ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                      <div className="w-12 h-12 rounded-full bg-[rgba(184,115,51,0.12)] flex items-center justify-center mb-4">
-                        <Wand2 className="w-6 h-6 text-[#B87333]" />
+                  {agentStreaming ? (
+                    /* Live streaming output */
+                    <div className="flex-1 flex flex-col min-h-0">
+                      <div className="shrink-0 flex items-center gap-2.5 px-4 py-2.5 border-b border-[rgba(184,115,51,0.1)]">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: '#B87333' }} />
+                        <span className="text-xs" style={{ color: '#A89070' }}>Rewriting…</span>
+                        <span className="text-xs tabular-nums ml-auto" style={{ color: '#4A3E35' }}>
+                          {(agentMessages[0]?.content.length ?? 0).toLocaleString()} chars
+                        </span>
                       </div>
-                      <h3 className="font-semibold text-[#F7F3EC] text-sm mb-2">Rewrite full article?</h3>
-                      <p className="text-xs text-[#A89070] text-center mb-6 leading-relaxed max-w-xs">
-                        Auto mode will rewrite your full article applying all audit improvements. This replaces your current content — make sure you have a copy first.
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setAutoConfirmOpen(false)}
-                          className="px-4 py-2 text-sm text-[#A89070] border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={sendAutoMode}
-                          className="px-4 py-2 text-sm bg-[#B87333] text-[#F7F3EC] rounded-lg hover:bg-[#A0622A] transition-colors font-medium"
-                        >
-                          Yes, rewrite it
-                        </button>
+                      <div ref={autoStreamRef} className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+                        <pre className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: '#7A6555', fontFamily: 'inherit' }}>
+                          {agentMessages[0]?.content}
+                        </pre>
                       </div>
                     </div>
-                  ) : agentStreaming ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                      <Loader2 className="w-6 h-6 animate-spin text-[#B87333] mb-3" />
-                      <p className="text-sm text-[#A89070]">Rewriting your article&hellip;</p>
-                      {agentMessages[0] && (
-                        <p className="text-xs text-[#7A6555] mt-1.5 tabular-nums">
-                          {agentMessages[0].content.length.toLocaleString()} characters written
-                        </p>
-                      )}
-                    </div>
-                  ) : autoResult ? (
+                  ) : autoApplied ? (
+                    /* Applied — show success + revert option */
                     <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                       <CheckCircle2 className="w-8 h-8 text-green-500 mb-3" />
-                      <p className="text-sm font-semibold text-[#F7F3EC] mb-1">Rewrite ready</p>
-                      <p className="text-xs text-[#A89070] mb-6">
-                        ~{autoResult.trim().split(/\s+/).length.toLocaleString()} words generated
+                      <p className="text-sm font-semibold mb-1" style={{ color: '#F7F3EC' }}>Article rewritten</p>
+                      <p className="text-xs mb-6" style={{ color: '#A89070' }}>
+                        ~{autoResult.trim().split(/\s+/).length.toLocaleString()} words · applied to editor
                       </p>
                       <button
-                        onClick={() => {
-                          applyContentRef.current?.(autoResult)
-                          setAutoResult('')
-                          setAgentMessages([])
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors mb-2"
+                        onClick={() => openHistory()}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-colors mb-2"
+                        style={{ color: '#A89070', borderColor: 'rgba(184,115,51,0.25)' }}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Apply to article
+                        <History className="w-3.5 h-3.5" /> View history to revert
                       </button>
                       <button
-                        onClick={() => { setAutoResult(''); setAgentMessages([]) }}
-                        className="text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                        onClick={() => { setAutoResult(''); setAutoApplied(false); setAgentMessages([]) }}
+                        className="text-xs transition-colors mt-1"
+                        style={{ color: '#4A3E35' }}
                       >
-                        Discard
+                        Run again
                       </button>
                     </div>
                   ) : agentMessages.length > 0 ? (
+                    /* Error state */
                     <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                       <AlertCircle className="w-6 h-6 text-red-400 mb-3" />
-                      <p className="text-xs text-[#A89070] leading-relaxed">{agentMessages[0]?.content}</p>
+                      <p className="text-xs leading-relaxed" style={{ color: '#A89070' }}>{agentMessages[0]?.content}</p>
                       <button
                         onClick={() => setAgentMessages([])}
-                        className="mt-4 text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                        className="mt-4 text-xs transition-colors"
+                        style={{ color: '#7A6555' }}
                       >
                         Dismiss
                       </button>
                     </div>
                   ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                      <div className="w-12 h-12 rounded-full bg-[rgba(184,115,51,0.1)] flex items-center justify-center mb-4">
-                        <Wand2 className="w-6 h-6 text-[#B87333]" />
-                      </div>
-                      <p className="text-sm font-semibold text-[#F7F3EC] mb-2">One-pass rewrite</p>
-                      <p className="text-xs text-[#A89070] mb-6 leading-relaxed max-w-xs">
-                        The agent reads your full article, audit scores, and brand profile — then applies every failing criterion in a single pass. No back-and-forth.
+                    /* Ready state — instruction input + run button */
+                    <div className="flex-1 flex flex-col p-4 gap-4">
+                      <p className="text-xs leading-relaxed" style={{ color: '#7A6555' }}>
+                        Reads your article, audit scores, and brand profile — then applies every failing criterion in one pass. Previous version saved automatically so you can revert anytime.
                       </p>
+                      <div>
+                        <label className="block text-xs font-medium mb-1.5" style={{ color: '#A89070' }}>
+                          Focus instructions <span style={{ color: '#4A3E35' }}>(optional)</span>
+                        </label>
+                        <textarea
+                          value={autoInstruction}
+                          onChange={(e) => setAutoInstruction(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.metaKey) sendAutoMode(autoInstruction)
+                          }}
+                          placeholder={'e.g. "strengthen the intro" · "add more data points" · "don\'t change the conclusion"'}
+                          rows={3}
+                          className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent placeholder-gray-600"
+                          style={{ background: '#1C1917', color: '#F7F3EC' }}
+                        />
+                      </div>
                       <button
-                        onClick={() => setAutoConfirmOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+                        onClick={() => sendAutoMode(autoInstruction)}
+                        disabled={agentStreaming}
+                        className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+                        style={{ background: '#B87333', color: '#F7F3EC' }}
                       >
                         <Wand2 className="w-4 h-4" />
-                        Run Auto Mode
+                        Rewrite Article
                       </button>
+                      <p className="text-xs text-center" style={{ color: '#3A342E' }}>⌘ + Enter to run</p>
                     </div>
                   )}
                 </div>

@@ -29,11 +29,12 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { messages, mode, selectedText, fixInstruction } = await request.json() as {
+  const { messages, mode, selectedText, fixInstruction, userInstruction } = await request.json() as {
     messages: Message[]
     mode?: 'review' | 'assist' | 'auto'
     selectedText?: string
     fixInstruction?: string
+    userInstruction?: string   // optional focus instructions for auto mode
   }
 
   // Plan-based agent mode gating
@@ -221,6 +222,10 @@ ANTI-SLOP STANDARDS (apply throughout the rewrite):
 - Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.
 - Sentence variety: never three of matching length in a row.`
 
+    const autoUserMessage = userInstruction
+      ? `Rewrite the article now, applying all failing criteria and returning the complete revised article.\n\nAdditional focus: ${userInstruction}`
+      : 'Rewrite the article now, applying all failing criteria and returning the complete revised article.'
+
     const autoStream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder()
@@ -229,7 +234,7 @@ ANTI-SLOP STANDARDS (apply throughout the rewrite):
             model: 'claude-sonnet-4-6',
             max_tokens: 8192,
             system: autoSystem,
-            messages: [{ role: 'user', content: 'Rewrite the article now, applying all failing criteria and returning the complete revised article.' }],
+            messages: [{ role: 'user', content: autoUserMessage }],
           })
           for await (const event of anthropicStream) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
