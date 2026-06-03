@@ -39,7 +39,7 @@ export default async function DashboardPage() {
   // Parallel data fetch
   const [brandRes, articlesRes, keywordsRes] = await Promise.all([
     sb.from('brand_profiles')
-      .select('brand_name, company_name, industry')
+      .select('brand_name, industry, target_audience')
       .eq('user_id', user!.id)
       .maybeSingle(),
     sb.from('articles')
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
       .limit(60),
   ])
 
-  const brand = brandRes.data as { brand_name: string | null; company_name: string | null; industry: string | null } | null
+  const brand = brandRes.data as { brand_name: string | null; industry: string | null; target_audience: string | null } | null
   const articles = (articlesRes.data ?? []) as Array<{
     id: string; title: string | null; target_keyword: string | null;
     status: string; word_count: number | null; updated_at: string; created_at: string
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
   }
   const folders = Object.entries(folderMap).slice(0, 4)
 
-  const displayName = brand?.brand_name ?? brand?.company_name ?? null
+  const displayName = brand?.brand_name ?? null
   const hasBrand = !!brand
 
   return (

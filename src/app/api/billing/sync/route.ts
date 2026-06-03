@@ -119,8 +119,9 @@ export async function POST() {
         cancel_at_period_end: sub.cancel_at_period_end,
         updated_at: new Date().toISOString(),
       }
-      // Only write plan if we could map it — avoids overwriting with wrong value
-      if (plan) payload.plan = plan
+      // Always write plan — fall back to 'starter' if price ID isn't mapped
+      // (prevents NOT NULL constraint violation; user can manually correct)
+      payload.plan = plan ?? 'starter'
 
       const { error } = await supabaseAny
         .from('subscriptions')
