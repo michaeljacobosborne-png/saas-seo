@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getStripe } from '@/lib/stripe'
 import Stripe from 'stripe'
 
@@ -35,8 +36,9 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    // Use service client for writes (bypasses RLS on subscriptions table)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabaseAny = supabase as any
+    const supabaseAny = createServiceClient() as any
     const stripe = getStripe()
 
     // Step 1: find Stripe customer ID — try DB first, then email lookup
