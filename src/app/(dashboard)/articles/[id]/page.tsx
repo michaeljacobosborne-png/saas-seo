@@ -232,6 +232,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState<'content' | 'scores'>('content')
   const getEditorTextRef = useRef<(() => string) | null>(null)
+  const getEditorWordCountRef = useRef<(() => number) | null>(null)
+  const replaceContentRef = useRef<((markdown: string) => void) | null>(null)
   const applyContentRef = useRef<((markdown: string) => void) | null>(null)
   const applyAtRangeRef = useRef<((from: number, to: number, html: string) => void) | null>(null)
   const [metaDesc, setMetaDesc] = useState('')
@@ -524,8 +526,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
     setAgentStreaming(false)
     if (fullResult) {
-      // Auto-apply immediately — user can revert via History if needed
-      applyContentRef.current?.(fullResult)
+      // Full replacement via replaceContentRef (setContent, not insertContent)
+      replaceContentRef.current?.(fullResult)
       setAutoResult(fullResult)
       setAutoApplied(true)
     }
@@ -613,7 +615,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     const res = await fetch(`/api/articles/${id}/versions/${vid}`, { method: 'POST' })
     const data = await res.json()
     if (res.ok && data.content) {
-      applyContentRef.current?.(data.content)
+      replaceContentRef.current?.(data.content)
       setArticle((prev) => prev ? { ...prev, content: data.content, word_count: data.word_count } : prev)
       setPreviewVersion(null)
       setHistoryOpen(false)
@@ -874,6 +876,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 articleId={id}
                 initialContent={article.content}
                 getTextRef={getEditorTextRef}
+                getWordCountRef={getEditorWordCountRef}
+                replaceContentRef={replaceContentRef}
                 applyContentRef={applyContentRef}
                 applyAtRangeRef={applyAtRangeRef}
                 onSelectionChange={handleSelectionChange}
@@ -1345,7 +1349,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <CheckCircle2 className="w-8 h-8 text-green-500 mb-3" />
                       <p className="text-sm font-semibold mb-1" style={{ color: '#F7F3EC' }}>Article rewritten</p>
                       <p className="text-xs mb-6" style={{ color: '#A89070' }}>
-                        ~{autoResult.trim().split(/\s+/).length.toLocaleString()} words · applied to editor
+                        Applied to editor · saving automatically
                       </p>
                       <button
                         onClick={() => openHistory()}
