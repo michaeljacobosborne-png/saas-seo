@@ -9,8 +9,9 @@ import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send,
-  Wand2, Pencil, Eye, Lock, Globe,
+  Wand2, Pencil, Eye, Lock, Globe, History, GitFork, RotateCcw, Clock,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
 
@@ -222,6 +223,7 @@ function SEOCriteriaRow({ label, passed, points, max }: { label: string; passed:
 export default function ArticleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const supabase = createClient()
+  const router = useRouter()
 
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
@@ -273,6 +275,18 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [kwSuggestionsLoading, setKwSuggestionsLoading] = useState(false)
   const [kwSuggestionsLoaded, setKwSuggestionsLoaded] = useState(false)
   const kwCardRef = useRef<HTMLDivElement>(null)
+
+  // History panel state
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [versions, setVersions] = useState<Array<{ id: string; label: string | null; trigger: string | null; word_count: number | null; created_at: string }>>([])
+  const [versionsLoading, setVersionsLoading] = useState(false)
+  const [previewVersion, setPreviewVersion] = useState<{ id: string; content: string; label: string | null; created_at: string } | null>(null)
+  const [restoring, setRestoring] = useState(false)
+
+  // Fork state
+  const [forkOpen, setForkOpen] = useState(false)
+  const [forkKeyword, setForkKeyword] = useState('')
+  const [forking, setForking] = useState(false)
 
   useEffect(() => { agentModeRef.current = agentMode }, [agentMode])
 
@@ -439,6 +453,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setAgentStreaming(false)
 
     if (isAssist && lastResponseRef.current) {
+      // Snapshot before applying assist edit
+      await saveSnapshot('Before Assist edit', 'agent_assist')
       const html = marked.parse(lastResponseRef.current) as string
       if (assist.selectionRange) {
         applyAtRangeRef.current?.(assist.selectionRange.from, assist.selectionRange.to, html)
@@ -458,6 +474,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setAgentMessages([])
     setAutoResult('')
     setAgentStreaming(true)
+    // Auto-snapshot before overwriting
+    await saveSnapshot('Before Auto mode', 'agent_auto')
 
     const res = await fetch(`/api/articles/${id}/agent`, {
       method: 'POST',
@@ -550,6 +568,61 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setKwSuggestionsLoaded(true)
     // Scroll keyword card into view
     setTimeout(() => kwCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+  }
+
+  async function openHistory() {
+    setHistoryOpen(true)
+    setAgentOpen(false)
+    setVersionsLoading(true)
+    const res = await fetch(`/api/articles/${id}/versions`)
+    const data = await res.json()
+    setVersions(data.versions ?? [])
+    setVersionsLoading(false)
+  }
+
+  async function saveSnapshot(label: string, trigger: string) {
+    await fetch(`/api/articles/${id}/versions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label, trigger }),
+    })
+  }
+
+  async function previewVersionContent(vid: string) {
+    const res = await fetch(`/api/articles/${id}/versions/${vid}`)
+    const data = await res.json()
+    if (data.version) setPreviewVersion(data.version)
+  }
+
+  async function restoreVersion(vid: string) {
+    setRestoring(true)
+    const res = await fetch(`/api/articles/${id}/versions/${vid}`, { method: 'POST' })
+    const data = await res.json()
+    if (res.ok && data.content) {
+      applyContentRef.current?.(data.content)
+      setArticle((prev) => prev ? { ...prev, content: data.content, word_count: data.word_count } : prev)
+      setPreviewVersion(null)
+      setHistoryOpen(false)
+      // Reload versions list
+      const r2 = await fetch(`/api/articles/${id}/versions`)
+      const d2 = await r2.json()
+      setVersions(d2.versions ?? [])
+    }
+    setRestoring(false)
+  }
+
+  async function handleFork() {
+    setForking(true)
+    const res = await fetch(`/api/articles/${id}/fork`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_keyword: forkKeyword.trim() || undefined }),
+    })
+    const data = await res.json()
+    if (res.ok && data.articleId) {
+      router.push(`/articles/${data.articleId}`)
+    }
+    setForking(false)
   }
 
   async function handleRetarget(newKeyword: string) {
@@ -649,7 +722,25 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <p className="text-sm text-[#7A6555] mt-0.5">Target: <span className="font-medium text-[#A89070]">{article.target_keyword}</span></p>
             )}
           </div>
-          <div className="flex items-center gap-2 shrink-0 ml-4">
+          <div className="flex items-center gap-2 shrink-0 ml-4 flex-wrap justify-end">
+            {article.content && (
+              <button
+                onClick={() => { setForkOpen(true) }}
+                className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] text-[#A89070] transition-colors"
+              >
+                <GitFork className="w-4 h-4" /> Fork
+              </button>
+            )}
+            {article.content && (
+              <button
+                onClick={openHistory}
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                  historyOpen ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.25)] text-[#A0622A]' : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+                }`}
+              >
+                <History className="w-4 h-4" /> History
+              </button>
+            )}
             {article.content && (
               <button
                 onClick={handleCopy}
@@ -1429,6 +1520,155 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* ── History panel ─────────────────────────────────────────────── */}
+      {historyOpen && (
+        <div className="w-80 shrink-0 border-l border-[rgba(184,115,51,0.2)] bg-[#1C1917] flex flex-col" style={{ height: '100vh', position: 'sticky', top: 0 }}>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(184,115,51,0.15)] shrink-0">
+            <div className="flex items-center gap-2">
+              <History className="w-4 h-4" style={{ color: '#B87333' }} />
+              <span className="font-semibold text-[#F7F3EC] text-sm">Version History</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => saveSnapshot('Manual save', 'manual').then(openHistory)}
+                className="text-xs font-medium transition-colors px-2 py-1 rounded"
+                style={{ color: '#B87333', background: 'rgba(184,115,51,0.08)' }}
+                title="Save current version"
+              >
+                Save now
+              </button>
+              <button onClick={() => { setHistoryOpen(false); setPreviewVersion(null) }} className="text-[#7A6555] hover:text-[#A89070]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {previewVersion ? (
+            /* Version preview */
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-4 py-3 border-b border-[rgba(184,115,51,0.1)] shrink-0">
+                <button onClick={() => setPreviewVersion(null)} className="flex items-center gap-1.5 text-xs mb-2" style={{ color: '#7A6555' }}>
+                  <ArrowLeft className="w-3 h-3" /> Back to list
+                </button>
+                <p className="text-sm font-semibold text-[#F7F3EC]">{previewVersion.label ?? 'Saved version'}</p>
+                <p className="text-xs mt-0.5" style={{ color: '#7A6555' }}>
+                  {new Date(previewVersion.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </p>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+                <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: '#A89070' }}>
+                  {previewVersion.content.slice(0, 1200)}{previewVersion.content.length > 1200 ? '…' : ''}
+                </p>
+              </div>
+              <div className="shrink-0 px-4 py-3 border-t border-[rgba(184,115,51,0.1)]">
+                <button
+                  onClick={() => restoreVersion(previewVersion.id)}
+                  disabled={restoring}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  style={{ background: '#B87333', color: '#F7F3EC' }}
+                >
+                  {restoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                  Restore this version
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Version list */
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {versionsLoading ? (
+                <div className="flex items-center justify-center h-24 gap-2" style={{ color: '#7A6555' }}>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Loading…</span>
+                </div>
+              ) : versions.length === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <Clock className="w-8 h-8 mx-auto mb-2" style={{ color: '#3A342E' }} />
+                  <p className="text-sm" style={{ color: '#7A6555' }}>No saved versions yet.</p>
+                  <p className="text-xs mt-1" style={{ color: '#4A3E35' }}>Versions are saved automatically before agent edits.</p>
+                </div>
+              ) : (
+                <div>
+                  {versions.map((v, i) => (
+                    <button
+                      key={v.id}
+                      onClick={() => previewVersionContent(v.id)}
+                      className="w-full text-left px-4 py-3 hover:bg-[#231F1B] transition-colors"
+                      style={{ borderTop: i > 0 ? '1px solid rgba(184,115,51,0.08)' : undefined }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[#F7F3EC] leading-snug">{v.label ?? 'Saved version'}</p>
+                          <p className="text-xs mt-0.5" style={{ color: '#7A6555' }}>
+                            {new Date(v.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="shrink-0 flex flex-col items-end gap-1">
+                          {v.word_count && (
+                            <span className="text-xs tabular-nums" style={{ color: '#4A3E35' }}>{v.word_count.toLocaleString()} w</span>
+                          )}
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                            v.trigger === 'agent_auto' ? 'text-blue-400 bg-blue-900/20'
+                            : v.trigger === 'agent_assist' ? 'text-amber-400 bg-amber-900/20'
+                            : 'text-[#7A6555] bg-[#2A2420]'
+                          }`}>
+                            {v.trigger === 'agent_auto' ? 'Auto' : v.trigger === 'agent_assist' ? 'Assist' : 'Manual'}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Fork dialog ───────────────────────────────────────────────── */}
+      {forkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
+          <div className="w-full max-w-md mx-4 rounded-2xl p-6" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.25)' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <GitFork className="w-5 h-5" style={{ color: '#B87333' }} />
+              <h2 className="text-base font-semibold text-[#F7F3EC]">Fork this article</h2>
+            </div>
+            <p className="text-sm mb-4" style={{ color: '#A89070' }}>
+              Creates a copy of the full content and brief so you can explore a different keyword angle without losing the original.
+            </p>
+            <div className="mb-5">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#A89070' }}>New target keyword <span style={{ color: '#4A3E35' }}>(optional — leave blank to keep current)</span></label>
+              <input
+                autoFocus
+                value={forkKeyword}
+                onChange={(e) => setForkKeyword(e.target.value)}
+                placeholder={article?.target_keyword ?? 'Enter a keyword…'}
+                className="w-full text-sm border border-[rgba(184,115,51,0.25)] rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333]"
+                style={{ background: '#1C1917', color: '#F7F3EC' }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleFork() }}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setForkOpen(false); setForkKeyword('') }}
+                className="flex-1 px-4 py-2.5 text-sm rounded-lg border transition-colors"
+                style={{ color: '#A89070', borderColor: 'rgba(184,115,51,0.2)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFork}
+                disabled={forking}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                style={{ background: '#B87333', color: '#F7F3EC' }}
+              >
+                {forking ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitFork className="w-4 h-4" />}
+                {forking ? 'Forking…' : 'Fork article'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
