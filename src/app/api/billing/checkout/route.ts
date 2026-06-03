@@ -31,23 +31,57 @@ export async function POST(request: Request) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existingSub } = await (supabase as any)
+    const supabaseAny = supabase as any
+
+    // Look for any existing subscription row (with or without customer ID)
+    const { data: existingSub } = await supabaseAny
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, id')
       .eq('user_id', user.id)
-      .not('stripe_customer_id', 'is', null)
       .limit(1)
       .maybeSingle()
 
     const stripe = getStripe()
-    let customerId: string = existingSub?.stripe_customer_id
+    let customerId: string = existingSub?.stripe_customer_id ?? ''
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { userId: user.id },
-      })
-      customerId = customer.id
+      // Try email lookup in Stripe before creating a new customer
+      if (user.email) {
+        const existing = await stripe.customers.list({ email: user.email, limit: 1 })
+        if (existing.data.length > 0) {
+          customerId = existing.data[0].id
+        }
+      }
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: { userId: user.id },
+        })
+        customerId = customer.id
+      }
+    }
+
+    // Immediately persist stripe_customer_id so the portal/sync always has it.
+    // The webhook will fill in stripe_subscription_id and set status='active' later.
+    if (existingSub?.id) {
+      // Update existing row with the customer ID if it was missing
+      if (!existingSub.stripe_customer_id) {
+        await supabaseAny
+          .from('subscriptions')
+          .update({ stripe_customer_id: customerId, plan, billing_interval: interval })
+          .eq('id', existingSub.id)
+      }
+    } else {
+      // Insert a preliminary row — webhook will upsert on stripe_subscription_id later
+      await supabaseAny
+        .from('subscriptions')
+        .insert({
+          user_id: user.id,
+          stripe_customer_id: customerId,
+          plan,
+          billing_interval: interval,
+          status: 'trialing',
+        })
     }
 
     const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL

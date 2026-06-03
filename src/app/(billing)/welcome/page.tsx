@@ -11,7 +11,7 @@ export default function WelcomePage() {
   useEffect(() => {
     const supabase = createClient()
     let attempts = 0
-    const max = 15
+    const max = 20
 
     async function poll() {
       attempts++
@@ -27,10 +27,25 @@ export default function WelcomePage() {
         .limit(1)
         .maybeSingle()
 
-      if (sub || attempts >= max) {
+      if (sub) {
+        setReady(true)
+        return
+      }
+
+      // Every 3 attempts, call the sync endpoint in case the webhook hasn't fired yet
+      if (attempts % 3 === 0) {
+        try {
+          await fetch('/api/billing/sync', { method: 'POST' })
+        } catch {
+          // ignore — just keep polling
+        }
+      }
+
+      if (attempts >= max) {
+        // Give up waiting — let the user through anyway (webhook will catch up)
         setReady(true)
       } else {
-        setTimeout(poll, 1000)
+        setTimeout(poll, 1500)
       }
     }
 

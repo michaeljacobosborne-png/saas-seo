@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CreditCard, Loader2, CheckCircle2, AlertCircle, Settings } from 'lucide-react'
+import { CreditCard, Loader2, CheckCircle2, AlertCircle, Settings, RefreshCw } from 'lucide-react'
 
 interface SubscriptionInfo {
   status: string | null
@@ -14,13 +14,41 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetch('/api/billing/subscription-info')
-      .then((r) => r.json())
-      .then((data) => { setSub(data); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
+  async function loadSub() {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/billing/subscription-info')
+      const data = await r.json()
+      setSub(data)
+    } catch {
+      // ignore
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => { loadSub() }, [])
+
+  async function handleSync() {
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      const res = await fetch('/api/billing/sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.synced) {
+        setSyncMessage('Subscription refreshed.')
+        await loadSub()
+      } else {
+        setSyncMessage(data.reason ?? 'No changes found.')
+      }
+    } catch {
+      setSyncMessage('Sync failed — try again.')
+    }
+    setSyncing(false)
+    setTimeout(() => setSyncMessage(null), 4000)
+  }
 
   async function handleManageBilling() {
     setPortalLoading(true)
@@ -70,10 +98,25 @@ export default function SettingsPage() {
         className="rounded-2xl p-6"
         style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}
       >
-        <div className="flex items-center gap-2 mb-5">
-          <CreditCard className="w-4 h-4" style={{ color: '#B87333' }} />
-          <h2 className="text-base font-semibold" style={{ color: '#F7F3EC' }}>Billing &amp; Subscription</h2>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4" style={{ color: '#B87333' }} />
+            <h2 className="text-base font-semibold" style={{ color: '#F7F3EC' }}>Billing &amp; Subscription</h2>
+          </div>
+          <button
+            onClick={handleSync}
+            disabled={syncing || loading}
+            className="flex items-center gap-1.5 text-xs transition-colors disabled:opacity-40"
+            style={{ color: '#7A6555' }}
+            title="Refresh subscription from Stripe"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing…' : 'Refresh'}
+          </button>
         </div>
+        {syncMessage && (
+          <p className="text-xs mb-3 px-1" style={{ color: '#B87333' }}>{syncMessage}</p>
+        )}
 
         {loading ? (
           <div className="flex items-center gap-2 py-4" style={{ color: '#7A6555' }}>
