@@ -62,6 +62,13 @@ export default function ChatWidget() {
     }
   }, [messages])
 
+  // Listen for external open trigger (e.g. dashboard "Ask Agent" button)
+  useEffect(() => {
+    const handler = () => setOpen(true)
+    window.addEventListener('byline:open-chat', handler)
+    return () => window.removeEventListener('byline:open-chat', handler)
+  }, [])
+
   // Auto-greet on first open
   useEffect(() => {
     if (open && !initialized.current) {

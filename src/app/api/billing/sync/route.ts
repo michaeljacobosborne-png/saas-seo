@@ -104,7 +104,8 @@ export async function POST() {
       const plan = (priceId && priceToPlan[priceId]) ? priceToPlan[priceId] : null
       const status = mapStatus(sub.status)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const currentPeriodEnd = new Date((sub as any).current_period_end * 1000).toISOString()
+      const rawPeriodEnd = (sub as any).current_period_end
+      const currentPeriodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000).toISOString() : null
 
       const payload: Record<string, unknown> = {
         user_id: user.id,
