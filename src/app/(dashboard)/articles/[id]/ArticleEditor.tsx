@@ -5,7 +5,6 @@ import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Typography from '@tiptap/extension-typography'
 import CharacterCount from '@tiptap/extension-character-count'
-import Placeholder from '@tiptap/extension-placeholder'
 import { Plugin } from '@tiptap/pm/state'
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model'
 import { marked } from 'marked'
@@ -103,7 +102,6 @@ export default function ArticleEditor({
       CharacterCount,
       HeadingEnterExit,
       MarkdownPaste,
-      Placeholder.configure({ placeholder: 'Start writing your article...' }),
     ],
     content: prepareContent(initialContent),
     editable: !readOnly,
