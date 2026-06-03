@@ -234,6 +234,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const applyAtRangeRef = useRef<((from: number, to: number, html: string) => void) | null>(null)
   const [metaDesc, setMetaDesc] = useState('')
   const [metaSaving, setMetaSaving] = useState(false)
+  const [metaGenerating, setMetaGenerating] = useState(false)
   const metaInitialized = useRef(false)
 
   // Agent state
@@ -467,6 +468,23 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setMetaSaving(false)
   }
 
+  async function handleGenerateMeta() {
+    if (!article?.content) return
+    setMetaGenerating(true)
+    try {
+      const res = await fetch(`/api/articles/${id}/meta-description`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && data.meta_description) {
+        setMetaDesc(data.meta_description)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('articles').update({ meta_description: data.meta_description }).eq('id', id)
+      }
+    } catch {
+      // silent fail — user can type manually
+    }
+    setMetaGenerating(false)
+  }
+
   async function handleCopy() {
     if (!article?.content) return
     const text = getEditorTextRef.current ? getEditorTextRef.current() : article.content
@@ -583,7 +601,21 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
         {/* Meta description */}
         <div className="mb-6">
-          <label className="block text-xs font-medium text-[#A89070] mb-1.5">Meta Description</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-medium text-[#A89070]">Meta Description</label>
+            {article.content && (
+              <button
+                onClick={handleGenerateMeta}
+                disabled={metaGenerating}
+                className="flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50"
+                style={{ color: '#B87333' }}
+              >
+                {metaGenerating
+                  ? <><Loader2 className="w-3 h-3 animate-spin" /> Generating…</>
+                  : <><Wand2 className="w-3 h-3" /> Auto-generate</>}
+              </button>
+            )}
+          </div>
           <textarea
             value={metaDesc}
             onChange={(e) => setMetaDesc(e.target.value)}
@@ -591,6 +623,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             placeholder="Write a compelling meta description (150–160 characters)…"
             rows={2}
             className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none text-[#A89070] placeholder-gray-400"
+            style={{ background: '#1C1917' }}
           />
           <div className="flex items-center justify-between mt-1">
             <span className={`text-xs tabular-nums ${metaDesc.length > 160 ? 'text-red-500' : 'text-[#7A6555]'}`}>
