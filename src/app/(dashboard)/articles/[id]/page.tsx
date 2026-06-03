@@ -262,6 +262,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [userPlan, setUserPlan] = useState<string>('starter')
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
+  // Keyword retargeting state
+  const [kwStats, setKwStats] = useState<{ volume: number | null; difficulty: number | null; cpc: number | null; intent: string | null } | null>(null)
+  const [kwEditMode, setKwEditMode] = useState(false)
+  const [kwSearch, setKwSearch] = useState('')
+  const [kwResults, setKwResults] = useState<Array<{ id: string; keyword: string; volume: number | null; difficulty: number | null }>>([])
+  const [kwSearching, setKwSearching] = useState(false)
+  const [kwRetargeting, setKwRetargeting] = useState(false)
+
   useEffect(() => { agentModeRef.current = agentMode }, [agentMode])
 
   useEffect(() => {
@@ -298,6 +306,43 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100
     if (isNearBottom) el.scrollTop = el.scrollHeight
   }, [agentMessages])
+
+  // Load keyword stats from saved_keywords when article loads
+  useEffect(() => {
+    if (!article?.target_keyword) return
+    let active = true
+    async function loadStats() {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('saved_keywords')
+        .select('volume, difficulty, cpc, intent')
+        .ilike('keyword', article!.target_keyword!)
+        .limit(1)
+        .maybeSingle()
+      if (active && data) setKwStats(data)
+    }
+    loadStats()
+    return () => { active = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article?.target_keyword])
+
+  // Live search saved keywords as user types in retarget mode
+  useEffect(() => {
+    if (!kwSearch.trim()) { setKwResults([]); return }
+    const timer = setTimeout(async () => {
+      setKwSearching(true)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('saved_keywords')
+        .select('id, keyword, volume, difficulty')
+        .ilike('keyword', `%${kwSearch.trim()}%`)
+        .limit(8)
+      setKwResults(data ?? [])
+      setKwSearching(false)
+    }, 300)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kwSearch])
 
   // Pre-fill assist input when a new selection is made
   useEffect(() => {
@@ -484,6 +529,21 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       // silent fail — user can type manually
     }
     setMetaGenerating(false)
+  }
+
+  async function handleRetarget(newKeyword: string) {
+    if (!article || !newKeyword.trim()) return
+    setKwRetargeting(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('articles').update({ target_keyword: newKeyword.trim() }).eq('id', id)
+    setArticle({ ...article, target_keyword: newKeyword.trim(), scores: null })
+    setKwStats(null)
+    setKwEditMode(false)
+    setKwSearch('')
+    setKwResults([])
+    setKwRetargeting(false)
+    setActiveTab('scores')
+    setScoreError(null)
   }
 
   async function handlePublish() {
@@ -721,6 +781,123 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               </div>
             ) : (
               <div className="space-y-5">
+
+                {/* ── Target keyword card ─────────────────────────────── */}
+                <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[#F7F3EC]">Target Keyword</span>
+                      {kwStats?.intent && (
+                        <span className="text-xs px-2 py-0.5 rounded-full capitalize" style={{ background: 'rgba(184,115,51,0.1)', color: '#B87333' }}>
+                          {kwStats.intent}
+                        </span>
+                      )}
+                    </div>
+                    {!kwEditMode && (
+                      <button
+                        onClick={() => { setKwEditMode(true); setKwSearch(article.target_keyword ?? '') }}
+                        className="text-xs font-medium transition-colors flex items-center gap-1"
+                        style={{ color: '#7A6555' }}
+                      >
+                        <Pencil className="w-3 h-3" /> Retarget
+                      </button>
+                    )}
+                  </div>
+
+                  {kwEditMode ? (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <input
+                          autoFocus
+                          value={kwSearch}
+                          onChange={(e) => setKwSearch(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && kwSearch.trim()) handleRetarget(kwSearch) }}
+                          placeholder="Type a keyword or search saved…"
+                          className="flex-1 text-sm border border-[rgba(184,115,51,0.25)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333]"
+                          style={{ background: '#231F1B', color: '#F7F3EC' }}
+                        />
+                        <button
+                          onClick={() => handleRetarget(kwSearch)}
+                          disabled={!kwSearch.trim() || kwRetargeting}
+                          className="px-3 py-2 text-xs font-medium rounded-lg disabled:opacity-40 transition-colors"
+                          style={{ background: '#B87333', color: '#F7F3EC' }}
+                        >
+                          {kwRetargeting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Apply'}
+                        </button>
+                        <button
+                          onClick={() => { setKwEditMode(false); setKwSearch(''); setKwResults([]) }}
+                          className="text-xs transition-colors"
+                          style={{ color: '#7A6555' }}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {kwSearching && <p className="text-xs py-1" style={{ color: '#7A6555' }}>Searching…</p>}
+                      {kwResults.length > 0 && (
+                        <div className="rounded-lg overflow-hidden border border-[rgba(184,115,51,0.15)] mt-1">
+                          {kwResults.map((kw) => (
+                            <button
+                              key={kw.id}
+                              onClick={() => handleRetarget(kw.keyword)}
+                              className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-[#2A2420] transition-colors border-t border-[rgba(184,115,51,0.08)] first:border-t-0"
+                            >
+                              <span className="text-sm" style={{ color: '#F7F3EC' }}>{kw.keyword}</span>
+                              <div className="flex items-center gap-3 text-xs shrink-0 ml-3" style={{ color: '#7A6555' }}>
+                                {kw.volume !== null && <span>{kw.volume >= 1000 ? `${(kw.volume/1000).toFixed(1)}k` : kw.volume} vol</span>}
+                                {kw.difficulty !== null && <span>KD {kw.difficulty}</span>}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {kwSearch.trim() && kwResults.length === 0 && !kwSearching && (
+                        <p className="text-xs mt-1" style={{ color: '#7A6555' }}>
+                          No saved keyword matches — press Enter or Apply to use &ldquo;{kwSearch}&rdquo; directly.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-base font-semibold mb-3" style={{ color: '#B87333' }}>
+                        {article.target_keyword ?? '—'}
+                      </p>
+                      {kwStats ? (
+                        <div className="flex flex-wrap gap-4">
+                          {kwStats.volume !== null && (
+                            <div>
+                              <p className="text-xs mb-0.5" style={{ color: '#7A6555' }}>Monthly searches</p>
+                              <p className="text-sm font-semibold tabular-nums" style={{ color: '#F7F3EC' }}>
+                                {kwStats.volume >= 1000 ? `${(kwStats.volume / 1000).toFixed(1)}k` : kwStats.volume}
+                              </p>
+                            </div>
+                          )}
+                          {kwStats.difficulty !== null && (
+                            <div>
+                              <p className="text-xs mb-0.5" style={{ color: '#7A6555' }}>Keyword difficulty</p>
+                              <p className={`text-sm font-semibold tabular-nums ${kwStats.difficulty < 30 ? 'text-green-400' : kwStats.difficulty < 60 ? 'text-amber-400' : 'text-red-400'}`}>
+                                {kwStats.difficulty} / 100
+                              </p>
+                            </div>
+                          )}
+                          {kwStats.cpc !== null && (
+                            <div>
+                              <p className="text-xs mb-0.5" style={{ color: '#7A6555' }}>CPC</p>
+                              <p className="text-sm font-semibold tabular-nums" style={{ color: '#F7F3EC' }}>
+                                ${Number(kwStats.cpc).toFixed(2)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs" style={{ color: '#7A6555' }}>
+                          No stats — save this keyword in{' '}
+                          <a href="/keywords" style={{ color: '#B87333' }} className="hover:underline">Keyword Research</a> to see volume and difficulty.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                   {[
                     { label: 'SEO', score: scores.seo.score },
