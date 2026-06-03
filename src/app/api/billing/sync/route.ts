@@ -3,17 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe'
 import Stripe from 'stripe'
 
-// Maps Stripe price IDs to plan names — populated from env at request time
 function getPriceToPlan(): Record<string, string> {
   const map: Record<string, string> = {}
-  const entries = [
+  const entries: [string | undefined, string][] = [
     [process.env.STRIPE_PRICE_STARTER_MONTHLY, 'starter'],
     [process.env.STRIPE_PRICE_STARTER_ANNUAL, 'starter'],
     [process.env.STRIPE_PRICE_PRO_MONTHLY, 'pro'],
     [process.env.STRIPE_PRICE_PRO_ANNUAL, 'pro'],
     [process.env.STRIPE_PRICE_AGENCY_MONTHLY, 'team'],
     [process.env.STRIPE_PRICE_AGENCY_ANNUAL, 'team'],
-  ] as const
+  ]
   for (const [id, plan] of entries) {
     if (id) map[id] = plan
   }
@@ -30,98 +29,120 @@ function mapStatus(status: Stripe.Subscription.Status): string {
   }
 }
 
-/**
- * POST /api/billing/sync
- * Fetches the user's Stripe subscriptions directly and upserts them into Supabase.
- * Called by the welcome page after checkout completes, and by the Settings "Refresh" button.
- */
 export async function POST() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const stripe = getStripe()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabaseAny = supabase as any
+    const stripe = getStripe()
 
-  // Find the Stripe customer — try DB first, then fall back to email lookup
-  let customerId: string | null = null
+    // Step 1: find Stripe customer ID — try DB first, then email lookup
+    let customerId: string | null = null
 
-  const { data: existingSub } = await supabaseAny
-    .from('subscriptions')
-    .select('stripe_customer_id')
-    .eq('user_id', user.id)
-    .not('stripe_customer_id', 'is', null)
-    .limit(1)
-    .maybeSingle()
+    const { data: existingSub } = await supabaseAny
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
 
-  customerId = (existingSub?.stripe_customer_id as string | null) ?? null
+    customerId = (existingSub?.stripe_customer_id as string | null) ?? null
 
-  if (!customerId && user.email) {
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 })
-    if (customers.data.length > 0) {
+    if (!customerId) {
+      if (!user.email) {
+        return NextResponse.json({ synced: false, reason: 'No email on account — cannot look up Stripe customer' })
+      }
+      let customers: Stripe.ApiList<Stripe.Customer>
+      try {
+        customers = await stripe.customers.list({ email: user.email, limit: 1 })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return NextResponse.json({ synced: false, reason: `Stripe customer lookup failed: ${msg}` }, { status: 500 })
+      }
+      if (customers.data.length === 0) {
+        return NextResponse.json({ synced: false, reason: 'No Stripe customer found for this email address' })
+      }
       customerId = customers.data[0].id
     }
-  }
 
-  if (!customerId) {
-    return NextResponse.json({ synced: false, reason: 'No Stripe customer found for this account' })
-  }
-
-  // Fetch all non-draft subscriptions for this customer
-  const stripeSubscriptions = await stripe.subscriptions.list({
-    customer: customerId,
-    limit: 5,
-    expand: ['data.items.data.price'],
-  })
-
-  if (stripeSubscriptions.data.length === 0) {
-    return NextResponse.json({ synced: false, reason: 'No subscriptions found in Stripe' })
-  }
-
-  const priceToPlan = getPriceToPlan()
-  let synced = 0
-
-  for (const sub of stripeSubscriptions.data) {
-    const priceId = sub.items.data[0]?.price?.id ?? null
-    const plan = (priceId && priceToPlan[priceId]) ? priceToPlan[priceId] : null
-    const interval = sub.items.data[0]?.price?.recurring?.interval === 'year' ? 'annual' : 'monthly'
-    const status = mapStatus(sub.status)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const currentPeriodEnd = new Date((sub as any).current_period_end * 1000).toISOString()
-
-    // Build the upsert payload — only include plan if we could map it
-    // (avoids overwriting with wrong value if price ID isn't in env vars)
-    const payload: Record<string, unknown> = {
-      user_id: user.id,
-      stripe_customer_id: customerId,
-      stripe_subscription_id: sub.id,
-      billing_interval: interval,
-      status,
-      current_period_end: currentPeriodEnd,
-      cancel_at_period_end: sub.cancel_at_period_end,
-      updated_at: new Date().toISOString(),
+    // Step 2: list their Stripe subscriptions
+    let stripeSubscriptions: Stripe.ApiList<Stripe.Subscription>
+    try {
+      stripeSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        limit: 5,
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return NextResponse.json({ synced: false, reason: `Stripe subscription lookup failed: ${msg}` }, { status: 500 })
     }
-    if (plan) payload.plan = plan
 
-    const { error } = await supabaseAny
+    if (stripeSubscriptions.data.length === 0) {
+      return NextResponse.json({ synced: false, reason: 'No subscriptions found in Stripe for this customer' })
+    }
+
+    const priceToPlan = getPriceToPlan()
+    let synced = 0
+
+    for (const sub of stripeSubscriptions.data) {
+      // Fetch price details separately to avoid expand issues
+      let priceId: string | null = null
+      let interval: 'monthly' | 'annual' = 'monthly'
+      try {
+        const firstItem = sub.items?.data?.[0]
+        if (firstItem?.price?.id) {
+          priceId = firstItem.price.id
+          interval = firstItem.price.recurring?.interval === 'year' ? 'annual' : 'monthly'
+        }
+      } catch {
+        // price details unavailable — continue without them
+      }
+
+      const plan = (priceId && priceToPlan[priceId]) ? priceToPlan[priceId] : null
+      const status = mapStatus(sub.status)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const currentPeriodEnd = new Date((sub as any).current_period_end * 1000).toISOString()
+
+      const payload: Record<string, unknown> = {
+        user_id: user.id,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: sub.id,
+        billing_interval: interval,
+        status,
+        current_period_end: currentPeriodEnd,
+        cancel_at_period_end: sub.cancel_at_period_end,
+        updated_at: new Date().toISOString(),
+      }
+      // Only write plan if we could map it — avoids overwriting with wrong value
+      if (plan) payload.plan = plan
+
+      const { error } = await supabaseAny
+        .from('subscriptions')
+        .upsert(payload, { onConflict: 'stripe_subscription_id' })
+
+      if (error) {
+        console.error('[billing/sync] upsert error:', JSON.stringify(error))
+        return NextResponse.json({ synced: false, reason: `DB write failed: ${error.message}` }, { status: 500 })
+      }
+
+      synced++
+    }
+
+    // Clean up dangling preliminary rows that have no stripe_subscription_id
+    await supabaseAny
       .from('subscriptions')
-      .upsert(payload, { onConflict: 'stripe_subscription_id' })
+      .delete()
+      .eq('user_id', user.id)
+      .is('stripe_subscription_id', null)
 
-    if (error) {
-      console.error('[billing/sync] upsert error:', JSON.stringify(error))
-      return NextResponse.json({ synced: false, reason: `DB error: ${error.message}` }, { status: 500 })
-    }
+    return NextResponse.json({ synced: true, count: synced })
 
-    synced++
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[billing/sync] unhandled error:', msg)
+    return NextResponse.json({ synced: false, reason: `Unexpected error: ${msg}` }, { status: 500 })
   }
-
-  // Clean up any dangling preliminary rows (from checkout pre-write) that have no subscription ID
-  await supabaseAny
-    .from('subscriptions')
-    .delete()
-    .eq('user_id', user.id)
-    .is('stripe_subscription_id', null)
-
-  return NextResponse.json({ synced: true, count: synced })
 }

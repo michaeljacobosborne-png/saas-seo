@@ -36,18 +36,26 @@ export default function SettingsPage() {
     setSyncMessage(null)
     try {
       const res = await fetch('/api/billing/sync', { method: 'POST' })
-      const data = await res.json()
+      let data: Record<string, unknown> = {}
+      try {
+        data = await res.json()
+      } catch {
+        setSyncMessage(`Server error (HTTP ${res.status}) — check Vercel logs`)
+        setSyncing(false)
+        setTimeout(() => setSyncMessage(null), 6000)
+        return
+      }
       if (data.synced) {
         setSyncMessage('Subscription refreshed.')
         await loadSub()
       } else {
-        setSyncMessage(data.reason ?? 'No changes found.')
+        setSyncMessage((data.reason as string) ?? (data.error as string) ?? 'No changes found.')
       }
-    } catch {
-      setSyncMessage('Sync failed — try again.')
+    } catch (err) {
+      setSyncMessage(err instanceof Error ? err.message : 'Network error — try again.')
     }
     setSyncing(false)
-    setTimeout(() => setSyncMessage(null), 4000)
+    setTimeout(() => setSyncMessage(null), 6000)
   }
 
   async function handleManageBilling() {
