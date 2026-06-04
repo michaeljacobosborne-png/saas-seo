@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { DM_Sans, DM_Mono, Playfair_Display } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import PostHogProvider from "@/components/PostHogProvider";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -32,7 +35,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${dmMono.variable} ${playfair.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col" style={{ background: '#1C1917', color: '#F7F3EC' }}>{children}</body>
+      <body className="min-h-full flex flex-col" style={{ background: '#1C1917', color: '#F7F3EC' }}>
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
+        <Analytics />
+        <SpeedInsights />
+      </body>
     </html>
   );
 }

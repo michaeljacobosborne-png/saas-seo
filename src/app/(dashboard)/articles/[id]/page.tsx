@@ -12,6 +12,7 @@ import {
   Wand2, Pencil, Eye, Lock, Globe, History, GitFork, RotateCcw, Clock,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { track } from '@/components/PostHogProvider'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
 
@@ -526,15 +527,16 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
     setAgentStreaming(false)
     if (fullResult) {
-      // Full replacement via replaceContentRef (setContent, not insertContent)
       replaceContentRef.current?.(fullResult)
       setAutoResult(fullResult)
       setAutoApplied(true)
+      track('auto_mode_completed', { had_instruction: !!(instruction?.trim()), word_count: fullResult.trim().split(/\s+/).length })
     }
   }, [id])
 
   function openAgent(currentArticle: Article) {
     setAgentOpen(true)
+    track('agent_opened', { mode: agentMode, keyword: currentArticle.target_keyword, has_scores: !!currentArticle.scores })
     const hasScores = !!currentArticle.scores
     if (hasScores && !initialSentRef.current) {
       initialSentRef.current = true
@@ -667,7 +669,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       .from('articles')
       .update({ status: newStatus })
       .eq('id', id)
-    if (!error) setArticle({ ...article, status: newStatus })
+    if (!error) {
+      setArticle({ ...article, status: newStatus })
+      if (newStatus === 'published') track('article_published', { keyword: article.target_keyword, word_count: article.word_count })
+    }
     setPublishing(false)
   }
 
@@ -695,6 +700,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setArticle(data as Article | null)
     setScoring(false)
     setActiveTab('scores')
+    track('article_scored', { keyword: article?.target_keyword, seo: (data as Article | null)?.scores ? ((data as Article | null)?.scores as Record<string,{score:number}>)?.seo?.score : null })
   }
 
   if (loading) {
