@@ -700,7 +700,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setArticle(data as Article | null)
     setScoring(false)
     setActiveTab('scores')
-    track('article_scored', { keyword: article?.target_keyword, seo: (data as Article | null)?.scores ? ((data as Article | null)?.scores as Record<string,{score:number}>)?.seo?.score : null })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    track('article_scored', { keyword: article?.target_keyword, seo: ((data as any)?.scores as any)?.seo?.score ?? null })
   }
 
   if (loading) {
