@@ -52,9 +52,9 @@ const PLANS = [
   },
   {
     id: 'agency' as Plan,
-    name: 'Agency',
-    tagline: 'For small teams and multi-client content operations.',
-    cta: 'Get in touch',
+    name: 'Multi-Brand',
+    tagline: 'Full agent operations for multiple brands.',
+    cta: 'Start with Multi-Brand',
     monthlyPrice: 249,
     annualPrice: 2390,
     popular: false,
@@ -63,7 +63,7 @@ const PLANS = [
       '100 articles per month',
       '200 keyword sessions per month',
       'Up to 3 brand profiles',
-      '2 team seats included',
+      'Switch brands in one click',
       'Dedicated onboarding call',
       'Priority email + chat support',
     ],
@@ -261,14 +261,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     ))}
                   </ul>
 
-                  {plan.id === 'agency' ? (
-                    <a
-                      href="mailto:hi@bylineseo.com?subject=Agency%20Plan%20Inquiry"
-                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors border border-[#B87333] text-[#B87333] hover:bg-[rgba(184,115,51,0.08)] text-center block"
-                    >
-                      Get in touch
-                    </a>
-                  ) : hasActiveSubscription && isCurrentPlan ? (
+                  {hasActiveSubscription && isCurrentPlan ? (
                     <button
                       onClick={handleManageBilling}
                       disabled={loading === 'portal'}
@@ -370,7 +363,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         </h2>
         <Link
           href="/signup"
-          className="inline-flex items-center px-7 py-3 rounded-lg bg-[rgba(184,115,51,0.08)]0 text-[#F7F3EC] font-semibold hover:bg-[#B87333] transition-colors text-sm"
+          className="inline-flex items-center px-7 py-3 rounded-lg bg-[rgba(184,115,51,0.08)] text-[#F7F3EC] font-semibold hover:bg-[#B87333] transition-colors text-sm"
         >
           Get started
         </Link>
