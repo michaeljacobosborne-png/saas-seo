@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { LayoutDashboard, Building2, Search, FileText, BarChart2, X, Globe } from 'lucide-react'
 import SignOutButton from './SignOutButton'
+import SupportWidget from '@/app/_components/SupportWidget'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -83,6 +84,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1 overflow-y-auto" style={{ background: '#1C1917' }}>
         {children}
       </main>
+
+      {/* Floating customer-support agent (available across the dashboard) */}
+      <SupportWidget />
     </div>
   )
 }
