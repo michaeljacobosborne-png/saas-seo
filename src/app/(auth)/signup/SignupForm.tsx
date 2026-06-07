@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { analytics } from '@/lib/analytics'
 
 function GoogleIcon() {
   return (
@@ -40,7 +41,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
     setLoading(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
@@ -51,6 +52,9 @@ export default function SignupForm({ plan }: { plan?: string }) {
       setLoading(false)
       return
     }
+
+    // Signup succeeded — fire GA4 `sign_up` + Meta `Lead`.
+    analytics.signUp(data.user?.id ?? '')
 
     if (isFree) {
       setMessage('Account created! Check your email to confirm, then sign in to access your free plan.')

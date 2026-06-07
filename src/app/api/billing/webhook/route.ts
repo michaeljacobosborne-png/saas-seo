@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/service'
+import { sendMetaCapiEvent } from '@/lib/meta-capi'
+import { sendGa4Purchase } from '@/lib/analytics-server'
+import { subscriptionEventId } from '@/lib/analytics-events'
 import Stripe from 'stripe'
 
 export const runtime = 'nodejs'
@@ -67,6 +70,38 @@ export async function POST(request: Request) {
 
       if (upsertError) {
         console.error('Webhook checkout.session.completed: failed to upsert subscription', upsertError, { userId, sessionId: session.id })
+      }
+
+      // Server-side conversion tracking. Wrapped so analytics failures never
+      // prevent us returning 200 to Stripe (which would trigger retries).
+      try {
+        const value = (session.amount_total ?? 0) / 100
+        const currency = (session.currency ?? 'usd').toUpperCase()
+        const email = session.customer_details?.email ?? session.customer_email ?? undefined
+
+        await Promise.allSettled([
+          // GA4 `purchase` via Measurement Protocol. No browser client_id is
+          // available here, so we key on the user id.
+          sendGa4Purchase({
+            clientId: userId,
+            userId,
+            value,
+            currency,
+            transactionId: subscription.id,
+            plan,
+          }),
+          // Meta `Subscribe` via the Conversions API. Same event_id as the
+          // browser Pixel event fired on /welcome, so Meta deduplicates.
+          sendMetaCapiEvent({
+            eventName: 'Subscribe',
+            eventId: subscriptionEventId(subscription.id),
+            email,
+            value,
+            currency,
+          }),
+        ])
+      } catch (analyticsErr) {
+        console.error('Webhook checkout.session.completed: analytics error', analyticsErr)
       }
       break
     }

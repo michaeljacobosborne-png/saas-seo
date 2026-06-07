@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { DM_Sans, DM_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { Suspense } from "react";
+import { AnalyticsScripts } from "./_components/AnalyticsScripts";
+import { AnalyticsPageView } from "./_components/AnalyticsPageView";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -32,7 +35,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${dmMono.variable} ${playfair.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col" style={{ background: '#1C1917', color: '#F7F3EC' }}>{children}</body>
+      <body className="min-h-full flex flex-col" style={{ background: '#1C1917', color: '#F7F3EC' }}>
+        <AnalyticsScripts />
+        <Suspense fallback={null}>
+          <AnalyticsPageView />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

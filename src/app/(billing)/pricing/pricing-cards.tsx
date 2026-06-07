@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
+import { analytics } from '@/lib/analytics'
 
 type Plan = 'starter' | 'pro' | 'agency'
 type Interval = 'monthly' | 'annual'
@@ -98,6 +99,15 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   async function handleCheckout(plan: Plan) {
     setError(null)
     setLoading(plan)
+
+    const planConfig = PLANS.find((p) => p.id === plan)
+    const value = planConfig
+      ? interval === 'monthly'
+        ? planConfig.monthlyPrice
+        : planConfig.annualPrice
+      : 0
+    analytics.beginCheckout(plan, value)
+
     try {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',

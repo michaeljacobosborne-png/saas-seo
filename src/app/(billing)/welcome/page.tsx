@@ -4,6 +4,16 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { analytics } from '@/lib/analytics'
+
+// Monthly list price per plan — best-effort `value` for the client-side
+// purchase event. The authoritative amount is recorded server-side from the
+// Stripe webhook; this event is primarily for Meta Pixel/CAPI dedup.
+const PLAN_VALUE: Record<string, number> = {
+  starter: 49,
+  pro: 99,
+  agency: 249,
+}
 
 export default function WelcomePage() {
   const [ready, setReady] = useState(false)
@@ -12,6 +22,7 @@ export default function WelcomePage() {
     const supabase = createClient()
     let attempts = 0
     const max = 15
+    let tracked = false
 
     async function poll() {
       attempts++
@@ -21,13 +32,22 @@ export default function WelcomePage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: sub } = await (supabase as any)
         .from('subscriptions')
-        .select('id')
+        .select('id, plan, stripe_subscription_id')
         .eq('user_id', user.id)
         .in('status', ['active', 'trialing'])
         .limit(1)
         .maybeSingle()
 
-      if (sub || attempts >= max) {
+      if (sub) {
+        // Fire client-side purchase/Subscribe once. The event_id is derived
+        // from the subscription id so it deduplicates against the server-side
+        // CAPI event sent by the Stripe webhook.
+        if (!tracked && sub.stripe_subscription_id) {
+          tracked = true
+          analytics.purchase(sub.plan ?? 'unknown', PLAN_VALUE[sub.plan] ?? 0, sub.stripe_subscription_id)
+        }
+        setReady(true)
+      } else if (attempts >= max) {
         setReady(true)
       } else {
         setTimeout(poll, 1000)
