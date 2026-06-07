@@ -371,7 +371,7 @@ export default function HomePage() {
             {/* Growth */}
             <div className="rounded-2xl border-2 border-[#B87333] p-7 text-left relative shadow-lg">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <span className="bg-[rgba(184,115,51,0.08)]0 text-[#F7F3EC] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
+                <span className="bg-[#B87333] text-[#F7F3EC] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
                   MOST POPULAR
                 </span>
               </div>
@@ -389,9 +389,9 @@ export default function HomePage() {
                 Get started
               </Link>
             </div>
-            {/* Agency */}
+            {/* Multi-Brand */}
             <div className="rounded-2xl border border-[rgba(184,115,51,0.2)] p-7 text-left">
-              <div className="text-sm font-semibold text-[#A89070] mb-1">Agency</div>
+              <div className="text-sm font-semibold text-[#A89070] mb-1">Multi-Brand</div>
               <div className="text-3xl font-bold text-[#F7F3EC] mb-4">
                 $249<span className="text-base font-normal text-[#7A6555]">/mo</span>
               </div>
