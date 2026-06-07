@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, BarChart2, X, Globe } from 'lucide-react'
+import { LayoutDashboard, Building2, Search, FileText, BarChart2, Settings, X, Globe } from 'lucide-react'
 import SignOutButton from './SignOutButton'
 import SupportWidget from '@/app/_components/SupportWidget'
 
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/keywords', label: 'Keywords', icon: Search },
   { href: '/articles', label: 'Articles', icon: FileText },
   { href: '/content-audit', label: 'Content Audit', icon: BarChart2 },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
