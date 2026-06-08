@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe } from 'lucide-react'
 import type { Article } from '@/lib/supabase/types'
+import DuplicateArticleButton from './DuplicateArticleButton'
 
 const STATUS_CONFIG: Record<Article['status'], { label: string; className: string; icon: React.ElementType; spin?: boolean }> = {
   draft: { label: 'Draft', className: 'bg-[#2A2420] text-[#A89070]', icon: Clock },
@@ -78,6 +79,7 @@ export default async function ArticlesPage() {
                 <th className="text-left px-4 py-3 font-medium text-[#A89070]">Words</th>
                 <th className="text-left px-4 py-3 font-medium text-[#A89070]">Scores</th>
                 <th className="text-left px-4 py-3 font-medium text-[#A89070]">Created</th>
+                <th className="text-right px-4 py-3 font-medium text-[#A89070]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -122,6 +124,9 @@ export default async function ArticlesPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-[#7A6555]">
                       {new Date(article.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <DuplicateArticleButton articleId={article.id} />
                     </td>
                   </tr>
                 )

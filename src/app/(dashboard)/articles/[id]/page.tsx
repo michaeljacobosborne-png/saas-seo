@@ -2,12 +2,13 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { marked } from 'marked'
 import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
-  ArrowLeft, Copy, CheckCircle2, Loader2, Sparkles,
+  ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
 } from 'lucide-react'
 
@@ -137,12 +138,15 @@ function SEOCriteriaRow({ label, passed, points, max }: { label: string; passed:
 export default function ArticleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const supabase = createClient()
+  const router = useRouter()
 
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [scoring, setScoring] = useState(false)
   const [scoreError, setScoreError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'content' | 'scores'>('content')
   const getEditorTextRef = useRef<(() => string) | null>(null)
   const applyContentRef = useRef<((markdown: string) => void) | null>(null)
@@ -382,6 +386,25 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setTimeout(() => setCopied(false), 2000)
   }
 
+  async function handleDuplicate() {
+    if (duplicating) return
+    setDuplicating(true)
+    setDuplicateError(null)
+    try {
+      const res = await fetch(`/api/articles/${id}/fork`, { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.id) {
+        setDuplicateError(json.error ?? 'Failed to duplicate article')
+        setDuplicating(false)
+        return
+      }
+      router.push(`/articles/${json.id}`)
+    } catch {
+      setDuplicateError('Failed to duplicate article')
+      setDuplicating(false)
+    }
+  }
+
   async function handleScore() {
     setScoring(true)
     setScoreError(null)
@@ -441,6 +464,15 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-4">
+            <button
+              onClick={handleDuplicate}
+              disabled={duplicating}
+              title="Duplicate article"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] text-[#A89070] disabled:opacity-50 transition-colors"
+            >
+              {duplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CopyPlus className="w-4 h-4" />}
+              {duplicating ? 'Duplicating…' : 'Duplicate'}
+            </button>
             {article.content && (
               <button
                 onClick={handleCopy}
@@ -480,6 +512,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {scoreError}
+          </div>
+        )}
+
+        {duplicateError && (
+          <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {duplicateError}
           </div>
         )}
 
