@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Dark is the default. Tailwind `dark:` utilities apply whenever <html> is
+   NOT explicitly set to the light theme (i.e. default + explicit dark). */
+@custom-variant dark (&:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -7,16 +11,38 @@
   --font-mono: var(--font-dm-mono);
 }
 
+/* ---- Dark theme (default) ---- */
 :root {
+  color-scheme: dark;
   --background: #1C1917;
   --foreground: #F7F3EC;
   --ink: #1C1917;
   --ink-card: #231F1B;
+  --ink-deep: #16140f;
   --copper: #B87333;
   --copper-lt: #D4954A;
   --cream: #F7F3EC;
   --cream-dim: #A89070;
+  --cream-faint: #7A6555;
   --border: rgba(184,115,51,0.18);
+  --hover: rgba(184,115,51,0.08);
+}
+
+/* ---- Light theme override ---- */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #F7F3EC;
+  --foreground: #1C1917;
+  --ink: #F4EEE3;
+  --ink-card: #FFFFFF;
+  --ink-deep: #ECE4D5;
+  --copper: #A05E28;
+  --copper-lt: #B87333;
+  --cream: #2A2521;
+  --cream-dim: #6B5D4F;
+  --cream-faint: #998876;
+  --border: rgba(160,94,40,0.22);
+  --hover: rgba(160,94,40,0.08);
 }
 
 html { scroll-behavior: smooth; }
@@ -25,6 +51,7 @@ body {
   color: var(--cream);
   font-family: "DM Sans", -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .prose-editor-content {

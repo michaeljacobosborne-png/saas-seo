@@ -4,6 +4,7 @@ import "./globals.css";
 import { Suspense } from "react";
 import { AnalyticsScripts } from "./_components/AnalyticsScripts";
 import { AnalyticsPageView } from "./_components/AnalyticsPageView";
+import { ThemeScript } from "./_components/ThemeScript";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -34,8 +35,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${dmMono.variable} ${playfair.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col" style={{ background: '#1C1917', color: '#F7F3EC' }}>
+    <html lang="en" suppressHydrationWarning className={`${dmSans.variable} ${dmMono.variable} ${playfair.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">
+        <ThemeScript />
         <AnalyticsScripts />
         <Suspense fallback={null}>
           <AnalyticsPageView />
