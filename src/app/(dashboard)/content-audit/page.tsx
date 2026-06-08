@@ -30,6 +30,8 @@ type AuditResult = {
 }
 
 const LS_KEY = 'byline_audit_last_run'
+const LS_RESULT_KEY = 'byline_audit_result_v2'
+type CachedAudit = { result: AuditResult; url: string; runAt: string }
 
 function PriorityBadge({ priority }: { priority: Gap['priority'] }) {
   const map = {
@@ -74,6 +76,16 @@ export default function DashboardAuditPage() {
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY)
     if (stored) setLastRun(new Date(stored))
+
+    const raw = localStorage.getItem(LS_RESULT_KEY)
+    if (raw) {
+      try {
+        const cached: CachedAudit = JSON.parse(raw)
+        setResult(cached.result)
+        setStatus('done')
+        setLastRun(new Date(cached.runAt))
+      } catch { /* ignore */ }
+    }
   }, [])
 
   useEffect(() => {
@@ -104,7 +116,21 @@ export default function DashboardAuditPage() {
           .map((a: { target_keyword: string | null }) => a.target_keyword)
           .filter(Boolean) as string[]
       )
-      if (brandUrl) setUrlForRun(brandUrl)
+      // If there's no local cache but the DB has a saved audit, hydrate from it
+      // (cross-device persistence) instead of triggering a fresh run.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const dbAudit = (profile as any)?.last_audit
+      if (!localStorage.getItem(LS_RESULT_KEY) && dbAudit) {
+        const dbCache = dbAudit as CachedAudit
+        localStorage.setItem(LS_RESULT_KEY, JSON.stringify(dbCache))
+        setResult(dbCache.result)
+        setStatus('done')
+        setLastRun(new Date(dbCache.runAt))
+      }
+
+      // Only trigger auto-run if we have no cached result
+      const hasCached = !!localStorage.getItem(LS_RESULT_KEY)
+      if (brandUrl && !hasCached) setUrlForRun(brandUrl)
       setPageLoaded(true)
     }
     load()
@@ -135,19 +161,37 @@ export default function DashboardAuditPage() {
       const now = new Date()
       setLastRun(now)
       localStorage.setItem(LS_KEY, now.toISOString())
+
+      const toCache: CachedAudit = { result: data, url: targetUrl.trim(), runAt: now.toISOString() }
+      localStorage.setItem(LS_RESULT_KEY, JSON.stringify(toCache))
+      // Also persist to brand_profiles for cross-device access (non-fatal)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('brand_profiles')
+            .update({ last_audit: toCache })
+            .eq('user_id', session.user.id)
+        }
+      } catch { /* ignore — local cache already written */ }
     } catch {
       setError('Network error. Please try again.')
       setStatus('error')
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
-  // Auto-run once brand URL is resolved
+  // Auto-run once brand URL is resolved — but never when a cached result exists
   useEffect(() => {
-    if (pageLoaded && urlForRun) {
-      runAudit(urlForRun)
+    if (!pageLoaded || !urlForRun || status === 'loading') return
+    if (localStorage.getItem(LS_RESULT_KEY)) {
       setUrlForRun(null)
+      return
     }
-  }, [pageLoaded, urlForRun, runAudit])
+    runAudit(urlForRun)
+    setUrlForRun(null)
+  }, [pageLoaded, urlForRun, status, runAudit])
 
   const unwrittenSaved = savedKeywords.filter(
     (kw) => !writtenKeywords.some((wk) => wk.toLowerCase().includes(kw.toLowerCase()))
@@ -180,7 +224,7 @@ export default function DashboardAuditPage() {
             Change URL
           </button>
           <button
-            onClick={() => runAudit(auditUrl)}
+            onClick={() => { localStorage.removeItem(LS_RESULT_KEY); runAudit(auditUrl) }}
             disabled={status === 'loading' || !auditUrl}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#B87333] border border-[rgba(184,115,51,0.25)] rounded-lg hover:bg-[rgba(184,115,51,0.08)] disabled:opacity-50 transition-colors"
           >
