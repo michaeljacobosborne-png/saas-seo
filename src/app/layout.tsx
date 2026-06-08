@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { AnalyticsScripts } from "./_components/AnalyticsScripts";
 import { AnalyticsPageView } from "./_components/AnalyticsPageView";
 import { ThemeScript } from "./_components/ThemeScript";
+import PostHogProvider from "@/components/PostHogProvider";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -37,12 +38,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${dmSans.variable} ${dmMono.variable} ${playfair.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <ThemeScript />
-        <AnalyticsScripts />
-        <Suspense fallback={null}>
-          <AnalyticsPageView />
-        </Suspense>
-        {children}
+        <PostHogProvider>
+          <ThemeScript />
+          <AnalyticsScripts />
+          <Suspense fallback={null}>
+            <AnalyticsPageView />
+          </Suspense>
+          {children}
+        </PostHogProvider>
       </body>
     </html>
   );
