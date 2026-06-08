@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject, BrandProfile } from '@/lib/supabase/types'
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, CheckCircle2,
-  AlertCircle, ChevronUp, ChevronDown, FileText, Info,
+  AlertCircle, ChevronUp, ChevronDown, FileText, Info, Plus, X,
 } from 'lucide-react'
 
 interface Keyword {
@@ -95,7 +96,23 @@ function SortBtn({
 }
 
 export default function NewArticlePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
+        </div>
+      }
+    >
+      <NewArticleWizard />
+    </Suspense>
+  )
+}
+
+function NewArticleWizard() {
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const projectParam = searchParams.get('project')
 
   const [step, setStep] = useState(1)
   const [error, setError] = useState<string | null>(null)
@@ -139,6 +156,20 @@ export default function NewArticlePage() {
     return () => { active = false }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // If arriving from the keywords page via ?project=<id>, auto-select that project
+  // and skip Step 1. Only completed projects appear in `projects`, so a match here
+  // means research is done — jump straight to keyword selection (Step 2).
+  const autoSelected = useRef(false)
+  useEffect(() => {
+    if (autoSelected.current || !projectParam || projectsLoading) return
+    const match = projects.find((p) => p.id === projectParam)
+    if (match) {
+      autoSelected.current = true
+      setSelectedProject(match)
+      setStep(2)
+    }
+  }, [projectParam, projectsLoading, projects])
 
   // Load keywords when project changes
   useEffect(() => {
@@ -292,6 +323,37 @@ export default function NewArticlePage() {
 
     setStep(5)
     setLoading(false)
+  }
+
+  // ─── Editable outline helpers (write back into `brief` before draft generation) ───
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function updateOutlineField(i: number, field: string, value: any) {
+    setBrief((prev) => {
+      if (!prev) return prev
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const outline = [...((prev.outline as any[]) ?? [])]
+      outline[i] = { ...outline[i], [field]: value }
+      return { ...prev, outline }
+    })
+  }
+
+  function addOutlineSection() {
+    setBrief((prev) => {
+      if (!prev) return prev
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const outline = [...((prev.outline as any[]) ?? [])]
+      outline.push({ heading: '', heading_level: 2, notes: '', word_count_target: 150 })
+      return { ...prev, outline }
+    })
+  }
+
+  function removeOutlineSection(i: number) {
+    setBrief((prev) => {
+      if (!prev) return prev
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const outline = ((prev.outline as any[]) ?? []).filter((_: any, idx: number) => idx !== i)
+      return { ...prev, outline }
+    })
   }
 
   return (
@@ -510,20 +572,62 @@ export default function NewArticlePage() {
             </div>
 
             <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
-              <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide mb-3">Outline</div>
-              <div className="space-y-2">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide">Outline</div>
+                <span className="text-[10px] text-[#7A6555]">Edit headings &amp; notes — changes feed the draft</span>
+              </div>
+              <div className="space-y-3">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {(brief.outline as any[] ?? []).map((s: any, i: number) => (
-                  <div key={i} className={`flex items-start gap-2 ${s.heading_level === 'H3' ? 'pl-5' : ''}`}>
-                    <span className="text-xs text-[#7A6555] shrink-0 mt-0.5 tabular-nums w-6">{s.heading_level}</span>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-[#F7F3EC]">{s.heading}</div>
-                      {s.notes && <div className="text-xs text-[#7A6555] mt-0.5">{s.notes}</div>}
+                  <div key={i} className="rounded-lg border border-[rgba(184,115,51,0.15)] bg-[#231F1B] p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        value={s.heading ?? ''}
+                        onChange={(e) => updateOutlineField(i, 'heading', e.target.value)}
+                        placeholder="Section heading"
+                        className="flex-1 px-2.5 py-1.5 text-sm font-medium bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-md text-[#F7F3EC] placeholder:text-[#7A6555] focus:outline-none focus:border-[#B87333]"
+                      />
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-xs text-[#7A6555]">~</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={50}
+                          value={s.word_count_target ?? 0}
+                          onChange={(e) => updateOutlineField(i, 'word_count_target', Number(e.target.value))}
+                          className="w-16 px-2 py-1.5 text-xs tabular-nums bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-md text-[#A89070] focus:outline-none focus:border-[#B87333]"
+                        />
+                        <span className="text-xs text-[#7A6555]">w</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeOutlineSection(i)}
+                        title="Remove section"
+                        className="shrink-0 p-1.5 text-[#7A6555] hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                    <span className="text-xs text-[#A89070] shrink-0">~{s.word_count_target}w</span>
+                    <textarea
+                      value={s.notes ?? ''}
+                      onChange={(e) => updateOutlineField(i, 'notes', e.target.value)}
+                      placeholder="Notes for this section (optional)"
+                      rows={2}
+                      className="w-full px-2.5 py-1.5 text-xs bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-md text-[#A89070] placeholder:text-[#7A6555] focus:outline-none focus:border-[#B87333] resize-y"
+                    />
                   </div>
                 ))}
               </div>
+
+              <button
+                type="button"
+                onClick={addOutlineSection}
+                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#B87333] hover:text-[#A0622A] border border-dashed border-[rgba(184,115,51,0.3)] rounded-lg hover:border-[#B87333] transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add section
+              </button>
+
               <div className="mt-3 pt-3 border-t border-[rgba(184,115,51,0.15)] text-xs text-[#7A6555] flex justify-between">
                 <span>Target total</span>
                 <span className="font-medium text-[#A89070]">{brief.word_count_target} words</span>

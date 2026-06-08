@@ -140,7 +140,23 @@ export async function POST(request: Request) {
     }
 
     // Merge cached + fresh results
-    const ideas = [...cachedIdeas, ...freshIdeas]
+    const allIdeas = [...cachedIdeas, ...freshIdeas]
+
+    // Filter: keep keywords that share at least one significant word with the topic,
+    // OR have a relevance score (if DataForSEO provides one) above threshold.
+    // Simple approach: filter ideas where keyword text overlaps with any seed word (length > 4 chars)
+    const topicText = (typeof brief?.topic === 'string' && brief.topic) || seedsToUse.join(' ')
+    const topicWords = new Set(
+      topicText.toLowerCase().split(/\s+/).filter((w) => w.length > 4)
+    )
+    const filteredIdeas = allIdeas.filter((kw) => {
+      const kwWords = kw.keyword.toLowerCase().split(/\s+/)
+      const relevanceScore = (kw as { relevance_score?: number }).relevance_score
+      return kwWords.some((w) => topicWords.has(w)) ||
+             (relevanceScore != null && relevanceScore > 0.5)
+    })
+    // Fall back to all ideas if filter removes everything (or leaves too few to be useful)
+    const ideas = filteredIdeas.length >= 5 ? filteredIdeas : allIdeas
 
     if (ideas.length === 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

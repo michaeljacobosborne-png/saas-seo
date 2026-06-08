@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useCallback, useRef, use } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject } from '@/lib/supabase/types'
 import {
   ArrowLeft, Sparkles, Loader2, AlertCircle, CheckCircle2,
   ChevronUp, ChevronDown, BookmarkPlus, X, Bookmark, RefreshCw,
+  Plus, FileText, ArrowRight,
 } from 'lucide-react'
 
 interface Keyword {
@@ -84,6 +86,10 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
   const [researchError, setResearchError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [savedCount, setSavedCount] = useState(0)
+  const [articleCtaCount, setArticleCtaCount] = useState(0)
+  const [manualKw, setManualKw] = useState('')
+  const [addingManual, setAddingManual] = useState(false)
+  const [manualError, setManualError] = useState<string | null>(null)
   const [activeCluster, setActiveCluster] = useState<string>('All')
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: 'avg_monthly_searches', dir: 'desc' })
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -240,8 +246,34 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
 
     setSavedKwIds((prev) => new Set([...prev, ...ids]))
     setSavedCount(selectedKws.length)
+    setArticleCtaCount(selectedKws.length)
     setSaving(false)
     setTimeout(() => setSavedCount(0), 3000)
+  }
+
+  async function handleAddManual(e: React.FormEvent) {
+    e.preventDefault()
+    const value = manualKw.trim()
+    if (!value || addingManual) return
+    setAddingManual(true)
+    setManualError(null)
+
+    const res = await fetch(`/api/keywords/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword: value }),
+    })
+
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      setManualError(json.error ?? 'Failed to add keyword')
+      setAddingManual(false)
+      return
+    }
+
+    setManualKw('')
+    setAddingManual(false)
+    await fetchData()
   }
 
   async function loadFolders() {
@@ -439,6 +471,24 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
         </div>
       )}
 
+      {/* Article CTA after saving keywords */}
+      {articleCtaCount > 0 && (
+        <div className="mb-6 flex items-center justify-between gap-3 bg-[rgba(184,115,51,0.08)] border border-[rgba(184,115,51,0.25)] rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-[#F7F3EC]">
+            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+            <span>Saved {articleCtaCount} keyword{articleCtaCount !== 1 ? 's' : ''}</span>
+          </div>
+          <Link
+            href={`/articles/new?project=${id}`}
+            className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors shrink-0"
+          >
+            <FileText className="w-4 h-4" />
+            Create article from these keywords
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
       {/* Pending state */}
       {project.status === 'pending' && !researching && (
         <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-2xl p-12 text-center">
@@ -464,6 +514,31 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
       {/* Keywords table */}
       {project.status === 'complete' && keywords.length > 0 && (
         <>
+          {/* Add keyword manually */}
+          <div className="mb-4">
+            <form onSubmit={handleAddManual} className="flex items-center gap-2">
+              <input
+                value={manualKw}
+                onChange={(e) => { setManualKw(e.target.value); setManualError(null) }}
+                placeholder="Add a keyword manually…"
+                className="flex-1 max-w-xs px-3 py-2 text-sm bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-lg text-[#F7F3EC] placeholder:text-[#7A6555] focus:outline-none focus:border-[#B87333]"
+              />
+              <button
+                type="submit"
+                disabled={!manualKw.trim() || addingManual}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[#2A2420] text-[#A89070] text-sm font-medium rounded-lg hover:bg-[#332C26] disabled:opacity-50 transition-colors"
+              >
+                {addingManual
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Plus className="w-4 h-4" />}
+                Add
+              </button>
+            </form>
+            {manualError && (
+              <p className="mt-1.5 text-xs text-red-500">{manualError}</p>
+            )}
+          </div>
+
           {/* Cluster tabs */}
           <div className="flex gap-1 mb-4 flex-wrap">
             {clusters.map((c) => (
