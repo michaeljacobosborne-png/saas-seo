@@ -45,8 +45,15 @@ type Post = {
 // request and are cached thereafter (dynamicParams defaults to true).
 export async function generateStaticParams() {
   if (!isSanityConfigured) return []
-  const slugs = await client.fetch<{ slug: string }[]>(postSlugsQuery)
-  return slugs.map(({ slug }) => ({ slug }))
+  try {
+    const slugs = await client.fetch<{ slug: string }[]>(postSlugsQuery)
+    return slugs.map(({ slug }) => ({ slug }))
+  } catch (err) {
+    // A Sanity fetch failure (network, auth, misconfig) must not abort the
+    // build — fall back to no prerendered slugs; pages render on first request.
+    console.warn('[blog] generateStaticParams: Sanity fetch failed, skipping prerender', err)
+    return []
+  }
 }
 
 export async function generateMetadata({

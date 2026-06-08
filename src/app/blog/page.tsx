@@ -30,10 +30,20 @@ function formatDate(value?: string) {
   })
 }
 
+// Fetch the post list, degrading to an empty list if Sanity is unconfigured or
+// the request fails (network, auth, misconfig) so the build/page never crashes.
+async function getPosts(): Promise<PostCard[]> {
+  if (!isSanityConfigured) return []
+  try {
+    return await client.fetch<PostCard[]>(postsListQuery)
+  } catch (err) {
+    console.warn('[blog] list page: Sanity fetch failed', err)
+    return []
+  }
+}
+
 export default async function BlogIndexPage() {
-  const posts = isSanityConfigured
-    ? await client.fetch<PostCard[]>(postsListQuery)
-    : []
+  const posts = await getPosts()
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-16">
