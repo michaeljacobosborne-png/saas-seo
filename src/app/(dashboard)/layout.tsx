@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, BarChart2, Settings, X, Globe } from 'lucide-react'
+import { LayoutDashboard, Building2, Search, Bookmark, FileText, BarChart2, Settings, X, Globe } from 'lucide-react'
 import SignOutButton from './SignOutButton'
 import SupportWidget from '@/app/_components/SupportWidget'
 import ThemeToggle from '@/app/_components/ThemeToggle'
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/brand', label: 'Brand', icon: Building2 },
   { href: '/keywords', label: 'Keywords', icon: Search },
+  { href: '/keywords/saved', label: 'Saved Keywords', icon: Bookmark },
   { href: '/articles', label: 'Articles', icon: FileText },
   { href: '/content-audit', label: 'Content Audit', icon: BarChart2 },
   { href: '/settings', label: 'Settings', icon: Settings },
