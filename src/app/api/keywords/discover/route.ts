@@ -6,8 +6,24 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-function buildSystemPrompt(competitors: string[]): string {
+interface Angle {
+  headline: string
+  description: string
+}
+
+function buildSystemPrompt(competitors: string[], topic?: string, angle?: Angle): string {
   const hasStored = competitors.length > 0
+
+  // When the topic was captured up front (via the angle picker), skip Q1 and
+  // start the conversation at Q2 so we don't ask for something we already know.
+  const topicContext = topic
+    ? `\nThe user has already told you their topic: "${topic}". You already have the answer to question 1 — do NOT ask it. Open the conversation at question 2.`
+    : ''
+
+  // An optional research angle the user selected before the conversation began.
+  const angleContext = angle
+    ? `\nThe user wants to explore the topic from this angle: ${angle.headline} — ${angle.description}. Use this to shape your competitor analysis and keyword suggestions, and reflect it in the seed_keywords.`
+    : ''
 
   // Q4 adapts based on whether the user already tracks competitors in their brand profile.
   const q4 = hasStored
@@ -20,6 +36,7 @@ function buildSystemPrompt(competitors: string[]): string {
     : ''
 
   return `You are a keyword research strategist. Your job is to have a short, focused conversation to build a research brief before running keyword research.
+${topicContext}${angleContext}
 
 Ask these questions ONE AT A TIME — never ask multiple questions in one message:
 1. What is the topic or product you want to rank for?
@@ -51,7 +68,11 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { messages } = await request.json() as { messages: Message[] }
+  const { messages, topic, angle } = await request.json() as {
+    messages: Message[]
+    topic?: string
+    angle?: Angle
+  }
 
   // Pull stored competitors from the brand profile so Q4 can reference them.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,7 +86,7 @@ export async function POST(request: Request) {
     ? brandProfile.competitors.filter((c: unknown): c is string => typeof c === 'string' && c.trim().length > 0)
     : []
 
-  const systemPrompt = buildSystemPrompt(storedCompetitors)
+  const systemPrompt = buildSystemPrompt(storedCompetitors, topic, angle)
 
   const stream = new ReadableStream({
     async start(controller) {

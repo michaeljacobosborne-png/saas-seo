@@ -8,7 +8,12 @@ import type { KeywordProject, BrandProfile } from '@/lib/supabase/types'
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, CheckCircle2,
   AlertCircle, ChevronUp, ChevronDown, FileText, Info, Plus, X,
+  MessageSquare, Send, Undo2,
 } from 'lucide-react'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type OutlineSection = Record<string, any>
+type OutlineChatMessage = { role: 'user' | 'system'; text: string }
 
 interface Keyword {
   id: string
@@ -135,6 +140,15 @@ function NewArticleWizard() {
   const [targetWordCount, setTargetWordCount] = useState<WordCountOption>(1200)
   const [generatingStatus, setGeneratingStatus] = useState<'generating' | 'expanding' | 'expanded' | null>(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+
+  // ─── Conversational outline editor (Step 3) ───
+  const [outlineChatOpen, setOutlineChatOpen] = useState(false)
+  const [outlineChatInput, setOutlineChatInput] = useState('')
+  const [outlineChatMessages, setOutlineChatMessages] = useState<OutlineChatMessage[]>([])
+  const [outlineChatSending, setOutlineChatSending] = useState(false)
+  const [outlineToast, setOutlineToast] = useState(false)
+  const [canUndoOutline, setCanUndoOutline] = useState(false)
+  const previousOutlineRef = useRef<OutlineSection[] | null>(null)
 
   // Load initial data
   useEffect(() => {
@@ -356,6 +370,85 @@ function NewArticleWizard() {
     })
   }
 
+  function setOutline(newOutline: OutlineSection[]) {
+    setBrief((prev) => (prev ? { ...prev, outline: newOutline } : prev))
+  }
+
+  // Natural-language outline edits. Sends the current outline + the user's
+  // request to the streaming outline-chat route and applies the result.
+  async function handleOutlineChat() {
+    const text = outlineChatInput.trim()
+    if (!text || outlineChatSending || !brief) return
+
+    const currentOutline = (brief.outline as OutlineSection[]) ?? []
+    const articleTitle = (brief.h1_options as string[] | undefined)?.[0]
+      ?? (brief.target_keyword as string | undefined)
+      ?? 'Untitled'
+
+    setOutlineChatSending(true)
+    setOutlineChatInput('')
+    setOutlineChatMessages((prev) => [...prev, { role: 'user' as const, text }].slice(-8))
+
+    try {
+      const res = await fetch('/api/articles/outline-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outline: currentOutline, message: text, articleTitle }),
+      })
+
+      if (!res.ok || !res.body) {
+        setOutlineChatMessages((prev) => [...prev, { role: 'system' as const, text: 'Could not update the outline. Please try again.' }].slice(-8))
+        return
+      }
+
+      // Drain the SSE stream, then parse the single data event it carries.
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+      }
+
+      let updated: OutlineSection[] | null = null
+      let errMsg: string | null = null
+      for (const block of buffer.split('\n\n')) {
+        const line = block.trim()
+        if (!line.startsWith('data:')) continue
+        try {
+          const json = JSON.parse(line.slice(5).trim()) as { type: string; outline?: OutlineSection[]; error?: string }
+          if (json.type === 'outline' && Array.isArray(json.outline)) updated = json.outline
+          else if (json.type === 'error') errMsg = json.error ?? 'Outline update failed'
+        } catch { /* skip malformed event */ }
+      }
+
+      if (!updated) {
+        setOutlineChatMessages((prev) => [...prev, { role: 'system' as const, text: errMsg ?? 'Could not update the outline. Please try again.' }].slice(-8))
+        return
+      }
+
+      previousOutlineRef.current = currentOutline
+      setCanUndoOutline(true)
+      setOutline(updated)
+      setOutlineChatMessages((prev) => [...prev, { role: 'system' as const, text: '✓ Outline updated' }].slice(-8))
+      setOutlineToast(true)
+      setTimeout(() => setOutlineToast(false), 2200)
+    } catch {
+      setOutlineChatMessages((prev) => [...prev, { role: 'system' as const, text: 'Something went wrong. Please try again.' }].slice(-8))
+    } finally {
+      setOutlineChatSending(false)
+    }
+  }
+
+  function handleUndoOutline() {
+    if (!previousOutlineRef.current) return
+    setOutline(previousOutlineRef.current)
+    previousOutlineRef.current = null
+    setCanUndoOutline(false)
+    setOutlineChatMessages((prev) => [...prev, { role: 'system' as const, text: '↩ Reverted to previous outline' }].slice(-8))
+  }
+
   return (
     <div className="p-8 max-w-3xl">
       {/* Free tier upgrade modal */}
@@ -384,6 +477,14 @@ function NewArticleWizard() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Outline-updated toast */}
+      {outlineToast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#1C1917] border border-[rgba(184,115,51,0.3)] rounded-lg px-4 py-2.5 shadow-lg">
+          <CheckCircle2 className="w-4 h-4 text-green-500" />
+          <span className="text-sm font-medium text-[#F7F3EC]">Outline updated</span>
         </div>
       )}
 
@@ -632,6 +733,86 @@ function NewArticleWizard() {
                 <span>Target total</span>
                 <span className="font-medium text-[#A89070]">{brief.word_count_target} words</span>
               </div>
+            </div>
+
+            {/* ─── Conversational outline editor ─── */}
+            <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setOutlineChatOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#231F1B] transition-colors"
+              >
+                <span className="flex items-center gap-2 text-sm font-medium text-[#F7F3EC]">
+                  <MessageSquare className="w-4 h-4 text-[#D4954A]" />
+                  Edit outline with AI
+                </span>
+                {outlineChatOpen
+                  ? <ChevronUp className="w-4 h-4 text-[#A89070]" />
+                  : <ChevronDown className="w-4 h-4 text-[#A89070]" />}
+              </button>
+
+              {outlineChatOpen && (
+                <div className="border-t border-[rgba(184,115,51,0.15)] px-4 py-4">
+                  <p className="text-xs text-[#7A6555] mb-3">
+                    Ask in plain language — e.g. &ldquo;add a section about pricing models&rdquo;,
+                    &ldquo;make section 2 more beginner-friendly&rdquo;, or &ldquo;swap sections 3 and 4&rdquo;.
+                  </p>
+
+                  {outlineChatMessages.length > 0 && (
+                    <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+                      {outlineChatMessages.map((m, i) => (
+                        <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-xs rounded-xl px-3 py-1.5 text-xs leading-relaxed ${
+                            m.role === 'user'
+                              ? 'bg-[#B87333] text-[#F7F3EC] rounded-br-sm'
+                              : 'bg-[#231F1B] text-[#A89070] rounded-bl-sm'
+                          }`}>
+                            {m.text}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={outlineChatInput}
+                      onChange={(e) => setOutlineChatInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleOutlineChat()
+                        }
+                      }}
+                      placeholder="Describe a change to the outline…"
+                      disabled={outlineChatSending}
+                      className="flex-1 px-3 py-2 text-sm bg-[#231F1B] border border-[rgba(184,115,51,0.2)] rounded-lg text-[#F7F3EC] placeholder:text-[#7A6555] focus:outline-none focus:border-[#B87333] disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleOutlineChat}
+                      disabled={outlineChatSending || !outlineChatInput.trim()}
+                      className="p-2 bg-[#B87333] text-[#F7F3EC] rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                    >
+                      {outlineChatSending
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Send className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {canUndoOutline && (
+                    <button
+                      type="button"
+                      onClick={handleUndoOutline}
+                      className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#A89070] hover:text-[#F7F3EC] transition-colors"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" />
+                      Undo last change
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {(brief.competitor_gaps as string[] ?? []).length > 0 && (

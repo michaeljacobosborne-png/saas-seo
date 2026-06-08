@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject } from '@/lib/supabase/types'
+import AnglePicker, { type Angle } from '@/components/AnglePicker'
 import {
   Search, Plus, ChevronRight, Loader2, AlertCircle, CheckCircle2, Clock,
   Trash2, X, Send, Bookmark, Bot, Sparkles, ArrowRight,
@@ -32,6 +33,8 @@ function groupByFolder(projects: KeywordProject[]): [string, KeywordProject[]][]
 }
 
 type DiscoverMode = 'choose' | 'direct' | 'agent'
+// The agent path walks through topic entry → angle selection → the chat itself.
+type AgentStage = 'topic' | 'angle' | 'chat'
 type Message = { role: 'user' | 'assistant'; content: string }
 
 interface ResearchBrief {
@@ -53,6 +56,15 @@ export default function KeywordsPage() {
   // Discovery panel
   const [showDiscover, setShowDiscover] = useState(false)
   const [discoverMode, setDiscoverMode] = useState<DiscoverMode>('choose')
+  // Agent-path staging: collect a topic, pick a research angle, then chat.
+  const [agentStage, setAgentStage] = useState<AgentStage>('topic')
+  const [topicInput, setTopicInput] = useState('')
+  const [topic, setTopic] = useState('')
+  const [selectedAngle, setSelectedAngle] = useState<Angle | null>(null)
+  // Mirrored into refs so streamDiscovery can read the latest values without
+  // re-creating the callback (and re-firing the auto-start effect).
+  const topicRef = useRef('')
+  const angleRef = useRef<Angle | null>(null)
   const [discoverMessages, setDiscoverMessages] = useState<Message[]>([])
   const [discoverInput, setDiscoverInput] = useState('')
   const [discoverStreaming, setDiscoverStreaming] = useState(false)
@@ -86,10 +98,15 @@ export default function KeywordsPage() {
     setDiscoverMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
     try {
+      const angle = angleRef.current
       const res = await fetch('/api/keywords/discover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({
+          messages: apiMessages,
+          topic: topicRef.current || undefined,
+          angle: angle ? { headline: angle.headline, description: angle.description } : undefined,
+        }),
       })
 
       if (!res.ok || !res.body) {
@@ -127,13 +144,14 @@ export default function KeywordsPage() {
     }
   }, [])
 
-  // Auto-trigger first question when user picks the agent path
+  // Auto-trigger the first question once the agent reaches the chat stage
+  // (after topic + angle have been captured).
   useEffect(() => {
-    if (showDiscover && discoverMode === 'agent' && !discoverInitialized.current) {
+    if (showDiscover && discoverMode === 'agent' && agentStage === 'chat' && !discoverInitialized.current) {
       discoverInitialized.current = true
       streamDiscovery([{ role: 'user', content: 'ready' }])
     }
-  }, [showDiscover, discoverMode, streamDiscovery])
+  }, [showDiscover, discoverMode, agentStage, streamDiscovery])
 
   // Auto-scroll chat
   useEffect(() => {
@@ -143,12 +161,39 @@ export default function KeywordsPage() {
   function openDiscover() {
     discoverInitialized.current = false
     setDiscoverMode('choose')
+    setAgentStage('topic')
+    setTopicInput('')
+    setTopic('')
+    setSelectedAngle(null)
+    topicRef.current = ''
+    angleRef.current = null
     setDiscoverMessages([])
     setBrief(null)
     setDiscoverInput('')
     setDirectKeyword('')
     setCreateError(null)
     setShowDiscover(true)
+  }
+
+  // Topic entry → angle selection
+  function handleTopicSubmit() {
+    const t = topicInput.trim()
+    if (!t) return
+    setTopic(t)
+    topicRef.current = t
+    setAgentStage('angle')
+  }
+
+  function handleAngleSelect(angle: Angle) {
+    setSelectedAngle(angle)
+    angleRef.current = angle
+    setAgentStage('chat')
+  }
+
+  function handleAngleSkip() {
+    setSelectedAngle(null)
+    angleRef.current = null
+    setAgentStage('chat')
   }
 
   async function handleDiscoverSend() {
@@ -479,9 +524,73 @@ export default function KeywordsPage() {
             </div>
           )}
 
-          {/* Agent path — chat messages */}
-          {discoverMode === 'agent' && (
+          {/* Agent path — Stage 1: topic entry */}
+          {discoverMode === 'agent' && agentStage === 'topic' && (
+            <div className="flex-1 flex items-center justify-center px-6 py-10">
+              <div className="w-full max-w-md">
+                <h3 className="text-base font-semibold text-[#F7F3EC] mb-1 text-center">What topic do you want to explore?</h3>
+                <p className="text-sm text-[#A89070] text-center mb-6">
+                  We&apos;ll suggest a few research angles before building your brief.
+                </p>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleTopicSubmit() }}
+                  className="space-y-3"
+                >
+                  <input
+                    type="text"
+                    autoFocus
+                    value={topicInput}
+                    onChange={(e) => setTopicInput(e.target.value)}
+                    placeholder="e.g. content marketing for B2B SaaS"
+                    className="w-full px-4 py-3 border border-[rgba(184,115,51,0.2)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!topicInput.trim()}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-xl hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                  >
+                    <ArrowRight className="w-4 h-4" /> Continue
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiscoverMode('choose')}
+                    className="w-full text-xs text-[#7A6555] hover:text-[#A89070] py-1 transition-colors"
+                  >
+                    Back
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Agent path — Stage 2: research angle picker */}
+          {discoverMode === 'agent' && agentStage === 'angle' && (
+            <div className="flex-1 overflow-y-auto px-6 py-10">
+              <AnglePicker topic={topic} onSelect={handleAngleSelect} onSkip={handleAngleSkip} />
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => setAgentStage('topic')}
+                  className="text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                >
+                  ← Change topic
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Agent path — Stage 3: chat messages */}
+          {discoverMode === 'agent' && agentStage === 'chat' && (
             <>
+              {selectedAngle && (
+                <div className="shrink-0 border-b border-[rgba(184,115,51,0.15)] bg-[#231F1B] px-6 py-2.5">
+                  <div className="max-w-2xl mx-auto flex items-center gap-2 text-xs text-[#A89070]">
+                    <Sparkles className="w-3.5 h-3.5 text-[#D4954A] shrink-0" />
+                    <span className="text-[#7A6555]">Angle:</span>
+                    <span className="font-medium text-[#F7F3EC] truncate">{selectedAngle.headline}</span>
+                  </div>
+                </div>
+              )}
               <div className="flex-1 overflow-y-auto px-6 py-6">
                 <div className="max-w-2xl mx-auto space-y-4">
                   {discoverMessages
