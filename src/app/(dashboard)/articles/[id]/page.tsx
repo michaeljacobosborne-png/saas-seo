@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CheckCircle2, Loader2, Sparkles,
-  TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock,
+  TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -149,6 +149,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const applyAtRangeRef = useRef<((from: number, to: number, html: string) => void) | null>(null)
   const [metaDesc, setMetaDesc] = useState('')
   const [metaSaving, setMetaSaving] = useState(false)
+  const [generatingMeta, setGeneratingMeta] = useState(false)
+  const [metaError, setMetaError] = useState<string | null>(null)
   const metaInitialized = useRef(false)
 
   // Agent state
@@ -339,6 +341,39 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setMetaSaving(false)
   }
 
+  async function handleGenerateMeta() {
+    if (!article?.content || generatingMeta) return
+    setGeneratingMeta(true)
+    setMetaError(null)
+    try {
+      const res = await fetch(`/api/articles/${id}/meta-description`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        setMetaError(json.error ?? 'Failed to generate meta description')
+        return
+      }
+      const generated = (json.meta_description ?? '').trim()
+      if (!generated) {
+        setMetaError('No meta description was returned')
+        return
+      }
+      setMetaDesc(generated)
+      setMetaSaving(true)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).from('articles').update({ meta_description: generated }).eq('id', id)
+      if (error) {
+        console.error('[meta-description] Save failed:', error)
+        setMetaError('Generated but failed to save')
+      }
+      setMetaSaving(false)
+    } catch (err) {
+      console.error('[meta-description] Generate failed:', err)
+      setMetaError('Failed to generate meta description')
+    } finally {
+      setGeneratingMeta(false)
+    }
+  }
+
   async function handleCopy() {
     if (!article?.content) return
     const text = getEditorTextRef.current ? getEditorTextRef.current() : article.content
@@ -454,7 +489,19 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
         {/* Meta description */}
         <div className="mb-6">
-          <label className="block text-xs font-medium text-[#A89070] mb-1.5">Meta Description</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-medium text-[#A89070]">Meta Description</label>
+            {article.content && (
+              <button
+                onClick={handleGenerateMeta}
+                disabled={generatingMeta}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] text-[#A89070] disabled:opacity-50 transition-colors"
+              >
+                {generatingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                {generatingMeta ? 'Generating…' : 'Auto-generate'}
+              </button>
+            )}
+          </div>
           <textarea
             value={metaDesc}
             onChange={(e) => setMetaDesc(e.target.value)}
@@ -467,7 +514,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             <span className={`text-xs tabular-nums ${metaDesc.length > 160 ? 'text-red-500' : 'text-[#7A6555]'}`}>
               {metaDesc.length}/160
             </span>
-            {metaSaving && <span className="text-xs text-[#7A6555]">Saving…</span>}
+            {metaError ? (
+              <span className="text-xs text-red-500">{metaError}</span>
+            ) : metaSaving ? (
+              <span className="text-xs text-[#7A6555]">Saving…</span>
+            ) : null}
           </div>
         </div>
 
