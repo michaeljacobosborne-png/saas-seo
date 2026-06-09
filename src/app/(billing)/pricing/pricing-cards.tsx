@@ -175,7 +175,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           </span>
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
-            Built on Claude Sonnet, the model editors trust
+            The editorial agent runs on Claude Sonnet
           </span>
         </div>
       </div>
@@ -330,7 +330,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
               Surfer SEO gives you a score and a list of keywords to add. Frase gives you a content brief. Both tell you what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, identifies specific sentences and sections that are underperforming, and rewrites them — directly inside your editor, with one click.
             </p>
             <p>
-              The agent is built on Claude Sonnet, the same model SEO professionals use when they actually need nuanced editorial feedback. It&apos;s been trained on Byline&apos;s SEO framework — E-E-A-T signals, topical authority, AEO and GEO optimization — so its suggestions are grounded in what actually moves rankings, not generic writing tips.
+              The editorial agent runs on claude-sonnet — the model SEO professionals use when they need real editorial judgment, not generic writing tips. It&apos;s been trained on Byline&apos;s SEO framework — E-E-A-T signals, topical authority, AEO and GEO optimization — so its suggestions are grounded in what actually moves rankings.
             </p>
             <p>
               And because Byline&apos;s keyword database is shared across all accounts, your research loads from cache on repeat queries — which means your results get faster the more you use the platform, and your API costs stay flat as the user base grows.
