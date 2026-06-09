@@ -38,7 +38,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (profile?.account_type !== 'free') redirect('/pricing')
+    // No active/trialing subscription: allow through only if the profile grants
+    // paid access (e.g. comped accounts, or before the subscription row lands).
+    // Genuinely free or unprovisioned users get sent to pricing.
+    if (!profile || profile.account_type === 'free') redirect('/pricing')
   }
 
   return (

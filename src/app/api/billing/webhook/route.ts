@@ -72,6 +72,19 @@ export async function POST(request: Request) {
         console.error('Webhook checkout.session.completed: failed to upsert subscription', upsertError, { userId, sessionId: session.id })
       }
 
+      // Sync account_type to 'paid' on successful subscribe. Without this,
+      // profiles.account_type stays 'free' and paying users are blocked from
+      // Assist mode (which gates on account_type !== 'free'). The user id comes
+      // from session.metadata.userId — that's how checkout passes it (see
+      // /api/billing/checkout) — and is guaranteed non-null after the guard above.
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({ user_id: userId, account_type: 'paid' }, { onConflict: 'user_id' })
+
+      if (profileError) {
+        console.error('Webhook checkout.session.completed: failed to sync account_type', profileError, { userId, sessionId: session.id })
+      }
+
       // Server-side conversion tracking. Wrapped so analytics failures never
       // prevent us returning 200 to Stripe (which would trigger retries).
       try {
@@ -130,10 +143,34 @@ export async function POST(request: Request) {
 
     case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription
+
+      // Look up the owning user before updating, so we can also downgrade their
+      // account_type back to 'free'.
+      const { data: subRow } = await supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('stripe_subscription_id', subscription.id)
+        .maybeSingle()
+
       await supabase
         .from('subscriptions')
         .update({ status: 'cancelled', updated_at: new Date().toISOString() })
         .eq('stripe_subscription_id', subscription.id)
+
+      // Sync account_type back to 'free' on cancellation so Assist mode is
+      // re-gated for the lapsed subscriber.
+      if (subRow?.user_id) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ account_type: 'free' })
+          .eq('user_id', subRow.user_id)
+
+        if (profileError) {
+          console.error('Webhook customer.subscription.deleted: failed to downgrade account_type', profileError, { userId: subRow.user_id, subscriptionId: subscription.id })
+        }
+      } else {
+        console.error('Webhook customer.subscription.deleted: no subscription row found to downgrade', { subscriptionId: subscription.id })
+      }
       break
     }
 
