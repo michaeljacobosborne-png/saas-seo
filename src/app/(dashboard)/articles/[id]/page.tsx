@@ -10,6 +10,7 @@ import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
+  Image as ImageIcon, RefreshCw, ChevronRight,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -17,6 +18,22 @@ const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
 const COPPER = '#B87333'
 
 type AgentMessage = { role: 'user' | 'assistant'; content: string }
+
+type ImageConcept = {
+  headline: string
+  prompt: string
+  style: string
+  alt_text: string
+  rationale: string
+}
+
+const STYLE_BADGES: Record<string, string> = {
+  photorealistic: 'bg-blue-50 text-blue-700',
+  illustration: 'bg-purple-50 text-purple-700',
+  abstract: 'bg-pink-50 text-pink-700',
+  '3d-render': 'bg-emerald-50 text-emerald-700',
+  'flat-design': 'bg-amber-50 text-amber-700',
+}
 
 function extractApplicableContent(content: string): string | null {
   const codeMatch = content.match(/```[\w]*\n?([\s\S]+?)```/)
@@ -156,6 +173,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [generatingMeta, setGeneratingMeta] = useState(false)
   const [metaError, setMetaError] = useState<string | null>(null)
   const metaInitialized = useRef(false)
+
+  // Featured image prompt state (kept in component state across the session)
+  const [imageConcepts, setImageConcepts] = useState<ImageConcept[] | null>(null)
+  const [generatingImages, setGeneratingImages] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const [copiedPromptIndex, setCopiedPromptIndex] = useState<number | null>(null)
+  const [expandedRationale, setExpandedRationale] = useState<number | null>(null)
 
   // Agent state
   const [agentOpen, setAgentOpen] = useState(false)
@@ -386,6 +410,36 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setTimeout(() => setCopied(false), 2000)
   }
 
+  async function handleGenerateImagePrompts() {
+    if (!article?.content || generatingImages) return
+    setGeneratingImages(true)
+    setImageError(null)
+    try {
+      const res = await fetch(`/api/articles/${id}/image-prompts`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        setImageError(json.error ?? 'Failed to generate image concepts')
+        return
+      }
+      if (!Array.isArray(json.concepts) || json.concepts.length === 0) {
+        setImageError('No concepts were returned')
+        return
+      }
+      setImageConcepts(json.concepts as ImageConcept[])
+    } catch (err) {
+      console.error('[image-prompts] Generate failed:', err)
+      setImageError('Failed to generate image concepts')
+    } finally {
+      setGeneratingImages(false)
+    }
+  }
+
+  async function handleCopyPrompt(prompt: string, index: number) {
+    await navigator.clipboard.writeText(prompt)
+    setCopiedPromptIndex(index)
+    setTimeout(() => setCopiedPromptIndex((cur) => (cur === index ? null : cur)), 2000)
+  }
+
   async function handleDuplicate() {
     if (duplicating) return
     setDuplicating(true)
@@ -560,6 +614,112 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             ) : null}
           </div>
         </div>
+
+        {/* Featured image */}
+        {article.content && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-[#D4954A]" />
+                <h3 className="text-sm font-semibold text-[#F7F3EC]">Featured Image</h3>
+              </div>
+              <button
+                onClick={handleGenerateImagePrompts}
+                disabled={generatingImages}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#B87333] text-[#F7F3EC] rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+              >
+                {generatingImages ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : imageConcepts ? (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                {generatingImages ? 'Generating concepts…' : imageConcepts ? 'Regenerate' : 'Generate concepts'}
+              </button>
+            </div>
+            <div className="border-b border-[rgba(184,115,51,0.2)] mb-4" />
+
+            {imageError && (
+              <div className="mb-4 flex items-center justify-between gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+                <span className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {imageError}
+                </span>
+                <button
+                  onClick={handleGenerateImagePrompts}
+                  disabled={generatingImages}
+                  className="shrink-0 text-xs font-semibold text-red-700 hover:text-red-900 disabled:opacity-50"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Skeletons on first generation */}
+            {generatingImages && !imageConcepts && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 animate-pulse">
+                    <div className="h-4 w-2/3 bg-[#2A2420] rounded mb-3" />
+                    <div className="h-5 w-20 bg-[#2A2420] rounded-full mb-3" />
+                    <div className="h-24 w-full bg-[#2A2420] rounded mb-3" />
+                    <div className="h-3 w-full bg-[#2A2420] rounded mb-2" />
+                    <div className="h-3 w-1/2 bg-[#2A2420] rounded" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Concept cards */}
+            {imageConcepts && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {imageConcepts.map((concept, i) => (
+                  <div key={i} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 flex flex-col">
+                    <h4 className="text-sm font-bold text-[#F7F3EC] leading-snug">{concept.headline}</h4>
+                    <span
+                      className={`mt-2 self-start text-xs font-medium px-2.5 py-1 rounded-full ${
+                        STYLE_BADGES[concept.style] ?? 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {concept.style}
+                    </span>
+                    <pre className="mt-3 text-xs font-mono text-[#A89070] whitespace-pre-wrap break-words bg-[#231F1B] border border-[rgba(184,115,51,0.15)] rounded-lg p-3 select-text max-h-44 overflow-y-auto">
+                      {concept.prompt}
+                    </pre>
+                    <button
+                      onClick={() => handleCopyPrompt(concept.prompt, i)}
+                      className="mt-2 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[rgba(184,115,51,0.25)] rounded-lg hover:bg-[#231F1B] text-[#A89070] transition-colors"
+                    >
+                      {copiedPromptIndex === i ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      {copiedPromptIndex === i ? 'Copied!' : 'Copy prompt'}
+                    </button>
+                    <p className="mt-2.5 text-xs text-[#7A6555] leading-relaxed">
+                      <span className="font-medium text-[#A89070]">Alt text: </span>
+                      {concept.alt_text}
+                    </p>
+                    <button
+                      onClick={() => setExpandedRationale((cur) => (cur === i ? null : i))}
+                      className="mt-2.5 flex items-center gap-1 text-xs font-medium text-[#B87333] hover:text-[#A0622A] transition-colors"
+                    >
+                      <ChevronRight
+                        className={`w-3.5 h-3.5 transition-transform ${expandedRationale === i ? 'rotate-90' : ''}`}
+                      />
+                      Why this works
+                    </button>
+                    {expandedRationale === i && (
+                      <p className="mt-1.5 text-xs text-[#A89070] leading-relaxed">{concept.rationale}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tabs */}
         {article.content && (
