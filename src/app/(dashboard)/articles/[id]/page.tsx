@@ -179,6 +179,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [generatingImages, setGeneratingImages] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [copiedPromptIndex, setCopiedPromptIndex] = useState<number | null>(null)
+  const [copiedAltIndex, setCopiedAltIndex] = useState<number | null>(null)
   const [expandedRationale, setExpandedRationale] = useState<number | null>(null)
 
   // Agent state
@@ -440,6 +441,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setTimeout(() => setCopiedPromptIndex((cur) => (cur === index ? null : cur)), 2000)
   }
 
+  async function handleCopyAlt(altText: string, index: number) {
+    await navigator.clipboard.writeText(altText)
+    setCopiedAltIndex(index)
+    setTimeout(() => setCopiedAltIndex((cur) => (cur === index ? null : cur)), 2000)
+  }
+
   async function handleDuplicate() {
     if (duplicating) return
     setDuplicating(true)
@@ -698,10 +705,27 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       )}
                       {copiedPromptIndex === i ? 'Copied!' : 'Copy prompt'}
                     </button>
-                    <p className="mt-2.5 text-xs text-[#7A6555] leading-relaxed">
-                      <span className="font-medium text-[#A89070]">Alt text: </span>
-                      {concept.alt_text}
-                    </p>
+                    {concept.alt_text && (
+                      <div className="mt-2.5 bg-[#231F1B] border border-[rgba(184,115,51,0.15)] rounded-lg p-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-[#7A6555]">
+                            Alt text
+                          </span>
+                          <button
+                            onClick={() => handleCopyAlt(concept.alt_text, i)}
+                            className="flex items-center gap-1 text-[10px] font-medium text-[#A89070] hover:text-[#F7F3EC] transition-colors"
+                          >
+                            {copiedAltIndex === i ? (
+                              <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            {copiedAltIndex === i ? 'Copied!' : 'Copy'}
+                          </button>
+                        </div>
+                        <p className="mt-1 text-xs text-[#A89070] leading-relaxed">{concept.alt_text}</p>
+                      </div>
+                    )}
                     <button
                       onClick={() => setExpandedRationale((cur) => (cur === i ? null : i))}
                       className="mt-2.5 flex items-center gap-1 text-xs font-medium text-[#B87333] hover:text-[#A0622A] transition-colors"

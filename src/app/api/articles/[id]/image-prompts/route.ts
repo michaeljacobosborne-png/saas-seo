@@ -12,7 +12,7 @@ For each concept return:
 - headline: short concept name (3-5 words)
 - prompt: a detailed, ready-to-use AI image generation prompt optimized for Midjourney or DALL-E. Include: subject description, composition, lighting, color palette, style, mood. 50-80 words.
 - style: one of "photorealistic", "illustration", "abstract", "3d-render", "flat-design"
-- alt_text: an SEO-friendly alt text for the image (under 125 chars, includes the target keyword naturally)
+- alt_text: SEO-optimized alt text for the image. It MUST: (1) accurately describe what the image actually depicts, (2) naturally include the article's target keyword, (3) stay under 125 characters, (4) NOT start with "image of", "picture of", "photo of" or similar filler. Write it as a concise descriptive phrase, not a sentence.
 - rationale: one sentence explaining why this visual angle works for the article
 
 Return valid JSON only: { "concepts": [ { "headline", "prompt", "style", "alt_text", "rationale" } ] }`
