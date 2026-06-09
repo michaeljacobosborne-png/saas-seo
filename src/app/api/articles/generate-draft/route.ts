@@ -1,4 +1,4 @@
-export const maxDuration = 120
+export const maxDuration = 300
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -476,6 +476,18 @@ Write the full article now.`
     .eq('user_id', user.id)
 
   if (updateError) {
+    // Safety net: never leave the article stranded in an in-flight status.
+    // Reset it to 'brief_ready' so the user can always retry. (A status='ready'
+    // write here used to fail the articles_status_check constraint and strand
+    // the article in 'generating' — the constraint is fixed in migration
+    // 20260608_fix_articles_status_check.sql, and this is the backstop.)
+    console.error(`generate-draft: final save failed for article ${articleId}: ${updateError.message}`)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('articles')
+      .update({ status: 'brief_ready' })
+      .eq('id', articleId)
+      .eq('user_id', user.id)
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 

@@ -42,3 +42,17 @@ next-env.d.ts
 
 # local-only architecture reference
 ARCHITECTURE.md
+
+# supabase local CLI state
+supabase/.temp/
+
+# scratch dumps, debug artifacts, and source copies
+*-dump.txt
+audit-*.txt
+replacements.txt
+fix.py
+src_app_*.txt
+
+# archives and exported site builds
+*.zip
+byline-site - branded/
