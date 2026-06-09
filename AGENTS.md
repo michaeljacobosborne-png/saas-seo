@@ -4,6 +4,12 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## Architecture reference (required reading)
+
+Before starting any feature work, check whether `ARCHITECTURE.md` exists in the repo root. If it does, read it — it contains the DB schema, all API routes, plan limits, known gotchas, and deployment conventions. This file is gitignored and local-only.
+
+After completing a session that adds API routes, modifies the DB schema, or builds a new feature: update the relevant section(s) of `ARCHITECTURE.md` before committing. Keep it current — stale docs cause bugs.
+
 ## Git safety rules (required for every session)
 
 1. **Always pull before committing.** Run `git pull --rebase origin main` before staging any files. If there are conflicts, resolve them before proceeding — do not force-push.
