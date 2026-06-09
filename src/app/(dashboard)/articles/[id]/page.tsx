@@ -202,6 +202,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [accountType, setAccountType] = useState<string | null>(null)
   const [showAssistUpgrade, setShowAssistUpgrade] = useState(false)
 
+  // Brand switcher state (Multi-Brand plan)
+  const [brandProfiles, setBrandProfiles] = useState<Array<{ id: string; brand_name: string }>>([])
+  const [switchingBrand, setSwitchingBrand] = useState(false)
+  const [brandSwitchError, setBrandSwitchError] = useState<string | null>(null)
+
   useEffect(() => { agentModeRef.current = agentMode }, [agentMode])
 
   useEffect(() => {
@@ -238,6 +243,22 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       setAccountType(data?.account_type ?? null)
     }
     loadProfile()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    async function loadBrandProfiles() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('brand_profiles')
+        .select('id, brand_name')
+        .eq('user_id', user.id)
+        .order('brand_name', { ascending: true })
+      setBrandProfiles((data as Array<{ id: string; brand_name: string }>) ?? [])
+    }
+    loadBrandProfiles()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -466,6 +487,33 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  async function handleSwitchBrand(newBrandId: string) {
+    if (!article || switchingBrand) return
+    if (newBrandId === (article.brand_profile_id ?? '')) return
+    setSwitchingBrand(true)
+    setBrandSwitchError(null)
+    try {
+      const res = await fetch(`/api/articles/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand_profile_id: newBrandId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.article) {
+        setBrandSwitchError(json.error ?? 'Failed to switch brand')
+        return
+      }
+      // Re-fetch the article so the new brand context flows into subsequent agent calls.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any).from('articles').select('*').eq('id', id).single()
+      setArticle(data as Article | null)
+    } catch {
+      setBrandSwitchError('Failed to switch brand')
+    } finally {
+      setSwitchingBrand(false)
+    }
+  }
+
   async function handleScore() {
     setScoring(true)
     setScoreError(null)
@@ -522,6 +570,28 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </h1>
             {article.target_keyword && article.title && (
               <p className="text-sm text-[#7A6555] mt-0.5">Target: <span className="font-medium text-[#A89070]">{article.target_keyword}</span></p>
+            )}
+            {brandProfiles.length > 1 && (
+              <div className="flex items-center gap-2 mt-2">
+                <label htmlFor="brand-switch" className="text-xs font-medium text-[#7A6555] shrink-0">Brand:</label>
+                <div className="relative inline-flex items-center">
+                  <select
+                    id="brand-switch"
+                    value={article.brand_profile_id ?? ''}
+                    onChange={(e) => handleSwitchBrand(e.target.value)}
+                    disabled={switchingBrand}
+                    className="text-xs text-[#A89070] bg-[#231F1B] border border-[rgba(184,115,51,0.2)] rounded-lg pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 appearance-none cursor-pointer"
+                  >
+                    {!article.brand_profile_id && <option value="">No brand</option>}
+                    {brandProfiles.map((b) => (
+                      <option key={b.id} value={b.id}>{b.brand_name}</option>
+                    ))}
+                  </select>
+                  <ChevronRight className="w-3.5 h-3.5 text-[#7A6555] absolute right-2 rotate-90 pointer-events-none" />
+                </div>
+                {switchingBrand && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#7A6555]" />}
+                {brandSwitchError && <span className="text-xs text-red-500">{brandSwitchError}</span>}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-4">
