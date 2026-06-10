@@ -1141,14 +1141,24 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           )}
                         </div>
                       )}
-                      {/* TODO: gate Apply button behind premium check */}
                       {applicable && (
-                        <button
-                          onClick={() => applyContentRef.current?.(applicable)}
-                          className="mt-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.08)] text-[#B87333] rounded-lg hover:bg-[rgba(184,115,51,0.12)] transition-colors border border-[rgba(184,115,51,0.25)]"
-                        >
-                          Apply to article
-                        </button>
+                        accountType === 'free' ? (
+                          <Link
+                            href="/pricing"
+                            title="Upgrade to apply agent suggestions"
+                            className="mt-1 flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.05)] text-[#7A6555] rounded-lg hover:text-[#B87333] hover:bg-[rgba(184,115,51,0.1)] transition-colors border border-[rgba(184,115,51,0.2)]"
+                          >
+                            <Lock className="w-2.5 h-2.5" />
+                            Apply to article
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={() => applyContentRef.current?.(applicable)}
+                            className="mt-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.08)] text-[#B87333] rounded-lg hover:bg-[rgba(184,115,51,0.12)] transition-colors border border-[rgba(184,115,51,0.25)]"
+                          >
+                            Apply to article
+                          </button>
+                        )
                       )}
                     </div>
                   )
