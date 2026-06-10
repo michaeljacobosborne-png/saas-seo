@@ -20,6 +20,38 @@ function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus
   }
 }
 
+// Split a full name from Stripe customer_details into first/last. Stripe gives
+// a single free-text name field, so we treat the first token as the first name
+// and the remainder as the last name.
+function splitName(name: string | null | undefined): { firstName: string; lastName: string } {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { firstName: '', lastName: '' }
+  const [firstName, ...rest] = parts
+  return { firstName, lastName: rest.join(' ') }
+}
+
+// Fire-and-await a contact webhook to GoHighLevel. Non-blocking by contract:
+// it never throws, so a GHL outage can't stop us returning 200 to Stripe
+// (which would otherwise trigger Stripe webhook retries). Skips silently when
+// GHL_WEBHOOK_URL is unset so local dev without the var keeps working.
+async function sendGhlWebhook(payload: Record<string, unknown>): Promise<void> {
+  const url = process.env.GHL_WEBHOOK_URL
+  if (!url) return
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      console.error('GHL webhook returned non-OK status', { status: res.status, email: payload.email })
+    }
+  } catch (err) {
+    console.error('GHL webhook error', err, { email: payload.email })
+  }
+}
+
 export async function POST(request: Request) {
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')
@@ -116,6 +148,23 @@ export async function POST(request: Request) {
       } catch (analyticsErr) {
         console.error('Webhook checkout.session.completed: analytics error', analyticsErr)
       }
+
+      // Create/refresh the contact in GoHighLevel so the onboarding sequence
+      // fires there. Non-blocking — sendGhlWebhook swallows its own errors.
+      const ghlEmail = session.customer_details?.email ?? session.customer_email ?? ''
+      const { firstName, lastName } = splitName(session.customer_details?.name)
+      await sendGhlWebhook({
+        email: ghlEmail,
+        firstName,
+        lastName,
+        phone: '',
+        tags: ['byline-subscriber', `plan-${plan}`],
+        customField: {
+          plan,
+          byline_user_id: userId,
+        },
+        source: 'byline-stripe',
+      })
       break
     }
 
@@ -168,6 +217,23 @@ export async function POST(request: Request) {
         if (profileError) {
           console.error('Webhook customer.subscription.deleted: failed to downgrade account_type', profileError, { userId: subRow.user_id, subscriptionId: subscription.id })
         }
+
+        // Tag the contact as cancelled in GoHighLevel. Email isn't stored on
+        // profiles (it lives in auth.users), so resolve it via the admin API
+        // using the user id we just looked up. Non-blocking.
+        const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(subRow.user_id)
+        if (authErr) {
+          console.error('Webhook customer.subscription.deleted: failed to look up email', authErr, { userId: subRow.user_id })
+        }
+        await sendGhlWebhook({
+          email: authUser?.user?.email ?? '',
+          tags: ['byline-cancelled'],
+          customField: {
+            plan: 'cancelled',
+            byline_user_id: subRow.user_id,
+          },
+          source: 'byline-stripe',
+        })
       } else {
         console.error('Webhook customer.subscription.deleted: no subscription row found to downgrade', { subscriptionId: subscription.id })
       }
