@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe } from 'lucide-react'
 import type { Article } from '@/lib/supabase/types'
 import DuplicateArticleButton from './DuplicateArticleButton'
+import PublishButton from './PublishButton'
 
 const STATUS_CONFIG: Record<Article['status'], { label: string; className: string; icon: React.ElementType; spin?: boolean }> = {
   draft: { label: 'Draft', className: 'bg-[#2A2420] text-[#A89070]', icon: Clock },
@@ -102,10 +103,13 @@ export default async function ArticlesPage() {
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.className}`}>
-                        <StatusIcon className={`w-3 h-3 ${statusCfg.spin ? 'animate-spin' : ''}`} />
-                        {statusCfg.label}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.className}`}>
+                          <StatusIcon className={`w-3 h-3 ${statusCfg.spin ? 'animate-spin' : ''}`} />
+                          {statusCfg.label}
+                        </span>
+                        <PublishButton articleId={article.id} initialStatus={article.status} />
+                      </div>
                     </td>
                     <td className="px-4 py-3 tabular-nums text-[#A89070] text-xs">
                       {article.word_count ? article.word_count.toLocaleString() : '—'}

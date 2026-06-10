@@ -29,11 +29,12 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { messages, mode, selectedText, fixInstruction } = await request.json() as {
+  const { messages, mode, selectedText, fixInstruction, userInstruction } = await request.json() as {
     messages: Message[]
-    mode?: 'review' | 'assist'
+    mode?: 'review' | 'assist' | 'auto'
     selectedText?: string
     fixInstruction?: string
+    userInstruction?: string   // optional focus instructions for auto mode
   }
 
   // Free tier: gate assist mode and enforce 3-turn cap on review
@@ -49,6 +50,12 @@ export async function POST(
   if (isFree && mode === 'assist') {
     return NextResponse.json({
       error: 'Assist mode is available on paid plans. Upgrade to let the agent rewrite sections of your article directly.',
+    }, { status: 403 })
+  }
+
+  if (isFree && mode === 'auto') {
+    return NextResponse.json({
+      error: 'Auto mode is available on paid plans. Upgrade to let the agent rewrite your full article automatically.',
     }, { status: 403 })
   }
 
@@ -183,6 +190,76 @@ ANTI-SLOP EDITORIAL STANDARDS:
     })
 
     return new Response(assistStream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  }
+
+  if (mode === 'auto') {
+    const autoSystem = `You are a professional SEO editor performing a comprehensive article rewrite. Apply ALL failing audit criteria and fix ALL weak areas in one pass. Return ONLY the complete revised article in clean markdown — no preamble, no commentary, no explanation before or after.
+
+ARTICLE CONTEXT:
+Title: ${articleTitle}
+Target keyword: "${article.target_keyword ?? '(none set)'}"
+${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice ?? 'professional'}` : ''}
+${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
+${brand?.expertise_notes ? `\nAUTHOR EXPERTISE (preserve this voice and perspective throughout):\n${brand.expertise_notes}` : ''}
+${brand?.signature_angles ? `\nSIGNATURE ANGLES (reinforce these throughout the rewrite):\n${brand.signature_angles}` : ''}
+${weakAreasSection}
+
+FULL ARTICLE TO REWRITE:
+${fullContent}
+
+REWRITE INSTRUCTIONS:
+- Fix every failing criterion listed in the weak areas above
+- Preserve the author's voice, tone, sentence rhythm, and formatting style throughout
+- Keep all sections and structural elements that are already working
+- Add or strengthen sections needed to pass failing criteria
+- Do not add a preamble, intro, or any commentary — return the article content only
+ANTI-SLOP STANDARDS (apply throughout the rewrite):
+- Active voice. Find the human doing the action. Never: "The data suggests" — always: "Researchers found."
+- Kill adverbs. If the verb needs one, replace the verb.
+- No Wh- starters: What makes this / Which means / Why this matters — banned.
+- No binary contrasts: "Not X — it's Y." Just say Y.
+- No vague declaratives: "The implications are significant." Name the implication.
+- No throat-clearing: It's worth noting / Importantly / Interestingly / Notably / Ultimately / Essentially.
+- No em dashes for drama. Use a comma or parentheses.
+- No quotable one-liners ending paragraphs.
+- No inanimate subjects doing human actions.
+- Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.
+- Sentence variety: never three of matching length in a row.`
+
+    const autoUserMessage = userInstruction
+      ? `Rewrite the article now, applying all failing criteria and returning the complete revised article.\n\nAdditional focus: ${userInstruction}`
+      : 'Rewrite the article now, applying all failing criteria and returning the complete revised article.'
+
+    const autoStream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder()
+        try {
+          const anthropicStream = anthropic.messages.stream({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 8192,
+            system: autoSystem,
+            messages: [{ role: 'user', content: autoUserMessage }],
+          })
+          for await (const event of anthropicStream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text))
+            }
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Stream error'
+          controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`))
+        } finally {
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(autoStream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'X-Content-Type-Options': 'nosniff',

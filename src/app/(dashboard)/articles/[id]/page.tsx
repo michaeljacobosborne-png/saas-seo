@@ -10,7 +10,7 @@ import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
-  Image as ImageIcon, RefreshCw, ChevronRight,
+  Image as ImageIcon, RefreshCw, ChevronRight, Globe,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -166,8 +166,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [duplicateError, setDuplicateError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'content' | 'scores'>('content')
   const getEditorTextRef = useRef<(() => string) | null>(null)
+  const replaceContentRef = useRef<((markdown: string) => void) | null>(null)
+  const getWordCountRef = useRef<(() => number) | null>(null)
   const applyContentRef = useRef<((markdown: string) => void) | null>(null)
   const applyAtRangeRef = useRef<((from: number, to: number, html: string) => void) | null>(null)
+  const [publishing, setPublishing] = useState(false)
   const [metaDesc, setMetaDesc] = useState('')
   const [metaSaving, setMetaSaving] = useState(false)
   const [generatingMeta, setGeneratingMeta] = useState(false)
@@ -184,23 +187,28 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   // Agent state
   const [agentOpen, setAgentOpen] = useState(false)
-  const [agentMode, setAgentMode] = useState<'review' | 'assist'>('review')
+  const [agentMode, setAgentMode] = useState<'review' | 'assist' | 'auto'>('review')
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([])
   const [agentInput, setAgentInput] = useState('')
   const [agentStreaming, setAgentStreaming] = useState(false)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const initialSentRef = useRef(false)
 
+  // Auto mode state
+  const [autoInstruction, setAutoInstruction] = useState('')
+  const [autoApplied, setAutoApplied] = useState(false)
+  const autoStreamRef = useRef<HTMLDivElement>(null)
+
   // Assist mode state
   const [selectedText, setSelectedText] = useState('')
   const [selectionRange, setSelectionRange] = useState<{ from: number; to: number } | null>(null)
   const [assistInput, setAssistInput] = useState('')
   const [assistApplied, setAssistApplied] = useState(false)
-  const agentModeRef = useRef<'review' | 'assist'>('review')
+  const agentModeRef = useRef<'review' | 'assist' | 'auto'>('review')
 
   // Free tier state
   const [accountType, setAccountType] = useState<string | null>(null)
-  const [showAssistUpgrade, setShowAssistUpgrade] = useState(false)
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   // Brand switcher state (Multi-Brand plan)
   const [brandProfiles, setBrandProfiles] = useState<Array<{ id: string; brand_name: string }>>([])
@@ -276,13 +284,21 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
   }, [selectedText])
 
-  // Clear messages when entering Assist mode
+  // Clear messages when entering Assist or Auto mode
   useEffect(() => {
-    if (agentMode === 'assist') {
+    if (agentMode === 'assist' || agentMode === 'auto') {
       setAgentMessages([])
       setAssistApplied(false)
+      setAutoApplied(false)
     }
   }, [agentMode])
+
+  // Auto-scroll live auto mode output as it streams
+  useEffect(() => {
+    if (autoStreamRef.current) {
+      autoStreamRef.current.scrollTop = autoStreamRef.current.scrollHeight
+    }
+  }, [agentMessages])
 
   const handleSelectionChange = useCallback((text: string, from: number, to: number) => {
     setSelectedText(text)
@@ -369,6 +385,56 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       setSelectionRange(null)
       setSelectedText('')
       setAssistInput('')
+    }
+  }, [id])
+
+  const sendAutoMode = useCallback(async (instruction?: string) => {
+    setAgentMessages([])
+    setAutoApplied(false)
+    setAgentStreaming(true)
+
+    const res = await fetch(`/api/articles/${id}/agent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [], mode: 'auto', userInstruction: instruction?.trim() || undefined }),
+    })
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
+      setAgentMessages([{ role: 'assistant', content: errorMsg }])
+      setAgentStreaming(false)
+      return
+    }
+    if (!res.body) {
+      setAgentMessages([{ role: 'assistant', content: 'Something went wrong. Please try again.' }])
+      setAgentStreaming(false)
+      return
+    }
+
+    setAgentMessages([{ role: 'assistant', content: '' }])
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let fullResult = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const text = decoder.decode(value)
+      fullResult += text
+      setAgentMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { ...updated[updated.length - 1], content: updated[updated.length - 1].content + text }
+        return updated
+      })
+    }
+
+    setAgentStreaming(false)
+    if (fullResult) {
+      // Full replacement via replaceContentRef (setContent, not insertContent at cursor).
+      // Autosave persists it; the editor's undo (⌘/Ctrl+Z) reverts.
+      replaceContentRef.current?.(fullResult)
+      setAutoApplied(true)
     }
   }, [id])
 
@@ -514,6 +580,19 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  async function handlePublish() {
+    if (!article) return
+    const newStatus = article.status === 'published' ? 'complete' : 'published'
+    setPublishing(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from('articles')
+      .update({ status: newStatus })
+      .eq('id', id)
+    if (!error) setArticle({ ...article, status: newStatus })
+    setPublishing(false)
+  }
+
   async function handleScore() {
     setScoring(true)
     setScoreError(null)
@@ -621,6 +700,21 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               >
                 {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {scores ? 'Re-score' : 'Score Article'}
+              </button>
+            )}
+            {article.content && (
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                title={article.status === 'published' ? 'Mark as Complete (unpublish)' : 'Mark as Published'}
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 ${
+                  article.status === 'published'
+                    ? 'border-[rgba(184,115,51,0.4)] text-[#B87333] bg-[rgba(184,115,51,0.08)]'
+                    : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+                }`}
+              >
+                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                {article.status === 'published' ? 'Published' : 'Publish'}
               </button>
             )}
             {article.content && (
@@ -840,6 +934,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 articleId={id}
                 initialContent={article.content}
                 getTextRef={getEditorTextRef}
+                getWordCountRef={getWordCountRef}
+                replaceContentRef={replaceContentRef}
                 applyContentRef={applyContentRef}
                 applyAtRangeRef={applyAtRangeRef}
                 onSelectionChange={handleSelectionChange}
@@ -1005,31 +1101,30 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <div className="w-2 h-2 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 animate-pulse" />
               <span className="font-semibold text-[#F7F3EC] text-sm">Byline Agent</span>
               <div className="flex gap-0.5 bg-[#2A2420] rounded-lg p-0.5">
-                {(['review', 'assist'] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      if (m === 'assist' && accountType === 'free') {
-                        setShowAssistUpgrade(true)
-                        return
-                      }
-                      setShowAssistUpgrade(false)
-                      setAgentMode(m)
-                    }}
-                    className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                      (agentMode === m && !showAssistUpgrade) || (m === 'review' && showAssistUpgrade)
-                        ? 'bg-[#1C1917] text-[#F7F3EC] shadow-sm'
-                        : 'text-[#A89070] hover:text-[#A89070]'
-                    }`}
-                  >
-                    {m === 'review' ? 'Review' : (
-                      <>
-                        Assist
-                        {accountType === 'free' && <Lock className="w-2.5 h-2.5" />}
-                      </>
-                    )}
-                  </button>
-                ))}
+                {(['review', 'assist', 'auto'] as const).map((m) => {
+                  const locked = m !== 'review' && accountType === 'free'
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        if (locked) {
+                          setShowUpgradePrompt(true)
+                          return
+                        }
+                        setShowUpgradePrompt(false)
+                        setAgentMode(m)
+                      }}
+                      className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 capitalize ${
+                        (agentMode === m && !showUpgradePrompt) || (m === 'review' && showUpgradePrompt)
+                          ? 'bg-[#1C1917] text-[#F7F3EC] shadow-sm'
+                          : 'text-[#A89070] hover:text-[#A89070]'
+                      }`}
+                    >
+                      {m}
+                      {locked && <Lock className="w-2.5 h-2.5" />}
+                    </button>
+                  )
+                })}
               </div>
             </div>
             <button
@@ -1040,15 +1135,15 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </button>
           </div>
 
-          {/* Assist upgrade prompt for free users */}
-          {showAssistUpgrade ? (
+          {/* Upgrade prompt for free users (Assist + Auto) */}
+          {showUpgradePrompt ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
               <div className="w-12 h-12 rounded-full bg-[#2A2420] flex items-center justify-center mb-3">
                 <Lock className="w-5 h-5 text-[#7A6555]" />
               </div>
-              <h3 className="font-semibold text-[#F7F3EC] text-sm mb-2">Assist mode is a paid feature</h3>
+              <h3 className="font-semibold text-[#F7F3EC] text-sm mb-2">Assist &amp; Auto are paid features</h3>
               <p className="text-sm text-[#A89070] mb-5 leading-relaxed">
-                Upgrade to let the agent rewrite sections of your article directly.
+                Upgrade to let the agent rewrite sections directly — or rewrite your entire article automatically.
               </p>
               <Link
                 href="/pricing"
@@ -1069,6 +1164,85 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Score Article
               </button>
+            </div>
+          ) : agentMode === 'auto' ? (
+            /* Auto mode — full-article rewrite */
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {agentStreaming ? (
+                /* Live streaming output */
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="shrink-0 flex items-center gap-2.5 px-4 py-2.5 border-b border-[rgba(184,115,51,0.1)]">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#B87333]" />
+                    <span className="text-xs text-[#A89070]">Rewriting…</span>
+                    <span className="text-xs tabular-nums ml-auto text-[#4A3E35]">
+                      {(agentMessages[0]?.content.length ?? 0).toLocaleString()} chars
+                    </span>
+                  </div>
+                  <div ref={autoStreamRef} className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+                    <pre className="text-xs leading-relaxed whitespace-pre-wrap text-[#7A6555]" style={{ fontFamily: 'inherit' }}>
+                      {agentMessages[0]?.content}
+                    </pre>
+                  </div>
+                </div>
+              ) : autoApplied ? (
+                /* Applied — success state */
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                  <CheckCircle2 className="w-8 h-8 text-green-500 mb-3" />
+                  <p className="text-sm font-semibold mb-1 text-[#F7F3EC]">Article rewritten</p>
+                  <p className="text-xs mb-6 text-[#A89070]">
+                    Applied to the editor · saving automatically. Use the editor&apos;s undo (⌘/Ctrl+Z) to revert.
+                  </p>
+                  <button
+                    onClick={() => { setAutoApplied(false); setAgentMessages([]) }}
+                    className="text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                  >
+                    Run again
+                  </button>
+                </div>
+              ) : agentMessages.length > 0 ? (
+                /* Error state */
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                  <AlertCircle className="w-6 h-6 text-red-400 mb-3" />
+                  <p className="text-xs leading-relaxed text-[#A89070]">{agentMessages[0]?.content}</p>
+                  <button
+                    onClick={() => setAgentMessages([])}
+                    className="mt-4 text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              ) : (
+                /* Ready state — focus instructions + run */
+                <div className="flex-1 flex flex-col p-4 gap-4">
+                  <p className="text-xs leading-relaxed text-[#7A6555]">
+                    Reads your article, audit scores, and brand profile — then applies every failing criterion in one pass. The rewrite saves automatically; undo in the editor to revert.
+                  </p>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5 text-[#A89070]">
+                      Focus instructions <span className="text-[#4A3E35]">(optional)</span>
+                    </label>
+                    <textarea
+                      value={autoInstruction}
+                      onChange={(e) => setAutoInstruction(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.metaKey && !agentStreaming) sendAutoMode(autoInstruction)
+                      }}
+                      placeholder={'e.g. "strengthen the intro" · "add more data points" · "don\'t change the conclusion"'}
+                      rows={3}
+                      className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent placeholder-gray-600 bg-[#1C1917] text-[#F7F3EC]"
+                    />
+                  </div>
+                  <button
+                    onClick={() => sendAutoMode(autoInstruction)}
+                    disabled={agentStreaming}
+                    className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 bg-[#B87333] text-[#F7F3EC] hover:bg-[#A0622A]"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    Rewrite Article
+                  </button>
+                  <p className="text-xs text-center text-[#3A342E]">⌘ + Enter to run</p>
+                </div>
+              )}
             </div>
           ) : (
             <>

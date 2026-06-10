@@ -66,12 +66,14 @@ interface ArticleEditorProps {
   articleId: string
   initialContent: string
   getTextRef: React.MutableRefObject<(() => string) | null>
-  applyContentRef?: React.MutableRefObject<((markdown: string) => void) | null>
+  getWordCountRef?: React.MutableRefObject<(() => number) | null>
+  replaceContentRef?: React.MutableRefObject<((markdown: string) => void) | null>  // full replace (auto mode)
+  applyContentRef?: React.MutableRefObject<((markdown: string) => void) | null>   // insert at cursor (review mode)
   applyAtRangeRef?: React.MutableRefObject<((from: number, to: number, html: string) => void) | null>
   onSelectionChange?: (text: string, from: number, to: number) => void
 }
 
-export default function ArticleEditor({ articleId, initialContent, getTextRef, applyContentRef, applyAtRangeRef, onSelectionChange }: ArticleEditorProps) {
+export default function ArticleEditor({ articleId, initialContent, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, onSelectionChange }: ArticleEditorProps) {
   const supabase = createClient()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
@@ -96,8 +98,9 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
         if (!isMountedRef.current) return
         setSaveStatus('saving')
         const html = editor.getHTML()
+        const wordCount = editor.storage.characterCount?.words?.() ?? null
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any).from('articles').update({ content: html }).eq('id', articleId)
+        const { error } = await (supabase as any).from('articles').update({ content: html, word_count: wordCount }).eq('id', articleId)
         if (!isMountedRef.current) return
         if (error) {
           console.error('[autosave] Failed to save article:', error)
@@ -128,7 +131,18 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
   useEffect(() => {
     if (editor) {
       getTextRef.current = () => editor.getText()
+      if (getWordCountRef) {
+        getWordCountRef.current = () => editor.storage.characterCount?.words?.() ?? 0
+      }
+      if (replaceContentRef) {
+        // Full article replacement — used by auto mode
+        replaceContentRef.current = (markdown: string) => {
+          const html = marked.parse(markdown) as string
+          editor.commands.setContent(html)
+        }
+      }
       if (applyContentRef) {
+        // Insert at cursor — used by review mode suggestions
         applyContentRef.current = (markdown: string) => {
           const html = marked.parse(markdown) as string
           editor.chain().focus().insertContent(html).run()
@@ -142,10 +156,12 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, a
     }
     return () => {
       getTextRef.current = null
+      if (getWordCountRef) getWordCountRef.current = null
+      if (replaceContentRef) replaceContentRef.current = null
       if (applyContentRef) applyContentRef.current = null
       if (applyAtRangeRef) applyAtRangeRef.current = null
     }
-  }, [editor, getTextRef, applyContentRef, applyAtRangeRef])
+  }, [editor, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef])
 
 
   if (!editor) return null
