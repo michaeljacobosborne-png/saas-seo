@@ -43,8 +43,27 @@ export default async function SettingsPage() {
     .limit(1)
     .maybeSingle()
 
-  const planName = sub?.plan ? (PLAN_NAMES[sub.plan] ?? sub.plan) : 'Free'
-  const status: string | null = sub?.status ?? null
+  // `profiles.account_type` is the source of truth for paid access — the
+  // dashboard gate (and comped accounts) rely on it, and it's set even when the
+  // subscription row is missing (webhook lag/failure) or stale. Use it as the
+  // fallback signal so we never tell a paying user they're on "Free".
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
+    .from('profiles')
+    .select('account_type')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const isPaid = profile?.account_type === 'paid'
+
+  // Prefer the subscription row's plan (most specific). If there's no row but the
+  // account is paid, show a neutral "Active" rather than a wrong/"Free" tier.
+  const planName = sub?.plan
+    ? (PLAN_NAMES[sub.plan] ?? sub.plan)
+    : isPaid
+      ? 'Active'
+      : 'Free'
+  // Same idea for status: a paid account with no row still has live access.
+  const status: string | null = sub?.status ?? (isPaid ? 'active' : null)
   const hasBilling = !!sub?.stripe_customer_id
   const isCanceling = !!sub?.cancel_at_period_end
   const periodEnd = sub?.current_period_end
