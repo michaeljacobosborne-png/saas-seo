@@ -7,8 +7,34 @@ import Link from 'next/link'
 import SearchConsolePages from './search-console-pages'
 import {
   BarChart2, RefreshCw, Loader2, AlertCircle, ArrowRight,
-  Search, FileText, CheckCircle2, Clock, ChevronDown, ChevronUp,
+  Search, FileText, CheckCircle2, Clock, ChevronDown, ChevronUp, Shield,
 } from 'lucide-react'
+
+type DomainRating = { dr: number; ahrefsRank: number }
+
+// Best-effort competitor name → domain. Competitors are stored as free text and
+// may be names ("Ahrefs") rather than domains ("ahrefs.com"). Strip common
+// prefixes + lowercase; if there's no dot, guess `<name>.com`. Imperfect — a
+// wrong guess just yields a null DR (shown as "—").
+function competitorToDomain(raw: string): string {
+  const cleaned = raw.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '').toLowerCase()
+  if (!cleaned) return ''
+  if (cleaned.includes('.')) return cleaned
+  return cleaned.replace(/\s+/g, '') + '.com'
+}
+
+function DrBadge({ rating }: { rating: DomainRating | null | undefined }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border border-[rgba(184,115,51,0.3)] text-[#D4954A]"
+      style={{ background: 'rgba(184,115,51,0.1)' }}
+      title="Ahrefs Domain Rating"
+    >
+      <Shield className="w-3 h-3" />
+      DR {rating ? rating.dr : '—'}
+    </span>
+  )
+}
 
 type Gap = {
   title: string
@@ -73,6 +99,8 @@ export default function DashboardAuditPage() {
   const [expandedCluster, setExpandedCluster] = useState<string | null>(null)
   const [pageLoaded, setPageLoaded] = useState(false)
   const [urlForRun, setUrlForRun] = useState<string | null>(null)
+  // Competitor Domain Ratings, keyed by the guessed domain (competitorToDomain).
+  const [competitorDr, setCompetitorDr] = useState<Record<string, DomainRating | null>>({})
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY)
@@ -194,6 +222,26 @@ export default function DashboardAuditPage() {
     setUrlForRun(null)
   }, [pageLoaded, urlForRun, status, runAudit])
 
+  // Batch-fetch competitor Domain Ratings once the audit result is shown.
+  useEffect(() => {
+    const competitors = brand?.competitors ?? []
+    if (status !== 'done' || competitors.length === 0) return
+    const domains = Array.from(
+      new Set(competitors.map(competitorToDomain).filter(Boolean))
+    ).slice(0, 10)
+    if (domains.length === 0) return
+    let active = true
+    async function load() {
+      try {
+        const res = await fetch(`/api/domain-rating?domains=${encodeURIComponent(domains.join(','))}`)
+        const data = await res.json()
+        if (active && res.ok) setCompetitorDr(data.ratings ?? {})
+      } catch { /* leave badges as "—" */ }
+    }
+    load()
+    return () => { active = false }
+  }, [status, brand])
+
   const unwrittenSaved = savedKeywords.filter(
     (kw) => !writtenKeywords.some((wk) => wk.toLowerCase().includes(kw.toLowerCase()))
   )
@@ -310,6 +358,40 @@ export default function DashboardAuditPage() {
               </div>
             ))}
           </div>
+
+          {/* Competitor Domain Authority */}
+          {(brand?.competitors?.length ?? 0) > 0 && (
+            <div className="rounded-xl p-5 border border-[rgba(184,115,51,0.2)]" style={{ background: '#1C1917' }}>
+              <h2 className="text-sm font-semibold text-[#F7F3EC] mb-1 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[#D4954A]" />
+                Competitor Domain Authority
+              </h2>
+              <p className="text-xs text-[#A89070] mb-3">
+                Ahrefs Domain Rating (0–100) for each competitor&apos;s backlink profile. Domains are
+                inferred from competitor names, so some lookups may show &ldquo;—&rdquo;.
+              </p>
+              <div className="flex flex-col gap-2">
+                {brand!.competitors.map((name) => {
+                  const domain = competitorToDomain(name)
+                  return (
+                    <div
+                      key={name}
+                      className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-[rgba(184,115,51,0.15)]"
+                      style={{ background: '#231F1B' }}
+                    >
+                      <div className="min-w-0">
+                        <span className="text-sm text-[#F7F3EC]">{name}</span>
+                        {domain && domain !== name.toLowerCase() && (
+                          <span className="text-xs text-[#7A6555] ml-2">{domain}</span>
+                        )}
+                      </div>
+                      <DrBadge rating={competitorDr[domain]} />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Saved keywords cross-reference */}
           {unwrittenSaved.length > 0 && (

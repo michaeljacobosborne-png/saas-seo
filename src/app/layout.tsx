@@ -64,6 +64,11 @@ export const metadata: Metadata = {
       follow: true,
     },
   },
+  // Emits <meta name="google-site-verification" content="..."> only when the env
+  // var is set, so Michael can verify bylineseo.com in GSC with a single env var.
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+    : {}),
 };
 
 export default function RootLayout({

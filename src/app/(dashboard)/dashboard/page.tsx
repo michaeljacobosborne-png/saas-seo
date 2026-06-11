@@ -4,6 +4,8 @@ import {
   FileText, Globe, Search, Bookmark, Plus, ArrowRight, ArrowUpRight,
   Sparkles, BarChart2, Clock,
 } from 'lucide-react'
+import SearchPerformance from './search-performance'
+import DomainAuthority from './domain-authority'
 
 // The DB lifecycle is broader than the (stale) Article TS union, so we key off
 // raw status strings: draft -> brief_ready -> generating -> expanding ->
@@ -93,8 +95,10 @@ export default async function DashboardPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from('brand_profiles')
-      .select('brand_name')
+      .select('id, brand_name, website_url')
       .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(1)
       .maybeSingle(),
   ])
 
@@ -102,6 +106,26 @@ export default async function DashboardPage() {
   const projects: ProjectRow[] = projectsRes.data ?? []
   const savedCount: number = savedRes.count ?? 0
   const brandName: string | undefined = brandRes.data?.brand_name
+  const brandProfileId: string | null = brandRes.data?.id ?? null
+  // Domain Authority widget needs the brand's website. brand_profiles.website_url
+  // exists in the schema; if it's empty we just skip the card.
+  const websiteUrl: string | null = brandRes.data?.website_url ?? null
+
+  // Search Console connection state for the primary brand profile — drives the
+  // bottom "Search Performance" section (or its connect CTA).
+  let gscConnected = false
+  let gscHasProperty = false
+  if (brandProfileId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: gscConn } = await (supabase as any)
+      .from('search_console_connections')
+      .select('property_url')
+      .eq('user_id', userId)
+      .eq('brand_profile_id', brandProfileId)
+      .maybeSingle()
+    gscConnected = !!gscConn
+    gscHasProperty = !!gscConn?.property_url
+  }
 
   const totalArticles = articles.length
   const publishedArticles = articles.filter((a) => a.status === 'published').length
@@ -141,6 +165,13 @@ export default async function DashboardPage() {
         <StatCard icon={Search} label="Keyword projects" value={projects.length} />
         <StatCard icon={Bookmark} label="Keywords saved" value={savedCount} />
       </div>
+
+      {/* Domain Authority — own-domain DR from Ahrefs (only when a website is set) */}
+      {websiteUrl && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <DomainAuthority websiteUrl={websiteUrl} />
+        </div>
+      )}
 
       {/* Row 2 — recent activity + keyword projects */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -288,6 +319,15 @@ export default async function DashboardPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Search Performance (GSC) — renders data when connected, CTA otherwise */}
+      {brandProfileId && (
+        <SearchPerformance
+          brandProfileId={brandProfileId}
+          connected={gscConnected}
+          hasProperty={gscHasProperty}
+        />
       )}
     </div>
   )

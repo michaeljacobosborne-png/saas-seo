@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { CreditCard, CheckCircle2, AlertCircle, Settings } from 'lucide-react'
 import ManageBillingButton from './manage-billing-button'
+import SearchConsoleSection from './search-console-section'
 
 // Maps the internal plan key stored on the subscription (set from checkout
 // metadata) to the customer-facing plan name shown on /pricing.
@@ -71,6 +73,37 @@ export default async function SettingsPage() {
     .eq('user_id', user.id)
     .maybeSingle()
   const isPaid = profile?.account_type === 'paid'
+
+  // Search Console is per brand profile. Use the user's primary (oldest) brand
+  // profile, and load its connection state server-side so the section renders
+  // without a flash.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: brandProfile } = await (supabase as any)
+    .from('brand_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  const brandProfileId: string | null = brandProfile?.id ?? null
+
+  let gscInitial = { connected: false, property_url: null as string | null, has_property: false }
+  if (brandProfileId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: gscConn } = await (supabase as any)
+      .from('search_console_connections')
+      .select('property_url')
+      .eq('user_id', user.id)
+      .eq('brand_profile_id', brandProfileId)
+      .maybeSingle()
+    if (gscConn) {
+      gscInitial = {
+        connected: true,
+        property_url: gscConn.property_url ?? null,
+        has_property: !!gscConn.property_url,
+      }
+    }
+  }
 
   // Prefer the subscription row's plan (most specific). If there's no row but the
   // account is paid, show a neutral "Active" rather than a wrong/"Free" tier.
@@ -149,6 +182,11 @@ export default async function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Search Console — useSearchParams needs a Suspense boundary */}
+      <Suspense fallback={null}>
+        <SearchConsoleSection brandProfileId={brandProfileId} initial={gscInitial} />
+      </Suspense>
     </div>
   )
 }
