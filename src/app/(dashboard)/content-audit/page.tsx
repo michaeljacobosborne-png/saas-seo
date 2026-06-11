@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandProfile } from '@/lib/supabase/types'
 import Link from 'next/link'
+import SearchConsolePages from './search-console-pages'
 import {
   BarChart2, RefreshCw, Loader2, AlertCircle, ArrowRight,
   Search, FileText, CheckCircle2, Clock, ChevronDown, ChevronUp,
@@ -476,6 +477,9 @@ export default function DashboardAuditPage() {
           )}
         </div>
       )}
+
+      {/* Top performing pages from Search Console (or connect CTA) */}
+      <SearchConsolePages brandProfileId={brand?.id ?? null} />
     </div>
   )
 }
