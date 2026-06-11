@@ -32,16 +32,33 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Pick the subscription that reflects the user's CURRENT plan: the live
+  // (active/trialing/past_due) one, most recently created. Ordering by
+  // `current_period_end` was wrong — an older annual sub outlives a newer
+  // monthly one, so e.g. a Growth-annual → Multi-Brand-monthly switcher would
+  // see the stale Growth row win and show the wrong plan. Fall back to the most
+  // recent row of any status so a fully-cancelled account still shows its plan.
   // `subscriptions` is not in the generated Supabase types, so cast as any.
-  // Most recent row wins (an old canceled sub may coexist with a new one).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: sub } = await (supabase as any)
+  const SUB_COLS = 'plan, status, current_period_end, cancel_at_period_end, stripe_customer_id'
+  const { data: liveSub } = await (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
     .from('subscriptions')
-    .select('plan, status, current_period_end, cancel_at_period_end, stripe_customer_id')
+    .select(SUB_COLS)
     .eq('user_id', user.id)
-    .order('current_period_end', { ascending: false })
+    .in('status', ['active', 'trialing', 'past_due'])
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+  let sub = liveSub
+  if (!sub) {
+    const { data: latestSub } = await (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      .from('subscriptions')
+      .select(SUB_COLS)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    sub = latestSub
+  }
 
   // `profiles.account_type` is the source of truth for paid access — the
   // dashboard gate (and comped accounts) rely on it, and it's set even when the
