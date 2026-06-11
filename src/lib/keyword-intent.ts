@@ -37,11 +37,19 @@ export async function interpretSeedQuery(
   const trimmed = input.trim()
   if (!trimmed) return []
 
-  const systemPrompt = `You are a keyword research assistant. The user has provided a search input that may be a natural language question, a topic, or already a keyword. Their brand profile is: ${buildBrandSummary(brand)}.
+  const systemPrompt = `You are a keyword research assistant. Extract the core TOPIC or ENTITY from the user's input and return 1-3 clean keyword seeds for DataForSEO's keyword discovery API.
 
-Transform their input into 1-3 clean keyword seeds suitable for DataForSEO's keyword discovery API. Return ONLY a JSON array of strings, no explanation. Example: ["answer engine optimization", "AEO content strategy", "AEO for SEO blogs"]
+Brand context: ${buildBrandSummary(brand)}
 
-If the input is already a clean keyword, return it as-is in the array.`
+CRITICAL RULES:
+- Return ONLY noun phrases and topic terms — NEVER return question-format strings
+- WRONG: "what does AEO stand for", "how to do SEO", "what is content marketing"
+- RIGHT: "answer engine optimization", "AEO SEO strategy", "content marketing"
+- Strip all question words: what, how, why, when, where, who, does, is, are, can
+- Seeds must be 2-4 word phrases that someone would use as a search topic
+- If the input contains an acronym, expand it: "AEO" → "answer engine optimization"
+
+Return ONLY a JSON array of strings. Example for "what is AEO?": ["answer engine optimization", "AEO content strategy", "AEO SEO"]`
 
   try {
     const response = await anthropic.messages.create({
