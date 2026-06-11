@@ -2,6 +2,7 @@ export const maxDuration = 60
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkKeywordSessionLimit, incrementKeywordSession } from '@/lib/usage'
 import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -72,6 +73,25 @@ export async function POST(request: Request) {
     messages: Message[]
     topic?: string
     angle?: Angle
+  }
+
+  // Enforce the per-plan keyword-session limit. A discovery conversation is counted
+  // once, on its first turn — subsequent turns of the same conversation send a longer
+  // messages array and don't re-consume the allowance.
+  const isFirstTurn = !Array.isArray(messages) || messages.length <= 1
+  if (isFirstTurn) {
+    const limitCheck = await checkKeywordSessionLimit(user.id, supabase)
+    if (!limitCheck.allowed) {
+      return NextResponse.json({
+        error: `You've used all ${limitCheck.limit} keyword research sessions for this month. Upgrade your plan for more.`,
+        code: 'KEYWORD_SESSION_LIMIT',
+        used: limitCheck.used,
+        limit: limitCheck.limit,
+      }, { status: 429 })
+    }
+    // Count the session up front: once the conversation starts the allowance is spent,
+    // regardless of how many back-and-forth turns it takes to build the brief.
+    await incrementKeywordSession(user.id, supabase)
   }
 
   // Pull stored competitors from the brand profile so Q4 can reference them.

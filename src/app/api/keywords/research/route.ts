@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getKeywordIdeas, KeywordIdea } from '@/lib/dataforseo'
+import { checkKeywordSessionLimit, incrementKeywordSession } from '@/lib/usage'
+import { interpretSeedQuery } from '@/lib/keyword-intent'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -54,9 +56,14 @@ export async function POST(request: Request) {
     brief?: Record<string, unknown>
   }
 
-  const seedsToUse: string[] = seeds?.length ? seeds : seed_topic ? [seed_topic] : []
+  // Seeds from the discovery brief are already clean (the agent built 15-20
+  // targeted phrases). A raw seed_topic from the "direct keyword" path may be a
+  // natural language question ("What is AEO?") that DataForSEO can't use — so we
+  // run it through the AI intent layer below to extract clean seeds.
+  const briefSeeds: string[] = seeds?.length ? seeds : []
+  const rawSeedTopic = seed_topic?.trim() || ''
 
-  if (!project_id || seedsToUse.length === 0) {
+  if (!project_id || (briefSeeds.length === 0 && !rawSeedTopic)) {
     return NextResponse.json({ error: 'project_id and seed_topic or seeds are required' }, { status: 400 })
   }
 
@@ -71,6 +78,37 @@ export async function POST(request: Request) {
 
   if (!project) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  }
+
+  // Enforce the per-plan keyword-session limit before doing any paid work.
+  const limitCheck = await checkKeywordSessionLimit(user.id, supabase)
+  if (!limitCheck.allowed) {
+    return NextResponse.json({
+      error: `You've used all ${limitCheck.limit} keyword research sessions for this month. Upgrade your plan for more.`,
+      code: 'KEYWORD_SESSION_LIMIT',
+      used: limitCheck.used,
+      limit: limitCheck.limit,
+    }, { status: 429 })
+  }
+
+  // Resolve the seeds we'll actually send to DataForSEO.
+  // - Brief seeds are already clean → use them as-is.
+  // - A raw seed_topic may be a natural language query → run the AI intent layer
+  //   to interpret it (with brand context) into 1-3 clean keyword seeds.
+  let seedsToUse: string[] = briefSeeds
+  let interpretedFromRaw = false
+  if (briefSeeds.length === 0) {
+    // Pull lightweight brand context so the intent layer can disambiguate the query.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: brandProfile } = await (supabase as any)
+      .from('brand_profiles')
+      .select('brand_name, industry, target_audience')
+      .eq('user_id', user.id)
+      .single()
+
+    seedsToUse = await interpretSeedQuery(rawSeedTopic, brandProfile ?? null)
+    // Flag when the interpreter actually changed the input so the UI can surface it.
+    interpretedFromRaw = !(seedsToUse.length === 1 && seedsToUse[0] === rawSeedTopic)
   }
 
   // Mark as researching; save brief if provided
@@ -209,7 +247,17 @@ export async function POST(request: Request) {
       .update({ status: 'complete', last_researched_at: new Date().toISOString() })
       .eq('id', project_id)
 
-    return NextResponse.json({ success: true, count: rows.length })
+    // Count this run against the user's monthly keyword-session allowance.
+    await incrementKeywordSession(user.id, supabase)
+
+    return NextResponse.json({
+      success: true,
+      count: rows.length,
+      // Surfaced when a raw seed_topic was rewritten by the intent layer, so the
+      // UI can show "Searching for: …" with the keywords actually queried.
+      resolved_seeds: interpretedFromRaw ? seedsToUse : undefined,
+      original_seed: interpretedFromRaw ? rawSeedTopic : undefined,
+    })
   } catch (err) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
