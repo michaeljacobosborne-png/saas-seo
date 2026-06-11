@@ -7,11 +7,21 @@ export async function GET(request: Request) {
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
 
+  // A paid signup carries the chosen plan/interval through confirmation. When
+  // present, drop the user straight into Stripe checkout instead of /pricing or
+  // /dashboard. The checkout-redirect route validates the params and creates the
+  // session for the now-authenticated user.
+  const plan = searchParams.get('plan')
+  const interval = searchParams.get('interval')
+  const checkoutRedirect = plan && interval
+    ? `${origin}/api/billing/checkout-redirect?plan=${encodeURIComponent(plan)}&interval=${encodeURIComponent(interval)}`
+    : null
+
   if (token_hash && type) {
     const supabase = await createClient()
     const { error } = await supabase.auth.verifyOtp({ token_hash, type })
     if (!error) {
-      return NextResponse.redirect(`${origin}/pricing`)
+      return NextResponse.redirect(checkoutRedirect ?? `${origin}/pricing`)
     }
     return NextResponse.redirect(`${origin}/login?error=confirmation_failed`)
   }
@@ -23,6 +33,11 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error && data.user) {
+      // Paid signup (OAuth): go straight to checkout with the carried plan.
+      if (checkoutRedirect) {
+        return NextResponse.redirect(checkoutRedirect)
+      }
+
       // Check if this user has an active subscription
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: sub } = await (supabase as any)

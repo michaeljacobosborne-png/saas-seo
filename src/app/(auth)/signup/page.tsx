@@ -3,8 +3,14 @@ import SignupForm from './SignupForm'
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string; ref?: string }>
+  searchParams: Promise<{
+    plan?: string
+    interval?: string
+    ref?: string
+    audit_keyword?: string
+    audit_topic?: string
+  }>
 }) {
-  const { plan } = await searchParams
-  return <SignupForm plan={plan} />
+  const { plan, interval, audit_keyword, audit_topic } = await searchParams
+  return <SignupForm plan={plan} interval={interval} auditKeyword={audit_keyword} auditTopic={audit_topic} />
 }

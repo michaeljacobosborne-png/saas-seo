@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { analytics } from '@/lib/analytics'
@@ -24,8 +24,46 @@ function GitHubIcon() {
   )
 }
 
-export default function SignupForm({ plan }: { plan?: string }) {
+export default function SignupForm({
+  plan,
+  interval,
+  auditKeyword,
+  auditTopic,
+}: {
+  plan?: string
+  interval?: string
+  auditKeyword?: string
+  auditTopic?: string
+}) {
   const isFree = plan === 'free'
+
+  // Build the post-confirmation callback URL. For a paid signup we carry the
+  // chosen plan/interval through email confirmation / OAuth so /auth/callback
+  // can drop the user straight into Stripe checkout (no second click). Free
+  // signups (or plain signups) just hit the bare callback.
+  function callbackUrl(): string {
+    const base = `${window.location.origin}/auth/callback`
+    if (!plan || isFree) return base
+    const params = new URLSearchParams({ plan })
+    if (interval) params.set('interval', interval)
+    return `${base}?${params.toString()}`
+  }
+
+  // Lead magnet bridge: the audit funnel sends the user here with the #1 gap
+  // keyword in the query string. Email confirmation drops query params, so stash
+  // it in localStorage; the dashboard picks it up to pre-fill the first article.
+  // See TODO in src/app/(dashboard)/articles/new/page.tsx.
+  useEffect(() => {
+    if (!auditKeyword) return
+    try {
+      localStorage.setItem(
+        'byline_audit_intent',
+        JSON.stringify({ keyword: auditKeyword, topic: auditTopic ?? '' })
+      )
+    } catch {
+      /* localStorage unavailable (private mode) — non-fatal */
+    }
+  }, [auditKeyword, auditTopic])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -44,7 +82,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: callbackUrl() },
     })
 
     if (error) {
@@ -70,7 +108,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: callbackUrl() },
     })
     if (error) {
       setError(error.message)
