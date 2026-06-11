@@ -12,8 +12,8 @@ import {
 } from 'lucide-react'
 
 const STATUS_CONFIG = {
-  pending: { label: 'Pending', icon: Clock, className: 'bg-[#2A2420] text-[#A89070]' },
-  researching: { label: 'Researching…', icon: Loader2, className: 'bg-[rgba(184,115,51,0.08)] text-[#B87333]' },
+  pending: { label: 'Pending', icon: Clock, className: 'bg-[var(--ink-card)] text-[var(--cream-dim)]' },
+  researching: { label: 'Researching…', icon: Loader2, className: 'bg-[var(--hover)] text-[var(--copper)]' },
   complete: { label: 'Complete', icon: CheckCircle2, className: 'bg-green-50 text-green-700' },
   error: { label: 'Error', icon: AlertCircle, className: 'bg-red-50 text-red-600' },
 }
@@ -292,17 +292,18 @@ export default function KeywordsPage() {
     <div className="p-8 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#F7F3EC]">Keyword Research</h1>
-          <p className="mt-1 text-sm text-[#A89070]">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--cream)' }}>Keyword Research</h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>
             Discover high-value keywords for your content strategy.
           </p>
           <div className="flex gap-1 mt-3">
-            <span className="px-3 py-1 text-xs font-medium rounded-full bg-[#B87333] text-[#F7F3EC]">
+            <span className="px-3 py-1 text-xs font-medium rounded-full text-[#F7F3EC]" style={{ background: 'var(--copper)' }}>
               Projects
             </span>
             <Link
               href="/keywords/saved"
-              className="px-3 py-1 text-xs font-medium rounded-full bg-[#2A2420] text-[#A89070] hover:bg-[#2A2420] transition-colors"
+              className="px-3 py-1 text-xs font-medium rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              style={{ background: 'var(--ink-card)', color: 'var(--cream-dim)' }}
             >
               <Bookmark className="w-3 h-3 inline mr-1 -mt-px" />
               Saved Keywords
@@ -311,7 +312,8 @@ export default function KeywordsPage() {
         </div>
         <button
           onClick={openDiscover}
-          className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-[#F7F3EC] text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+          style={{ background: 'var(--copper)' }}
         >
           <Plus className="w-4 h-4" />
           New Research
@@ -321,20 +323,21 @@ export default function KeywordsPage() {
       {/* Projects list */}
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--cream-faint)' }} />
         </div>
       ) : projects.length === 0 ? (
-        <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-2xl p-12 text-center">
+        <div className="border-2 border-dashed rounded-2xl p-12 text-center" style={{ borderColor: 'var(--border)' }}>
           <div className="inline-flex p-3 bg-violet-50 rounded-xl mb-4">
             <Search className="w-6 h-6 text-violet-500" />
           </div>
-          <h3 className="text-base font-semibold text-[#A89070] mb-2">No projects yet</h3>
-          <p className="text-sm text-[#A89070] mb-4">
+          <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--cream-dim)' }}>No projects yet</h3>
+          <p className="text-sm mb-4" style={{ color: 'var(--cream-dim)' }}>
             Start a conversation with the AI research assistant to discover targeted keywords.
           </p>
           <button
             onClick={openDiscover}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-[#F7F3EC] text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+            style={{ background: 'var(--copper)' }}
           >
             <Plus className="w-4 h-4" />
             New Research
@@ -344,21 +347,21 @@ export default function KeywordsPage() {
         <div className="space-y-6">
           {grouped.map(([folderName, folderProjects]) => (
             <div key={folderName}>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[#7A6555] mb-2 px-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: 'var(--cream-faint)' }}>
                 {folderName}
               </h2>
-              <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
+              <div className="border rounded-xl overflow-hidden" style={{ background: 'var(--ink)', borderColor: 'var(--border)' }}>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[rgba(184,115,51,0.15)] bg-[#231F1B]">
-                      <th className="text-left px-4 py-3 font-medium text-[#A89070]">Project</th>
-                      <th className="text-left px-4 py-3 font-medium text-[#A89070]">Seed Topic</th>
-                      <th className="text-left px-4 py-3 font-medium text-[#A89070]">Status</th>
-                      <th className="text-left px-4 py-3 font-medium text-[#A89070]">Created</th>
+                    <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--ink-card)' }}>
+                      <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Project</th>
+                      <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Seed Topic</th>
+                      <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Status</th>
+                      <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Created</th>
                       <th className="w-16" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-[color:var(--border)]">
                     {folderProjects.map((p) => {
                       const status = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.pending
                       const StatusIcon = status.icon
@@ -366,17 +369,17 @@ export default function KeywordsPage() {
                         <tr
                           key={p.id}
                           onClick={() => router.push(`/keywords/${p.id}`)}
-                          className="hover:bg-[#231F1B] cursor-pointer transition-colors"
+                          className="cursor-pointer transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                         >
-                          <td className="px-4 py-3 font-medium text-[#F7F3EC]">{p.name}</td>
-                          <td className="px-4 py-3 text-[#A89070]">{p.seed_topic}</td>
+                          <td className="px-4 py-3 font-medium" style={{ color: 'var(--cream)' }}>{p.name}</td>
+                          <td className="px-4 py-3" style={{ color: 'var(--cream-dim)' }}>{p.seed_topic}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.className}`}>
                               <StatusIcon className={`w-3 h-3 ${p.status === 'researching' ? 'animate-spin' : ''}`} />
                               {status.label}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-[#7A6555] text-xs">
+                          <td className="px-4 py-3 text-xs" style={{ color: 'var(--cream-faint)' }}>
                             {new Date(p.created_at).toLocaleDateString()}
                           </td>
                           <td className="px-4 py-3">
@@ -384,7 +387,7 @@ export default function KeywordsPage() {
                               <button
                                 onClick={(e) => handleDelete(e, p.id, p.name)}
                                 disabled={deletingId === p.id}
-                                className="p-1.5 text-[#A89070] hover:text-red-500 transition-colors rounded disabled:opacity-50"
+                                className="p-1.5 text-[var(--cream-dim)] hover:text-red-500 transition-colors rounded disabled:opacity-50"
                                 title="Delete project"
                               >
                                 {deletingId === p.id
@@ -392,7 +395,7 @@ export default function KeywordsPage() {
                                   : <Trash2 className="w-3.5 h-3.5" />
                                 }
                               </button>
-                              <ChevronRight className="w-4 h-4 text-[#A89070]" />
+                              <ChevronRight className="w-4 h-4" style={{ color: 'var(--cream-dim)' }} />
                             </div>
                           </td>
                         </tr>
@@ -408,23 +411,23 @@ export default function KeywordsPage() {
 
       {/* Discovery panel */}
       {showDiscover && (
-        <div className="fixed inset-0 z-50 bg-[#1C1917] flex flex-col">
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--ink)' }}>
           {/* Header */}
-          <div className="border-b border-[rgba(184,115,51,0.15)] px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="border-b px-6 py-4 flex items-center justify-between shrink-0" style={{ borderColor: 'var(--border)' }}>
             <div className="flex items-center gap-3">
               <div className="p-2 bg-violet-50 rounded-lg">
                 <Bot className="w-4 h-4 text-violet-600" />
               </div>
               <div>
-                <h2 className="font-semibold text-[#F7F3EC] text-sm">New Research</h2>
-                <p className="text-xs text-[#7A6555]">
+                <h2 className="font-semibold text-sm" style={{ color: 'var(--cream)' }}>New Research</h2>
+                <p className="text-xs" style={{ color: 'var(--cream-faint)' }}>
                   {discoverMode === 'agent' ? 'AI discovery · Haiku' : discoverMode === 'direct' ? 'Direct keyword' : 'Choose a path'}
                 </p>
               </div>
             </div>
             <button
               onClick={() => setShowDiscover(false)}
-              className="p-2 text-[#7A6555] hover:text-[#A89070] transition-colors rounded-lg hover:bg-[#2A2420]"
+              className="p-2 text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
             >
               <X className="w-5 h-5" />
             </button>
@@ -434,22 +437,23 @@ export default function KeywordsPage() {
           {discoverMode === 'choose' && (
             <div className="flex-1 flex items-center justify-center px-6 py-10">
               <div className="w-full max-w-2xl">
-                <p className="text-center text-sm text-[#A89070] mb-6">How do you want to start?</p>
+                <p className="text-center text-sm mb-6" style={{ color: 'var(--cream-dim)' }}>How do you want to start?</p>
                 <div className="grid grid-cols-2 gap-4">
 
                   {/* Direct path — secondary */}
                   <button
                     onClick={() => setDiscoverMode('direct')}
-                    className="group flex flex-col items-start text-left p-5 rounded-2xl border border-[rgba(184,115,51,0.2)] hover:border-[rgba(184,115,51,0.25)] hover:bg-[#231F1B] transition-all"
+                    className="group flex flex-col items-start text-left p-5 rounded-2xl border transition-all hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ borderColor: 'var(--border)' }}
                   >
-                    <div className="p-2.5 bg-[#2A2420] rounded-xl mb-4 group-hover:bg-[#2A2420] transition-colors">
-                      <Search className="w-5 h-5 text-[#A89070]" />
+                    <div className="p-2.5 rounded-xl mb-4" style={{ background: 'var(--ink-card)' }}>
+                      <Search className="w-5 h-5" style={{ color: 'var(--cream-dim)' }} />
                     </div>
-                    <h3 className="font-semibold text-[#F7F3EC] text-sm mb-1">I have a keyword</h3>
-                    <p className="text-xs text-[#A89070] leading-relaxed mb-4">
+                    <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--cream)' }}>I have a keyword</h3>
+                    <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--cream-dim)' }}>
                       Enter a keyword and run research immediately. Best when you already know what you want to target.
                     </p>
-                    <span className="mt-auto flex items-center gap-1 text-xs font-medium text-[#A89070] group-hover:text-[#F7F3EC] transition-colors">
+                    <span className="mt-auto flex items-center gap-1 text-xs font-medium text-[var(--cream-dim)] group-hover:text-[var(--cream)] transition-colors">
                       Use this path <ArrowRight className="w-3 h-3" />
                     </span>
                   </button>
@@ -457,19 +461,20 @@ export default function KeywordsPage() {
                   {/* AI discovery path — featured */}
                   <button
                     onClick={() => setDiscoverMode('agent')}
-                    className="group flex flex-col items-start text-left p-5 rounded-2xl border-2 border-[#B87333] bg-[rgba(184,115,51,0.08)] hover:bg-[rgba(184,115,51,0.12)] transition-all relative overflow-hidden"
+                    className="group flex flex-col items-start text-left p-5 rounded-2xl border-2 bg-[rgba(184,115,51,0.08)] hover:bg-[rgba(184,115,51,0.12)] transition-all relative overflow-hidden"
+                    style={{ borderColor: 'var(--copper)' }}
                   >
-                    <span className="absolute top-3.5 right-3.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#B87333] text-[#F7F3EC] tracking-wide">
+                    <span className="absolute top-3.5 right-3.5 text-[10px] font-semibold px-2 py-0.5 rounded-full text-[#F7F3EC] tracking-wide" style={{ background: 'var(--copper)' }}>
                       RECOMMENDED
                     </span>
                     <div className="p-2.5 bg-[rgba(184,115,51,0.12)] rounded-xl mb-4 group-hover:bg-[rgba(184,115,51,0.2)] transition-colors">
-                      <Sparkles className="w-5 h-5 text-[#B87333]" />
+                      <Sparkles className="w-5 h-5" style={{ color: 'var(--copper)' }} />
                     </div>
-                    <h3 className="font-semibold text-[#F7F3EC] text-sm mb-1">Help me find keywords</h3>
-                    <p className="text-xs text-[#A89070] leading-relaxed mb-4">
+                    <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--cream)' }}>Help me find keywords</h3>
+                    <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--cream-dim)' }}>
                       Answer 4 quick questions. The AI builds a research brief with 15–20 targeted seed keywords tailored to your audience.
                     </p>
-                    <span className="mt-auto flex items-center gap-1 text-xs font-medium text-[#B87333] group-hover:text-[#A0622A] transition-colors">
+                    <span className="mt-auto flex items-center gap-1 text-xs font-medium text-[var(--copper)] group-hover:text-[var(--copper-lt)] transition-colors">
                       Start conversation <ArrowRight className="w-3 h-3" />
                     </span>
                   </button>
@@ -483,8 +488,8 @@ export default function KeywordsPage() {
           {discoverMode === 'direct' && (
             <div className="flex-1 flex items-center justify-center px-6 py-10">
               <div className="w-full max-w-md">
-                <h3 className="text-base font-semibold text-[#F7F3EC] mb-1 text-center">Enter your keyword</h3>
-                <p className="text-sm text-[#A89070] text-center mb-6">
+                <h3 className="text-base font-semibold mb-1 text-center" style={{ color: 'var(--cream)' }}>Enter your keyword</h3>
+                <p className="text-sm text-center mb-6" style={{ color: 'var(--cream-dim)' }}>
                   We&apos;ll fetch keyword ideas from DataForSEO and cluster them automatically.
                 </p>
                 <form
@@ -497,7 +502,8 @@ export default function KeywordsPage() {
                     value={directKeyword}
                     onChange={(e) => setDirectKeyword(e.target.value)}
                     placeholder="e.g. saas content marketing"
-                    className="w-full px-4 py-3 border border-[rgba(184,115,51,0.2)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent"
+                    className="w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent"
+                    style={{ background: 'var(--ink-card)', color: 'var(--cream)', borderColor: 'var(--border)' }}
                   />
                   {createError && (
                     <p className="text-xs text-red-600">{createError}</p>
@@ -505,7 +511,8 @@ export default function KeywordsPage() {
                   <button
                     type="submit"
                     disabled={directRunning || !directKeyword.trim()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-xl hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[#F7F3EC] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    style={{ background: 'var(--copper)' }}
                   >
                     {directRunning
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating project…</>
@@ -515,7 +522,7 @@ export default function KeywordsPage() {
                   <button
                     type="button"
                     onClick={() => { setDiscoverMode('choose'); setCreateError(null) }}
-                    className="w-full text-xs text-[#7A6555] hover:text-[#A89070] py-1 transition-colors"
+                    className="w-full text-xs text-[var(--cream-faint)] hover:text-[var(--cream-dim)] py-1 transition-colors"
                   >
                     Back
                   </button>
@@ -528,8 +535,8 @@ export default function KeywordsPage() {
           {discoverMode === 'agent' && agentStage === 'topic' && (
             <div className="flex-1 flex items-center justify-center px-6 py-10">
               <div className="w-full max-w-md">
-                <h3 className="text-base font-semibold text-[#F7F3EC] mb-1 text-center">What topic do you want to explore?</h3>
-                <p className="text-sm text-[#A89070] text-center mb-6">
+                <h3 className="text-base font-semibold mb-1 text-center" style={{ color: 'var(--cream)' }}>What topic do you want to explore?</h3>
+                <p className="text-sm text-center mb-6" style={{ color: 'var(--cream-dim)' }}>
                   We&apos;ll suggest a few research angles before building your brief.
                 </p>
                 <form
@@ -542,19 +549,21 @@ export default function KeywordsPage() {
                     value={topicInput}
                     onChange={(e) => setTopicInput(e.target.value)}
                     placeholder="e.g. content marketing for B2B SaaS"
-                    className="w-full px-4 py-3 border border-[rgba(184,115,51,0.2)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent"
+                    className="w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent"
+                    style={{ background: 'var(--ink-card)', color: 'var(--cream)', borderColor: 'var(--border)' }}
                   />
                   <button
                     type="submit"
                     disabled={!topicInput.trim()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-xl hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[#F7F3EC] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    style={{ background: 'var(--copper)' }}
                   >
                     <ArrowRight className="w-4 h-4" /> Continue
                   </button>
                   <button
                     type="button"
                     onClick={() => setDiscoverMode('choose')}
-                    className="w-full text-xs text-[#7A6555] hover:text-[#A89070] py-1 transition-colors"
+                    className="w-full text-xs text-[var(--cream-faint)] hover:text-[var(--cream-dim)] py-1 transition-colors"
                   >
                     Back
                   </button>
@@ -571,7 +580,7 @@ export default function KeywordsPage() {
                 <button
                   type="button"
                   onClick={() => setAgentStage('topic')}
-                  className="text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                  className="text-xs text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
                 >
                   ← Change topic
                 </button>
@@ -583,11 +592,11 @@ export default function KeywordsPage() {
           {discoverMode === 'agent' && agentStage === 'chat' && (
             <>
               {selectedAngle && (
-                <div className="shrink-0 border-b border-[rgba(184,115,51,0.15)] bg-[#231F1B] px-6 py-2.5">
-                  <div className="max-w-2xl mx-auto flex items-center gap-2 text-xs text-[#A89070]">
-                    <Sparkles className="w-3.5 h-3.5 text-[#D4954A] shrink-0" />
-                    <span className="text-[#7A6555]">Angle:</span>
-                    <span className="font-medium text-[#F7F3EC] truncate">{selectedAngle.headline}</span>
+                <div className="shrink-0 border-b px-6 py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--ink-card)' }}>
+                  <div className="max-w-2xl mx-auto flex items-center gap-2 text-xs" style={{ color: 'var(--cream-dim)' }}>
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--copper-lt)' }} />
+                    <span style={{ color: 'var(--cream-faint)' }}>Angle:</span>
+                    <span className="font-medium truncate" style={{ color: 'var(--cream)' }}>{selectedAngle.headline}</span>
                   </div>
                 </div>
               )}
@@ -602,14 +611,17 @@ export default function KeywordsPage() {
                             <Bot className="w-3.5 h-3.5 text-violet-600" />
                           </div>
                         )}
-                        <div className={`max-w-lg rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                          msg.role === 'user'
-                            ? 'bg-[#B87333] text-[#F7F3EC] rounded-br-sm'
-                            : 'bg-[#2A2420] text-[#F7F3EC] rounded-bl-sm'
-                        }`}>
+                        <div
+                          className="max-w-lg rounded-2xl px-4 py-3 text-sm leading-relaxed"
+                          style={
+                            msg.role === 'user'
+                              ? { background: 'var(--copper)', color: '#F7F3EC', borderBottomRightRadius: '0.25rem' }
+                              : { background: 'var(--ink-card)', color: 'var(--cream)', borderBottomLeftRadius: '0.25rem' }
+                          }
+                        >
                           {msg.content
                             ? msg.content
-                            : <Loader2 className="w-4 h-4 animate-spin text-[#7A6555]" />
+                            : <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--cream-faint)' }} />
                           }
                         </div>
                       </div>
@@ -620,33 +632,33 @@ export default function KeywordsPage() {
 
               {/* Brief summary card */}
               {brief && (
-                <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] bg-[#231F1B] px-6 py-5">
+                <div className="shrink-0 border-t px-6 py-5" style={{ borderColor: 'var(--border)', background: 'var(--ink-card)' }}>
                   <div className="max-w-2xl mx-auto">
-                    <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.25)] rounded-xl p-4 mb-4 shadow-sm">
+                    <div className="border rounded-xl p-4 mb-4 shadow-sm" style={{ background: 'var(--ink)', borderColor: 'var(--border)' }}>
                       <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="w-4 h-4 text-[#D4954A]" />
-                        <h3 className="text-sm font-semibold text-[#F7F3EC]">Research brief ready</h3>
+                        <Sparkles className="w-4 h-4" style={{ color: 'var(--copper-lt)' }} />
+                        <h3 className="text-sm font-semibold" style={{ color: 'var(--cream)' }}>Research brief ready</h3>
                       </div>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
                         <div>
-                          <span className="text-[#7A6555] font-medium">Topic</span>
-                          <p className="text-[#F7F3EC] mt-0.5">{brief.topic}</p>
+                          <span className="font-medium" style={{ color: 'var(--cream-faint)' }}>Topic</span>
+                          <p className="mt-0.5" style={{ color: 'var(--cream)' }}>{brief.topic}</p>
                         </div>
                         <div>
-                          <span className="text-[#7A6555] font-medium">Intent</span>
-                          <p className="text-[#F7F3EC] mt-0.5 capitalize">{brief.intent}</p>
+                          <span className="font-medium" style={{ color: 'var(--cream-faint)' }}>Intent</span>
+                          <p className="mt-0.5 capitalize" style={{ color: 'var(--cream)' }}>{brief.intent}</p>
                         </div>
                         <div className="col-span-2">
-                          <span className="text-[#7A6555] font-medium">Audience</span>
-                          <p className="text-[#F7F3EC] mt-0.5">{brief.audience}</p>
+                          <span className="font-medium" style={{ color: 'var(--cream-faint)' }}>Audience</span>
+                          <p className="mt-0.5" style={{ color: 'var(--cream)' }}>{brief.audience}</p>
                         </div>
                         <div>
-                          <span className="text-[#7A6555] font-medium">Competitors</span>
-                          <p className="text-[#F7F3EC] mt-0.5">{brief.competitors.join(', ')}</p>
+                          <span className="font-medium" style={{ color: 'var(--cream-faint)' }}>Competitors</span>
+                          <p className="mt-0.5" style={{ color: 'var(--cream)' }}>{brief.competitors.join(', ')}</p>
                         </div>
                         <div>
-                          <span className="text-[#7A6555] font-medium">Seed keywords</span>
-                          <p className="text-[#F7F3EC] mt-0.5">{brief.seed_keywords.length} phrases ready</p>
+                          <span className="font-medium" style={{ color: 'var(--cream-faint)' }}>Seed keywords</span>
+                          <p className="mt-0.5" style={{ color: 'var(--cream)' }}>{brief.seed_keywords.length} phrases ready</p>
                         </div>
                       </div>
                     </div>
@@ -656,7 +668,8 @@ export default function KeywordsPage() {
                     <button
                       onClick={handleRunResearch}
                       disabled={creatingProject}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-xl hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[#F7F3EC] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                      style={{ background: 'var(--copper)' }}
                     >
                       {creatingProject
                         ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating project…</>
@@ -669,7 +682,7 @@ export default function KeywordsPage() {
 
               {/* Chat input */}
               {!brief && (
-                <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-6 py-4">
+                <div className="shrink-0 border-t px-6 py-4" style={{ borderColor: 'var(--border)' }}>
                   <div className="max-w-2xl mx-auto flex gap-2">
                     <input
                       type="text"
@@ -683,12 +696,14 @@ export default function KeywordsPage() {
                       }}
                       placeholder="Type your answer…"
                       disabled={discoverStreaming}
-                      className="flex-1 px-4 py-2.5 border border-[rgba(184,115,51,0.2)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 disabled:bg-[#231F1B]"
+                      className="flex-1 px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50"
+                      style={{ background: 'var(--ink-card)', color: 'var(--cream)', borderColor: 'var(--border)' }}
                     />
                     <button
                       onClick={handleDiscoverSend}
                       disabled={discoverStreaming || !discoverInput.trim()}
-                      className="p-2.5 bg-[#B87333] text-[#F7F3EC] rounded-xl hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                      className="p-2.5 text-[#F7F3EC] rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                      style={{ background: 'var(--copper)' }}
                     >
                       <Send className="w-4 h-4" />
                     </button>
