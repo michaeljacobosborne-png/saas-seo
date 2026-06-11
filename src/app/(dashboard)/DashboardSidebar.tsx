@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, Building2, Search, Bookmark, FileText, BarChart2,
-  Settings, Globe, X, Menu,
+  Settings, X, Menu, Facebook,
 } from 'lucide-react'
 import SignOutButton from './SignOutButton'
 import ThemeToggle from '@/app/_components/ThemeToggle'
@@ -69,7 +69,7 @@ export default function DashboardSidebar({ userEmail }: { userEmail: string }) {
             <X className="w-3.5 h-3.5" />
           </a>
           <a href="https://facebook.com/bylineseo" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cream-faint)' }} className="hover:text-[var(--cream-dim)] transition-colors">
-            <Globe className="w-3.5 h-3.5" />
+            <Facebook className="w-3.5 h-3.5" />
           </a>
         </div>
         <div className="px-3 py-1 text-xs truncate mb-1" style={{ color: 'var(--cream-faint)' }}>{userEmail}</div>
