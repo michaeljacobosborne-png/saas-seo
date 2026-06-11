@@ -84,6 +84,9 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true)
   const [researching, setResearching] = useState(false)
   const [researchError, setResearchError] = useState<string | null>(null)
+  // When the AI intent layer rewrites a raw seed query into clean keyword seeds,
+  // we surface what was actually sent to DataForSEO.
+  const [resolvedSeeds, setResolvedSeeds] = useState<string[] | null>(null)
   const [saving, setSaving] = useState(false)
   const [savedCount, setSavedCount] = useState(0)
   const [articleCtaCount, setArticleCtaCount] = useState(0)
@@ -163,6 +166,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
     if (!project) return
     setResearching(true)
     setResearchError(null)
+    setResolvedSeeds(null)
 
     // Show toast and schedule optimistic stage advances
     stageTimers.current.forEach(clearTimeout)
@@ -205,6 +209,10 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
       setResearching(false)
       fetchData()
       return
+    }
+
+    if (Array.isArray(json.resolved_seeds) && json.resolved_seeds.length > 0) {
+      setResolvedSeeds(json.resolved_seeds)
     }
 
     setToastStage('complete')
@@ -396,6 +404,12 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
           </button>
           <h1 className="text-2xl font-bold text-[#F7F3EC]">{project.name}</h1>
           <p className="mt-0.5 text-sm text-[#A89070]">Seed: <span className="font-medium text-[#A89070]">{project.seed_topic}</span></p>
+          {resolvedSeeds && resolvedSeeds.length > 0 && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-[#D4954A]">
+              <Sparkles className="w-3 h-3 shrink-0" />
+              <span>Searching for: <span className="font-medium">{resolvedSeeds.join(', ')}</span></span>
+            </p>
+          )}
         </div>
 
         {project.status === 'pending' && (
