@@ -10,11 +10,19 @@ import {
 import SignOutButton from './SignOutButton'
 import ThemeToggle from '@/app/_components/ThemeToggle'
 
-// lucide-react v1+ dropped brand icons — use inline SVG for Facebook
+// lucide-react v1+ dropped brand icons — use inline SVG for Facebook and X
 function FacebookIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    </svg>
+  )
+}
+
+function XTwitterIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
   )
 }
@@ -75,7 +83,7 @@ export default function DashboardSidebar({ userEmail }: { userEmail: string }) {
         <ThemeToggle />
         <div className="flex items-center gap-3 px-3 mt-3 mb-3">
           <a href="https://x.com/bylineseo" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cream-faint)' }} className="hover:text-[var(--cream-dim)] transition-colors">
-            <X className="w-3.5 h-3.5" />
+            <XTwitterIcon className="w-3.5 h-3.5" />
           </a>
           <a href="https://facebook.com/bylineseo" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cream-faint)' }} className="hover:text-[var(--cream-dim)] transition-colors">
             <FacebookIcon className="w-3.5 h-3.5" />
