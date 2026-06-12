@@ -65,14 +65,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#1C1917' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--ink)' }}>
       <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
           <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '28px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>
-            byline<span style={{ color: '#B87333' }}>.</span>
+            Byline<span style={{ color: '#B87333' }}>.</span>
           </span>
         </div>
-        <div className="rounded-2xl p-8" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.25)' }}>
+        <div className="rounded-2xl p-8" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.25)' }}>
           <div className="mb-8">
             <h1 className="text-2xl font-bold" style={{ color: '#F7F3EC' }}>Welcome back</h1>
             <p className="mt-1 text-sm" style={{ color: '#A89070' }}>Sign in to your workspace</p>
@@ -90,7 +90,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-                style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.3)', color: '#F7F3EC' }}
+                style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.3)', color: '#F7F3EC' }}
                 placeholder="you@example.com"
               />
             </div>
@@ -106,7 +106,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-                style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.3)', color: '#F7F3EC' }}
+                style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.3)', color: '#F7F3EC' }}
                 placeholder="••••••••"
               />
             </div>
@@ -119,7 +119,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full py-2.5 px-4 text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              style={{ background: '#B87333', color: '#1C1917', letterSpacing: '0.04em', textTransform: 'uppercase' }}
+              style={{ background: '#B87333', color: 'var(--ink)', letterSpacing: '0.04em', textTransform: 'uppercase' }}
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
@@ -137,7 +137,7 @@ export default function LoginPage() {
               onClick={() => handleOAuth('google')}
               disabled={oauthLoading !== null}
               className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: '#1C1917', color: '#F7F3EC', border: '1px solid rgba(184,115,51,0.3)' }}
+              style={{ background: 'var(--ink)', color: '#F7F3EC', border: '1px solid rgba(184,115,51,0.3)' }}
             >
               <GoogleIcon />
               {oauthLoading === 'google' ? 'Redirecting…' : 'Google'}
@@ -147,7 +147,7 @@ export default function LoginPage() {
               onClick={() => handleOAuth('github')}
               disabled={oauthLoading !== null}
               className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: '#1C1917', color: '#F7F3EC', border: '1px solid rgba(184,115,51,0.3)' }}
+              style={{ background: 'var(--ink)', color: '#F7F3EC', border: '1px solid rgba(184,115,51,0.3)' }}
             >
               <GitHubIcon />
               {oauthLoading === 'github' ? 'Redirecting…' : 'GitHub'}

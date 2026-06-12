@@ -36,7 +36,7 @@ export default function DuplicateArticleButton({ articleId }: { articleId: strin
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors disabled:opacity-50 ${
         error
           ? 'border-red-200 text-red-600 hover:bg-red-50'
-          : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+          : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
       }`}
     >
       {duplicating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CopyPlus className="w-3.5 h-3.5" />}

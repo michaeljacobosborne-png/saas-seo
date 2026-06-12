@@ -73,8 +73,8 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
       <div className="mt-8">
         <Link
           href="/settings"
-          className="flex items-center justify-between gap-4 rounded-xl p-5 transition-colors hover:bg-[#231F1B] group"
-          style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.18)' }}
+          className="flex items-center justify-between gap-4 rounded-xl p-5 transition-colors hover:bg-[var(--ink-card)] group"
+          style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.18)' }}
         >
           <div className="flex items-center gap-3">
             <span className="inline-flex p-2 rounded-lg" style={{ background: 'rgba(184,115,51,0.12)' }}>
@@ -82,12 +82,12 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
             </span>
             <div>
               <h3 className="text-sm font-semibold text-[#F7F3EC]">Connect Search Console</h3>
-              <p className="text-sm text-[#A89070]">
+              <p className="text-sm text-[var(--cream-dim)]">
                 Connect Search Console to see which pages are driving traffic.
               </p>
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-[#7A6555] group-hover:text-[#B87333] transition-colors shrink-0" />
+          <ArrowRight className="w-4 h-4 text-[var(--cream-faint)] group-hover:text-[#B87333] transition-colors shrink-0" />
         </Link>
       </div>
     )
@@ -98,7 +98,7 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
       <h2 className="text-sm font-semibold text-[#F7F3EC] mb-3 flex items-center gap-2">
         <Globe className="w-4 h-4 text-[#D4954A]" />
         Top Performing Pages from Search Console
-        <span className="text-xs font-normal text-[#7A6555]">· Last 28 days</span>
+        <span className="text-xs font-normal text-[var(--cream-faint)]">· Last 28 days</span>
       </h2>
 
       {state === 'error' ? (
@@ -107,18 +107,18 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
           <p className="text-sm text-[#f87171]">{error}</p>
         </div>
       ) : state === 'loading' ? (
-        <div className="rounded-xl p-10 text-center" style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.2)' }}>
+        <div className="rounded-xl p-10 text-center" style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.2)' }}>
           <Loader2 className="w-6 h-6 animate-spin text-[#D4954A] mx-auto" />
         </div>
       ) : rows.length === 0 ? (
-        <div className="rounded-xl p-8 text-center text-sm text-[#A89070]" style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.2)' }}>
+        <div className="rounded-xl p-8 text-center text-sm text-[var(--cream-dim)]" style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.2)' }}>
           No Search Console data for this period yet.
         </div>
       ) : (
-        <div className="rounded-xl overflow-hidden" style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.2)' }}>
+        <div className="rounded-xl overflow-hidden" style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.2)' }}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs uppercase tracking-wider text-[#7A6555]" style={{ borderBottom: '1px solid rgba(184,115,51,0.12)' }}>
+              <tr className="text-xs uppercase tracking-wider text-[var(--cream-faint)]" style={{ borderBottom: '1px solid rgba(184,115,51,0.12)' }}>
                 <th className="text-left font-medium px-5 py-2.5">Page</th>
                 <th className="text-right font-medium px-3 py-2.5">Clicks</th>
                 <th className="text-right font-medium px-3 py-2.5">Impr.</th>
@@ -130,7 +130,7 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
               {rows.slice(0, 10).map((r, i) => {
                 const url = r.keys[0] ?? ''
                 return (
-                  <tr key={i} className="text-[#A89070]" style={{ borderBottom: i < Math.min(rows.length, 10) - 1 ? '1px solid rgba(184,115,51,0.08)' : undefined }}>
+                  <tr key={i} className="text-[var(--cream-dim)]" style={{ borderBottom: i < Math.min(rows.length, 10) - 1 ? '1px solid rgba(184,115,51,0.08)' : undefined }}>
                     <td className="px-5 py-3 max-w-[20rem]">
                       <a
                         href={url}

@@ -169,7 +169,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
   const wordCount: number = (editor.storage.characterCount as { words: () => number })?.words() ?? 0
 
   return (
-    <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
+    <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 px-3 py-2 border-b border-[rgba(184,115,51,0.15)] flex-wrap">
         <ToolbarBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold">
@@ -199,7 +199,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
           <Quote className="w-4 h-4" />
         </ToolbarBtn>
         <div className="flex-1" />
-        {saveStatus === 'saving' && <span className="text-xs text-[#7A6555]">Saving…</span>}
+        {saveStatus === 'saving' && <span className="text-xs text-[var(--cream-faint)]">Saving…</span>}
         {saveStatus === 'saved' && <span className="text-xs text-green-600">Saved</span>}
         {saveStatus === 'error' && <span className="text-xs text-red-500">Save failed</span>}
       </div>
@@ -208,7 +208,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
       <EditorContent editor={editor} className="px-5 py-4 min-h-96 max-h-[70vh] overflow-y-auto" />
 
       {/* Footer: word count */}
-      <div className="px-5 py-2 border-t border-[rgba(184,115,51,0.15)] text-xs text-[#7A6555]">
+      <div className="px-5 py-2 border-t border-[rgba(184,115,51,0.15)] text-xs text-[var(--cream-faint)]">
         {wordCount.toLocaleString()} words · ~{Math.ceil(wordCount / 200)} min read
       </div>
     </div>
@@ -229,7 +229,7 @@ function ToolbarBtn({
       onClick={onClick}
       title={title}
       className={`p-1.5 rounded transition-colors ${
-        active ? 'bg-[#2A2420] text-[#F7F3EC]' : 'text-[#A89070] hover:bg-[#2A2420] hover:text-[#A89070]'
+        active ? 'bg-[var(--ink-deep)] text-[#F7F3EC]' : 'text-[var(--cream-dim)] hover:bg-[var(--ink-deep)] hover:text-[var(--cream-dim)]'
       }`}
     >
       {children}
@@ -238,5 +238,5 @@ function ToolbarBtn({
 }
 
 function Divider() {
-  return <span className="w-px h-4 bg-[#2A2420] mx-1 shrink-0" />
+  return <span className="w-px h-4 bg-[var(--ink-deep)] mx-1 shrink-0" />
 }

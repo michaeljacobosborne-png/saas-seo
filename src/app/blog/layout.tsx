@@ -25,7 +25,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
               letterSpacing: '-0.01em',
             }}
           >
-            byline<span style={{ color: '#B87333' }}>.</span>
+            Byline<span style={{ color: '#B87333' }}>.</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link

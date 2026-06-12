@@ -25,7 +25,7 @@ const STATUS_CLASSES: Record<string, string> = {
   active: 'text-green-400 bg-green-900/30 border-green-700/40',
   trialing: 'text-amber-400 bg-amber-900/30 border-amber-700/40',
   past_due: 'text-red-400 bg-red-900/30 border-red-700/40',
-  canceled: 'text-[#7A6555] bg-[#2A2420] border-[rgba(184,115,51,0.15)]',
+  canceled: 'text-[var(--cream-faint)] bg-[var(--ink-deep)] border-[rgba(184,115,51,0.15)]',
   unpaid: 'text-red-400 bg-red-900/30 border-red-700/40',
 }
 
@@ -133,12 +133,12 @@ export default async function SettingsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold" style={{ color: '#F7F3EC' }}>Settings</h1>
-          <p className="text-sm" style={{ color: '#7A6555' }}>Manage your account and billing</p>
+          <p className="text-sm" style={{ color: 'var(--cream-faint)' }}>Manage your account and billing</p>
         </div>
       </div>
 
       {/* Billing card */}
-      <div className="rounded-2xl p-6" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+      <div className="rounded-2xl p-6" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
         <div className="flex items-center gap-2 mb-5">
           <CreditCard className="w-4 h-4" style={{ color: '#B87333' }} />
           <h2 className="text-base font-semibold" style={{ color: '#F7F3EC' }}>Billing &amp; Subscription</h2>
@@ -147,29 +147,29 @@ export default async function SettingsPage() {
         <div className="space-y-4">
           {/* Plan */}
           <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid rgba(184,115,51,0.1)' }}>
-            <span className="text-sm" style={{ color: '#A89070' }}>Current plan</span>
+            <span className="text-sm" style={{ color: 'var(--cream-dim)' }}>Current plan</span>
             <span className="text-sm font-semibold" style={{ color: '#F7F3EC' }}>{planName}</span>
           </div>
 
           {/* Status */}
           <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid rgba(184,115,51,0.1)' }}>
-            <span className="text-sm" style={{ color: '#A89070' }}>Status</span>
+            <span className="text-sm" style={{ color: 'var(--cream-dim)' }}>Status</span>
             {status ? (
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border ${STATUS_CLASSES[status] ?? 'text-[#A89070] bg-[#2A2420] border-[rgba(184,115,51,0.15)]'}`}>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border ${STATUS_CLASSES[status] ?? 'text-[var(--cream-dim)] bg-[var(--ink-deep)] border-[rgba(184,115,51,0.15)]'}`}>
                 {status === 'active' || status === 'trialing'
                   ? <CheckCircle2 className="w-3 h-3" />
                   : <AlertCircle className="w-3 h-3" />}
                 {STATUS_LABELS[status] ?? status}
               </span>
             ) : (
-              <span className="text-sm" style={{ color: '#7A6555' }}>No active subscription</span>
+              <span className="text-sm" style={{ color: 'var(--cream-faint)' }}>No active subscription</span>
             )}
           </div>
 
           {/* Renewal / access-until */}
           {periodEnd && (
             <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid rgba(184,115,51,0.1)' }}>
-              <span className="text-sm" style={{ color: '#A89070' }}>
+              <span className="text-sm" style={{ color: 'var(--cream-dim)' }}>
                 {isCanceling || status === 'canceled' ? 'Access until' : 'Next renewal'}
               </span>
               <span className="text-sm" style={{ color: '#F7F3EC' }}>{periodEnd}</span>

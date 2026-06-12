@@ -88,7 +88,7 @@ function TagInput({
         onKeyDown={handleKeyDown}
         onBlur={add}
         placeholder={tags.length === 0 ? placeholder : ''}
-        className="flex-1 min-w-[120px] outline-none bg-transparent placeholder:text-[#7A6555]"
+        className="flex-1 min-w-[120px] outline-none bg-transparent placeholder:text-[var(--cream-faint)]"
       />
     </div>
   )
@@ -286,7 +286,7 @@ export default function BrandPage() {
   if (pageState === 'loading') {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--cream-faint)]" />
       </div>
     )
   }
@@ -299,11 +299,11 @@ export default function BrandPage() {
     return (
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="px-8 py-6 border-b border-[rgba(184,115,51,0.2)] bg-[#1C1917]">
+        <div className="px-8 py-6 border-b border-[rgba(184,115,51,0.2)] bg-[var(--ink)]">
           <h1 className="text-xl font-semibold text-[#F7F3EC]">
             {isUpdate ? 'Update your brand profile' : 'Set up your brand'}
           </h1>
-          <p className="mt-0.5 text-sm text-[#A89070]">
+          <p className="mt-0.5 text-sm text-[var(--cream-dim)]">
             Answer a few questions and we'll build your profile automatically.
           </p>
         </div>
@@ -316,7 +316,7 @@ export default function BrandPage() {
                 className={`max-w-[72%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
                     ? 'bg-[#B87333] text-[#F7F3EC] rounded-br-sm'
-                    : 'bg-[#1C1917] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] rounded-bl-sm shadow-sm'
+                    : 'bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] rounded-bl-sm shadow-sm'
                 }`}
               >
                 {msg.content}
@@ -327,7 +327,7 @@ export default function BrandPage() {
           {/* Streaming bubble */}
           {streamingText && !isBuildingProfile && (
             <div className="flex justify-start">
-              <div className="max-w-[72%] px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed whitespace-pre-wrap bg-[#1C1917] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] shadow-sm">
+              <div className="max-w-[72%] px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed whitespace-pre-wrap bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] shadow-sm">
                 {streamingText}
                 <span className="inline-block w-1.5 h-3.5 bg-[#B87333] ml-0.5 animate-pulse rounded-sm" />
               </div>
@@ -337,7 +337,7 @@ export default function BrandPage() {
           {/* Building profile indicator */}
           {isBuildingProfile && (
             <div className="flex justify-start">
-              <div className="px-4 py-3 rounded-2xl rounded-bl-sm text-sm bg-[#1C1917] border border-[rgba(184,115,51,0.2)] text-[#A89070] shadow-sm flex items-center gap-2">
+              <div className="px-4 py-3 rounded-2xl rounded-bl-sm text-sm bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] shadow-sm flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-[#D4954A]" />
                 Building your profile…
               </div>
@@ -347,7 +347,7 @@ export default function BrandPage() {
           {/* Typing indicator when first message is loading */}
           {isStreaming && messages.length === 0 && !streamingText && (
             <div className="flex justify-start">
-              <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-[#1C1917] border border-[rgba(184,115,51,0.2)] shadow-sm flex items-center gap-1.5">
+              <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] shadow-sm flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-[#B87333] rounded-full animate-bounce [animation-delay:0ms]" />
                 <span className="w-1.5 h-1.5 bg-[#B87333] rounded-full animate-bounce [animation-delay:150ms]" />
                 <span className="w-1.5 h-1.5 bg-[#B87333] rounded-full animate-bounce [animation-delay:300ms]" />
@@ -358,49 +358,49 @@ export default function BrandPage() {
           {/* Profile ready card */}
           {parsedProfile && (
             <div className="flex justify-start w-full">
-              <div className="w-full max-w-lg bg-[#1C1917] border border-green-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="w-full max-w-lg bg-[var(--ink)] border border-green-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-5 py-3 bg-green-50 border-b border-green-200 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
                   <span className="text-sm font-medium text-green-800">Profile ready</span>
                 </div>
                 <div className="px-5 py-4 space-y-3 text-sm">
                   <div>
-                    <span className="font-medium text-[#A89070]">Company: </span>
-                    <span className="text-[#A89070]">{parsedProfile.company_name}</span>
+                    <span className="font-medium text-[var(--cream-dim)]">Company: </span>
+                    <span className="text-[var(--cream-dim)]">{parsedProfile.company_name}</span>
                     {parsedProfile.industry && (
                       <span className="ml-2 text-xs bg-[rgba(184,115,51,0.08)] text-[#A0622A] px-2 py-0.5 rounded-full font-medium">{parsedProfile.industry}</span>
                     )}
                   </div>
                   {parsedProfile.target_audience && (
                     <div>
-                      <span className="font-medium text-[#A89070]">Audience: </span>
-                      <span className="text-[#A89070]">{parsedProfile.target_audience}</span>
+                      <span className="font-medium text-[var(--cream-dim)]">Audience: </span>
+                      <span className="text-[var(--cream-dim)]">{parsedProfile.target_audience}</span>
                     </div>
                   )}
                   {parsedProfile.brand_voice && (
                     <div>
-                      <span className="font-medium text-[#A89070]">Voice: </span>
-                      <span className="text-[#A89070]">{parsedProfile.brand_voice}</span>
+                      <span className="font-medium text-[var(--cream-dim)]">Voice: </span>
+                      <span className="text-[var(--cream-dim)]">{parsedProfile.brand_voice}</span>
                     </div>
                   )}
                   {parsedProfile.content_goals && (
                     <div>
-                      <span className="font-medium text-[#A89070]">Goal: </span>
-                      <span className="text-[#A89070]">{parsedProfile.content_goals}</span>
+                      <span className="font-medium text-[var(--cream-dim)]">Goal: </span>
+                      <span className="text-[var(--cream-dim)]">{parsedProfile.content_goals}</span>
                     </div>
                   )}
                   {parsedProfile.competitors?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      <span className="font-medium text-[#A89070] self-center">Competitors: </span>
+                      <span className="font-medium text-[var(--cream-dim)] self-center">Competitors: </span>
                       {parsedProfile.competitors.map((c) => (
-                        <span key={c} className="text-xs bg-[#2A2420] text-[#A89070] px-2 py-0.5 rounded-full">{c}</span>
+                        <span key={c} className="text-xs bg-[var(--ink-deep)] text-[var(--cream-dim)] px-2 py-0.5 rounded-full">{c}</span>
                       ))}
                     </div>
                   )}
                   {parsedProfile.avoid_topics && (
                     <div>
-                      <span className="font-medium text-[#A89070]">Avoid: </span>
-                      <span className="text-[#A89070]">{parsedProfile.avoid_topics}</span>
+                      <span className="font-medium text-[var(--cream-dim)]">Avoid: </span>
+                      <span className="text-[var(--cream-dim)]">{parsedProfile.avoid_topics}</span>
                     </div>
                   )}
                 </div>
@@ -418,7 +418,7 @@ export default function BrandPage() {
                   </button>
                   <button
                     onClick={() => setParsedProfile(null)}
-                    className="text-sm text-[#A89070] hover:text-[#A89070]"
+                    className="text-sm text-[var(--cream-dim)] hover:text-[var(--cream-dim)]"
                   >
                     Edit answers
                   </button>
@@ -432,7 +432,7 @@ export default function BrandPage() {
 
         {/* Input bar */}
         {!parsedProfile && (
-          <div className="px-8 py-4 border-t border-[rgba(184,115,51,0.2)] bg-[#1C1917]">
+          <div className="px-8 py-4 border-t border-[rgba(184,115,51,0.2)] bg-[var(--ink)]">
             <div className="flex items-end gap-3">
               <textarea
                 value={userInput}
@@ -473,14 +473,14 @@ export default function BrandPage() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-[#F7F3EC]">Brand Profile</h1>
-          <p className="mt-1 text-sm text-[#A89070]">
+          <p className="mt-1 text-sm text-[var(--cream-dim)]">
             Your persistent brand memory — the AI uses this to write content that sounds like you.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setShowEditModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[#A89070] border border-[rgba(184,115,51,0.25)] rounded-lg hover:bg-[#231F1B] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[var(--cream-dim)] border border-[rgba(184,115,51,0.25)] rounded-lg hover:bg-[var(--ink-card)] transition-colors"
           >
             <Pencil className="w-3.5 h-3.5" />
             Edit manually
@@ -496,13 +496,13 @@ export default function BrandPage() {
       </div>
 
       {/* Profile card */}
-      <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl shadow-sm overflow-hidden">
         {/* Company / industry */}
-        <div className="px-6 py-4 bg-[#231F1B] border-b border-[rgba(184,115,51,0.2)] flex items-center gap-3">
+        <div className="px-6 py-4 bg-[var(--ink-card)] border-b border-[rgba(184,115,51,0.2)] flex items-center gap-3">
           <Building2 className="w-5 h-5 text-[#D4954A] flex-shrink-0" />
           <div>
             <p className="font-semibold text-[#F7F3EC]">{p.brand_name}</p>
-            {p.industry && <p className="text-sm text-[#A89070]">{p.industry}</p>}
+            {p.industry && <p className="text-sm text-[var(--cream-dim)]">{p.industry}</p>}
           </div>
           {p.website_url && (
             <a
@@ -520,9 +520,9 @@ export default function BrandPage() {
           {/* Target audience */}
           {p.target_audience && (
             <div className="px-6 py-4 flex gap-3">
-              <Users className="w-4 h-4 text-[#7A6555] flex-shrink-0 mt-0.5" />
+              <Users className="w-4 h-4 text-[var(--cream-faint)] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-medium text-[#A89070] uppercase tracking-wide mb-1">Target Audience</p>
+                <p className="text-xs font-medium text-[var(--cream-dim)] uppercase tracking-wide mb-1">Target Audience</p>
                 <p className="text-sm text-[#F7F3EC]">{p.target_audience}</p>
               </div>
             </div>
@@ -531,9 +531,9 @@ export default function BrandPage() {
           {/* Brand voice */}
           {(p.tone_notes || p.brand_voice) && (
             <div className="px-6 py-4 flex gap-3">
-              <MessageSquare className="w-4 h-4 text-[#7A6555] flex-shrink-0 mt-0.5" />
+              <MessageSquare className="w-4 h-4 text-[var(--cream-faint)] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-medium text-[#A89070] uppercase tracking-wide mb-1">Brand Voice</p>
+                <p className="text-xs font-medium text-[var(--cream-dim)] uppercase tracking-wide mb-1">Brand Voice</p>
                 {p.brand_voice && (
                   <span className="inline-block text-xs bg-[rgba(184,115,51,0.08)] text-[#A0622A] px-2 py-0.5 rounded-full font-medium mb-1.5 capitalize">
                     {p.brand_voice}
@@ -547,9 +547,9 @@ export default function BrandPage() {
           {/* Content goals */}
           {p.content_goals && (
             <div className="px-6 py-4 flex gap-3">
-              <TrendingUp className="w-4 h-4 text-[#7A6555] flex-shrink-0 mt-0.5" />
+              <TrendingUp className="w-4 h-4 text-[var(--cream-faint)] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-medium text-[#A89070] uppercase tracking-wide mb-1">Content Goal</p>
+                <p className="text-xs font-medium text-[var(--cream-dim)] uppercase tracking-wide mb-1">Content Goal</p>
                 <p className="text-sm text-[#F7F3EC]">{p.content_goals}</p>
               </div>
             </div>
@@ -558,12 +558,12 @@ export default function BrandPage() {
           {/* Competitors */}
           {p.competitors?.length > 0 && (
             <div className="px-6 py-4 flex gap-3">
-              <Target className="w-4 h-4 text-[#7A6555] flex-shrink-0 mt-0.5" />
+              <Target className="w-4 h-4 text-[var(--cream-faint)] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-medium text-[#A89070] uppercase tracking-wide mb-2">Competitors</p>
+                <p className="text-xs font-medium text-[var(--cream-dim)] uppercase tracking-wide mb-2">Competitors</p>
                 <div className="flex flex-wrap gap-1.5">
                   {p.competitors.map((c) => (
-                    <span key={c} className="text-xs bg-[#2A2420] text-[#A89070] px-2.5 py-1 rounded-full">{c}</span>
+                    <span key={c} className="text-xs bg-[var(--ink-deep)] text-[var(--cream-dim)] px-2.5 py-1 rounded-full">{c}</span>
                   ))}
                 </div>
               </div>
@@ -573,9 +573,9 @@ export default function BrandPage() {
           {/* Avoid topics */}
           {p.avoid_topics && (
             <div className="px-6 py-4 flex gap-3">
-              <Shield className="w-4 h-4 text-[#7A6555] flex-shrink-0 mt-0.5" />
+              <Shield className="w-4 h-4 text-[var(--cream-faint)] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-medium text-[#A89070] uppercase tracking-wide mb-1">Avoid</p>
+                <p className="text-xs font-medium text-[var(--cream-dim)] uppercase tracking-wide mb-1">Avoid</p>
                 <p className="text-sm text-[#F7F3EC]">{p.avoid_topics}</p>
               </div>
             </div>
@@ -584,9 +584,9 @@ export default function BrandPage() {
           {/* Primary keywords */}
           {p.primary_keywords?.length > 0 && (
             <div className="px-6 py-4 flex gap-3">
-              <Plus className="w-4 h-4 text-[#7A6555] flex-shrink-0 mt-0.5" />
+              <Plus className="w-4 h-4 text-[var(--cream-faint)] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-medium text-[#A89070] uppercase tracking-wide mb-2">Primary Keywords</p>
+                <p className="text-xs font-medium text-[var(--cream-dim)] uppercase tracking-wide mb-2">Primary Keywords</p>
                 <div className="flex flex-wrap gap-1.5">
                   {p.primary_keywords.map((k) => (
                     <span key={k} className="text-xs bg-[rgba(184,115,51,0.08)] text-[#A0622A] px-2.5 py-1 rounded-full">{k}</span>
@@ -601,10 +601,10 @@ export default function BrandPage() {
       {/* Edit modal */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-[#1C1917] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+          <div className="bg-[var(--ink)] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(184,115,51,0.2)]">
               <h2 className="font-semibold text-[#F7F3EC]">Edit profile</h2>
-              <button onClick={() => setShowEditModal(false)} className="text-[#7A6555] hover:text-[#A89070]">
+              <button onClick={() => setShowEditModal(false)} className="text-[var(--cream-faint)] hover:text-[var(--cream-dim)]">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -616,7 +616,7 @@ export default function BrandPage() {
                 { label: 'Industry', key: 'industry' as const, placeholder: 'SaaS / B2B Software' },
               ].map(({ label, key, placeholder }) => (
                 <div key={key}>
-                  <label className="block text-sm font-medium text-[#A89070] mb-1">{label}</label>
+                  <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1">{label}</label>
                   <input
                     type="text"
                     value={editForm[key] as string}
@@ -634,7 +634,7 @@ export default function BrandPage() {
                 { label: 'Topics to Avoid', key: 'avoid_topics' as const, placeholder: 'Avoid mentioning competitors by name, no ROI guarantees' },
               ].map(({ label, key, placeholder }) => (
                 <div key={key}>
-                  <label className="block text-sm font-medium text-[#A89070] mb-1">{label}</label>
+                  <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1">{label}</label>
                   <textarea
                     value={editForm[key] as string}
                     onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value }))}
@@ -646,7 +646,7 @@ export default function BrandPage() {
               ))}
 
               <div>
-                <label className="block text-sm font-medium text-[#A89070] mb-1">Competitors</label>
+                <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1">Competitors</label>
                 <TagInput
                   tags={editForm.competitors}
                   onChange={(tags) => setEditForm((f) => ({ ...f, competitors: tags }))}
@@ -655,7 +655,7 @@ export default function BrandPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#A89070] mb-1">Primary Keywords</label>
+                <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1">Primary Keywords</label>
                 <TagInput
                   tags={editForm.primary_keywords}
                   onChange={(tags) => setEditForm((f) => ({ ...f, primary_keywords: tags }))}
@@ -677,7 +677,7 @@ export default function BrandPage() {
               </button>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="text-sm text-[#A89070] hover:text-[#A89070]"
+                className="text-sm text-[var(--cream-dim)] hover:text-[var(--cream-dim)]"
               >
                 Cancel
               </button>

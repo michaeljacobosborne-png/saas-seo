@@ -25,7 +25,7 @@ export default function ManageBillingButton({ hasBilling }: { hasBilling: boolea
 
   if (!hasBilling) {
     return (
-      <p className="text-xs" style={{ color: '#7A6555' }}>
+      <p className="text-xs" style={{ color: 'var(--cream-faint)' }}>
         No billing account yet.{' '}
         <a href="/pricing" style={{ color: '#B87333' }} className="hover:underline">
           View plans →

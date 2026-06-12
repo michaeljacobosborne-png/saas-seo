@@ -121,7 +121,7 @@ export default function SignupForm({
       <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
           <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '28px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>
-            byline<span style={{ color: '#B87333' }}>.</span>
+            Byline<span style={{ color: '#B87333' }}>.</span>
           </span>
         </div>
         <div className="rounded-2xl p-8" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.25)' }}>

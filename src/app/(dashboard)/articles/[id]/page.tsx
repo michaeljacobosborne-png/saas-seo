@@ -110,10 +110,10 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm font-medium text-[#A89070]">{label}</span>
+        <span className="text-sm font-medium text-[var(--cream-dim)]">{label}</span>
         <span className="text-sm font-bold tabular-nums" style={{ color: COPPER }}>{score}</span>
       </div>
-      <div className="w-full bg-[#2A2420] rounded-full h-2.5">
+      <div className="w-full bg-[var(--ink-deep)] rounded-full h-2.5">
         <div className={`h-2.5 rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${score}%` }} />
       </div>
     </div>
@@ -132,10 +132,10 @@ function ConfidenceChip({ confidence }: { confidence: 'low' | 'medium' | 'high' 
 function CriteriaRow({ label, passed }: { label: string; passed: boolean }) {
   return (
     <div className="flex items-start gap-2.5 py-1.5">
-      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[#2A2420]'}`}>
+      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[var(--ink-deep)]'}`}>
         <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
       </div>
-      <span className={`text-xs flex-1 ${passed ? 'text-[#A89070]' : 'text-[#7A6555]'}`}>{label}</span>
+      <span className={`text-xs flex-1 ${passed ? 'text-[var(--cream-dim)]' : 'text-[var(--cream-faint)]'}`}>{label}</span>
     </div>
   )
 }
@@ -143,11 +143,11 @@ function CriteriaRow({ label, passed }: { label: string; passed: boolean }) {
 function SEOCriteriaRow({ label, passed, points, max }: { label: string; passed: boolean; points: number; max: number }) {
   return (
     <div className="flex items-start gap-2.5 py-1.5">
-      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[#2A2420]'}`}>
+      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[var(--ink-deep)]'}`}>
         <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
       </div>
-      <span className={`text-xs flex-1 ${passed ? 'text-[#A89070]' : 'text-[#7A6555]'}`}>{label}</span>
-      <span className="text-xs tabular-nums font-medium text-[#A89070] shrink-0">{points}/{max}</span>
+      <span className={`text-xs flex-1 ${passed ? 'text-[var(--cream-dim)]' : 'text-[var(--cream-faint)]'}`}>{label}</span>
+      <span className="text-xs tabular-nums font-medium text-[var(--cream-dim)] shrink-0">{points}/{max}</span>
     </div>
   )
 }
@@ -614,7 +614,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--cream-faint)]" />
       </div>
     )
   }
@@ -622,10 +622,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   if (!article) {
     return (
       <div className="p-8">
-        <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[#7A6555] hover:text-[#A89070] mb-4">
+        <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[var(--cream-faint)] hover:text-[var(--cream-dim)] mb-4">
           <ArrowLeft className="w-4 h-4" /> Articles
         </Link>
-        <p className="text-[#A89070]">Article not found.</p>
+        <p className="text-[var(--cream-dim)]">Article not found.</p>
       </div>
     )
   }
@@ -640,7 +640,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div className="min-w-0 flex-1">
-            <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[#7A6555] hover:text-[#A89070] mb-3 transition-colors w-fit">
+            <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[var(--cream-faint)] hover:text-[var(--cream-dim)] mb-3 transition-colors w-fit">
               <ArrowLeft className="w-4 h-4" />
               Articles
             </Link>
@@ -648,27 +648,27 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               {article.title ?? article.target_keyword ?? 'Untitled'}
             </h1>
             {article.target_keyword && article.title && (
-              <p className="text-sm text-[#7A6555] mt-0.5">Target: <span className="font-medium text-[#A89070]">{article.target_keyword}</span></p>
+              <p className="text-sm text-[var(--cream-faint)] mt-0.5">Target: <span className="font-medium text-[var(--cream-dim)]">{article.target_keyword}</span></p>
             )}
             {brandProfiles.length > 1 && (
               <div className="flex items-center gap-2 mt-2">
-                <label htmlFor="brand-switch" className="text-xs font-medium text-[#7A6555] shrink-0">Brand:</label>
+                <label htmlFor="brand-switch" className="text-xs font-medium text-[var(--cream-faint)] shrink-0">Brand:</label>
                 <div className="relative inline-flex items-center">
                   <select
                     id="brand-switch"
                     value={article.brand_profile_id ?? ''}
                     onChange={(e) => handleSwitchBrand(e.target.value)}
                     disabled={switchingBrand}
-                    className="text-xs text-[#A89070] bg-[#231F1B] border border-[rgba(184,115,51,0.2)] rounded-lg pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 appearance-none cursor-pointer"
+                    className="text-xs text-[var(--cream-dim)] bg-[var(--ink-card)] border border-[rgba(184,115,51,0.2)] rounded-lg pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 appearance-none cursor-pointer"
                   >
                     {!article.brand_profile_id && <option value="">No brand</option>}
                     {brandProfiles.map((b) => (
                       <option key={b.id} value={b.id}>{b.brand_name}</option>
                     ))}
                   </select>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#7A6555] absolute right-2 rotate-90 pointer-events-none" />
+                  <ChevronRight className="w-3.5 h-3.5 text-[var(--cream-faint)] absolute right-2 rotate-90 pointer-events-none" />
                 </div>
-                {switchingBrand && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#7A6555]" />}
+                {switchingBrand && <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--cream-faint)]" />}
                 {brandSwitchError && <span className="text-xs text-red-500">{brandSwitchError}</span>}
               </div>
             )}
@@ -678,7 +678,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               onClick={handleDuplicate}
               disabled={duplicating}
               title="Duplicate article"
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] text-[#A89070] disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] text-[var(--cream-dim)] disabled:opacity-50 transition-colors"
             >
               {duplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CopyPlus className="w-4 h-4" />}
               {duplicating ? 'Duplicating…' : 'Duplicate'}
@@ -686,7 +686,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             {article.content && (
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] text-[#A89070] transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] text-[var(--cream-dim)] transition-colors"
               >
                 {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copied!' : 'Copy Markdown'}
@@ -710,7 +710,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 ${
                   article.status === 'published'
                     ? 'border-[rgba(184,115,51,0.4)] text-[#B87333] bg-[rgba(184,115,51,0.08)]'
-                    : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+                    : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
                 }`}
               >
                 {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
@@ -723,7 +723,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
                   agentOpen
                     ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.25)] text-[#A0622A]'
-                    : 'border-[rgba(184,115,51,0.2)] text-[#A89070] hover:bg-[#231F1B]'
+                    : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
                 }`}
               >
                 <Bot className="w-4 h-4" />
@@ -747,19 +747,19 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           </div>
         )}
 
-        <div className="flex items-center gap-4 mb-4 text-xs text-[#7A6555]">
+        <div className="flex items-center gap-4 mb-4 text-xs text-[var(--cream-faint)]">
           <span className="capitalize">{article.status}</span>
         </div>
 
         {/* Meta description */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-medium text-[#A89070]">Meta Description</label>
+            <label className="block text-xs font-medium text-[var(--cream-dim)]">Meta Description</label>
             {article.content && (
               <button
                 onClick={handleGenerateMeta}
                 disabled={generatingMeta}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] text-[#A89070] disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] text-[var(--cream-dim)] disabled:opacity-50 transition-colors"
               >
                 {generatingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                 {generatingMeta ? 'Generating…' : 'Auto-generate'}
@@ -772,16 +772,16 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             onBlur={handleMetaDescBlur}
             placeholder="Write a compelling meta description (150–160 characters)…"
             rows={2}
-            className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none text-[#A89070] placeholder-gray-400"
+            className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none text-[var(--cream-dim)] placeholder-gray-400"
           />
           <div className="flex items-center justify-between mt-1">
-            <span className={`text-xs tabular-nums ${metaDesc.length > 160 ? 'text-red-500' : 'text-[#7A6555]'}`}>
+            <span className={`text-xs tabular-nums ${metaDesc.length > 160 ? 'text-red-500' : 'text-[var(--cream-faint)]'}`}>
               {metaDesc.length}/160
             </span>
             {metaError ? (
               <span className="text-xs text-red-500">{metaError}</span>
             ) : metaSaving ? (
-              <span className="text-xs text-[#7A6555]">Saving…</span>
+              <span className="text-xs text-[var(--cream-faint)]">Saving…</span>
             ) : null}
           </div>
         </div>
@@ -831,12 +831,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             {generatingImages && !imageConcepts && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 animate-pulse">
-                    <div className="h-4 w-2/3 bg-[#2A2420] rounded mb-3" />
-                    <div className="h-5 w-20 bg-[#2A2420] rounded-full mb-3" />
-                    <div className="h-24 w-full bg-[#2A2420] rounded mb-3" />
-                    <div className="h-3 w-full bg-[#2A2420] rounded mb-2" />
-                    <div className="h-3 w-1/2 bg-[#2A2420] rounded" />
+                  <div key={i} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 animate-pulse">
+                    <div className="h-4 w-2/3 bg-[var(--ink-deep)] rounded mb-3" />
+                    <div className="h-5 w-20 bg-[var(--ink-deep)] rounded-full mb-3" />
+                    <div className="h-24 w-full bg-[var(--ink-deep)] rounded mb-3" />
+                    <div className="h-3 w-full bg-[var(--ink-deep)] rounded mb-2" />
+                    <div className="h-3 w-1/2 bg-[var(--ink-deep)] rounded" />
                   </div>
                 ))}
               </div>
@@ -846,7 +846,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             {imageConcepts && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {imageConcepts.map((concept, i) => (
-                  <div key={i} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 flex flex-col">
+                  <div key={i} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 flex flex-col">
                     <h4 className="text-sm font-bold text-[#F7F3EC] leading-snug">{concept.headline}</h4>
                     <span
                       className={`mt-2 self-start text-xs font-medium px-2.5 py-1 rounded-full ${
@@ -855,12 +855,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     >
                       {concept.style}
                     </span>
-                    <pre className="mt-3 text-xs font-mono text-[#A89070] whitespace-pre-wrap break-words bg-[#231F1B] border border-[rgba(184,115,51,0.15)] rounded-lg p-3 select-text max-h-44 overflow-y-auto">
+                    <pre className="mt-3 text-xs font-mono text-[var(--cream-dim)] whitespace-pre-wrap break-words bg-[var(--ink-card)] border border-[rgba(184,115,51,0.15)] rounded-lg p-3 select-text max-h-44 overflow-y-auto">
                       {concept.prompt}
                     </pre>
                     <button
                       onClick={() => handleCopyPrompt(concept.prompt, i)}
-                      className="mt-2 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[rgba(184,115,51,0.25)] rounded-lg hover:bg-[#231F1B] text-[#A89070] transition-colors"
+                      className="mt-2 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[rgba(184,115,51,0.25)] rounded-lg hover:bg-[var(--ink-card)] text-[var(--cream-dim)] transition-colors"
                     >
                       {copiedPromptIndex === i ? (
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
@@ -870,14 +870,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       {copiedPromptIndex === i ? 'Copied!' : 'Copy prompt'}
                     </button>
                     {concept.alt_text && (
-                      <div className="mt-2.5 bg-[#231F1B] border border-[rgba(184,115,51,0.15)] rounded-lg p-2.5">
+                      <div className="mt-2.5 bg-[var(--ink-card)] border border-[rgba(184,115,51,0.15)] rounded-lg p-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-[#7A6555]">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--cream-faint)]">
                             Alt text
                           </span>
                           <button
                             onClick={() => handleCopyAlt(concept.alt_text, i)}
-                            className="flex items-center gap-1 text-[10px] font-medium text-[#A89070] hover:text-[#F7F3EC] transition-colors"
+                            className="flex items-center gap-1 text-[10px] font-medium text-[var(--cream-dim)] hover:text-[#F7F3EC] transition-colors"
                           >
                             {copiedAltIndex === i ? (
                               <CheckCircle2 className="w-3 h-3 text-green-500" />
@@ -887,7 +887,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                             {copiedAltIndex === i ? 'Copied!' : 'Copy'}
                           </button>
                         </div>
-                        <p className="mt-1 text-xs text-[#A89070] leading-relaxed">{concept.alt_text}</p>
+                        <p className="mt-1 text-xs text-[var(--cream-dim)] leading-relaxed">{concept.alt_text}</p>
                       </div>
                     )}
                     <button
@@ -900,7 +900,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       Why this works
                     </button>
                     {expandedRationale === i && (
-                      <p className="mt-1.5 text-xs text-[#A89070] leading-relaxed">{concept.rationale}</p>
+                      <p className="mt-1.5 text-xs text-[var(--cream-dim)] leading-relaxed">{concept.rationale}</p>
                     )}
                   </div>
                 ))}
@@ -917,7 +917,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-                  activeTab === tab ? 'border-[#B87333] text-[#B87333]' : 'border-transparent text-[#A89070] hover:text-[#A89070]'
+                  activeTab === tab ? 'border-[#B87333] text-[#B87333]' : 'border-transparent text-[var(--cream-dim)] hover:text-[var(--cream-dim)]'
                 }`}
               >
                 {tab}
@@ -942,7 +942,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               />
             ) : (
               <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
-                <p className="text-sm text-[#A89070] mb-3">No content yet.</p>
+                <p className="text-sm text-[var(--cream-dim)] mb-3">No content yet.</p>
                 {article.status === 'brief_ready' && (
                   <Link href="/articles/new" className="text-sm text-[#B87333] hover:text-[#A0622A] font-medium">
                     Continue in article wizard →
@@ -958,8 +958,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           <div>
             {!scores ? (
               <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
-                <BarChart2 className="w-8 h-8 text-[#A89070] mx-auto mb-3" />
-                <p className="text-sm text-[#A89070] mb-4">No scores yet. Click &quot;Score Article&quot; to analyze this content.</p>
+                <BarChart2 className="w-8 h-8 text-[var(--cream-dim)] mx-auto mb-3" />
+                <p className="text-sm text-[var(--cream-dim)] mb-4">No scores yet. Click &quot;Score Article&quot; to analyze this content.</p>
                 <button
                   onClick={handleScore}
                   disabled={scoring}
@@ -978,10 +978,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     { label: 'GEO', score: scores.geo.score },
                     { label: 'AEO', score: scores.aeo.score },
                   ].map(({ label, score }) => (
-                    <div key={label} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
+                    <div key={label} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
                       <div className="text-2xl font-bold mb-1" style={{ color: COPPER }}>{score}</div>
-                      <div className="text-xs font-semibold text-[#7A6555] uppercase tracking-wide">{label}</div>
-                      <div className="mt-2 w-full bg-[#2A2420] rounded-full h-1.5">
+                      <div className="text-xs font-semibold text-[var(--cream-faint)] uppercase tracking-wide">{label}</div>
+                      <div className="mt-2 w-full bg-[var(--ink-deep)] rounded-full h-1.5">
                         <div
                           className={`h-1.5 rounded-full ${score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-400' : 'bg-red-400'}`}
                           style={{ width: `${score}%` }}
@@ -991,7 +991,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   ))}
                 </div>
 
-                <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                   <h3 className="font-semibold text-[#F7F3EC] text-sm mb-4">Score Overview</h3>
                   <div className="space-y-3">
                     <ScoreBar label="SEO" score={scores.seo.score} />
@@ -1002,7 +1002,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-[#F7F3EC] text-sm">SEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.seo.score}/100</span>
@@ -1014,7 +1014,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
 
-                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-[#F7F3EC] text-sm">AEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.aeo.score}/100</span>
@@ -1026,7 +1026,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
 
-                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-[#F7F3EC] text-sm">GEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.geo.score}/100</span>
@@ -1038,30 +1038,30 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
 
-                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-[#F7F3EC] text-sm">Readability</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.readability.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
                       {Object.values(scores.readability.breakdown).map((c, i) => (
-                        <div key={i} className="py-1.5 text-xs text-[#A89070]">{c.label}</div>
+                        <div key={i} className="py-1.5 text-xs text-[var(--cream-dim)]">{c.label}</div>
                       ))}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <TrendingUp className="w-4 h-4 text-[#D4954A]" />
                       <h3 className="font-semibold text-[#F7F3EC] text-sm">Ranking Prediction</h3>
                     </div>
-                    <p className="text-sm text-[#A89070] mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
+                    <p className="text-sm text-[var(--cream-dim)] mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
                     <ConfidenceChip confidence={scores.ranking_prediction.confidence} />
                   </div>
 
-                  <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <BarChart2 className="w-4 h-4 text-[#D4954A]" />
                       <h3 className="font-semibold text-[#F7F3EC] text-sm">Traffic Prediction (monthly)</h3>
@@ -1075,10 +1075,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           { rank: 10, visits: scores.traffic_prediction.at_rank_10, ctr: '2%' },
                         ]).map(({ rank, visits, ctr }) => (
                           <tr key={rank}>
-                            <td className="py-1.5 text-[#A89070]">Position {rank}</td>
-                            <td className="py-1.5 text-[#7A6555] text-right">{ctr} CTR</td>
-                            <td className="py-1.5 font-semibold text-[#A89070] text-right tabular-nums">
-                              {visits.toLocaleString()} <span className="font-normal text-[#7A6555]">visits</span>
+                            <td className="py-1.5 text-[var(--cream-dim)]">Position {rank}</td>
+                            <td className="py-1.5 text-[var(--cream-faint)] text-right">{ctr} CTR</td>
+                            <td className="py-1.5 font-semibold text-[var(--cream-dim)] text-right tabular-nums">
+                              {visits.toLocaleString()} <span className="font-normal text-[var(--cream-faint)]">visits</span>
                             </td>
                           </tr>
                         ))}
@@ -1094,13 +1094,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Agent panel */}
       {agentOpen && (
-        <div className="w-96 shrink-0 border-l border-[rgba(184,115,51,0.2)] bg-[#1C1917] flex flex-col" style={{ height: '100vh', position: 'sticky', top: 0 }}>
+        <div className="w-96 shrink-0 border-l border-[rgba(184,115,51,0.2)] bg-[var(--ink)] flex flex-col" style={{ height: '100vh', position: 'sticky', top: 0 }}>
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(184,115,51,0.15)] shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-2 h-2 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 animate-pulse" />
               <span className="font-semibold text-[#F7F3EC] text-sm">Byline Agent</span>
-              <div className="flex gap-0.5 bg-[#2A2420] rounded-lg p-0.5">
+              <div className="flex gap-0.5 bg-[var(--ink-deep)] rounded-lg p-0.5">
                 {(['review', 'assist', 'auto'] as const).map((m) => {
                   const locked = m !== 'review' && accountType === 'free'
                   return (
@@ -1116,8 +1116,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       }}
                       className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 capitalize ${
                         (agentMode === m && !showUpgradePrompt) || (m === 'review' && showUpgradePrompt)
-                          ? 'bg-[#1C1917] text-[#F7F3EC] shadow-sm'
-                          : 'text-[#A89070] hover:text-[#A89070]'
+                          ? 'bg-[var(--ink)] text-[#F7F3EC] shadow-sm'
+                          : 'text-[var(--cream-dim)] hover:text-[var(--cream-dim)]'
                       }`}
                     >
                       {m}
@@ -1129,7 +1129,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </div>
             <button
               onClick={() => setAgentOpen(false)}
-              className="text-[#7A6555] hover:text-[#A89070] transition-colors"
+              className="text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1138,11 +1138,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           {/* Upgrade prompt for free users (Assist + Auto) */}
           {showUpgradePrompt ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-[#2A2420] flex items-center justify-center mb-3">
-                <Lock className="w-5 h-5 text-[#7A6555]" />
+              <div className="w-12 h-12 rounded-full bg-[var(--ink-deep)] flex items-center justify-center mb-3">
+                <Lock className="w-5 h-5 text-[var(--cream-faint)]" />
               </div>
               <h3 className="font-semibold text-[#F7F3EC] text-sm mb-2">Assist &amp; Auto are paid features</h3>
-              <p className="text-sm text-[#A89070] mb-5 leading-relaxed">
+              <p className="text-sm text-[var(--cream-dim)] mb-5 leading-relaxed">
                 Upgrade to let the agent rewrite sections directly — or rewrite your entire article automatically.
               </p>
               <Link
@@ -1154,8 +1154,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </div>
           ) : !scores ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <Bot className="w-10 h-10 text-[#A89070] mb-3" />
-              <p className="text-sm text-[#A89070] mb-4">Score the article first to unlock the agent.</p>
+              <Bot className="w-10 h-10 text-[var(--cream-dim)] mb-3" />
+              <p className="text-sm text-[var(--cream-dim)] mb-4">Score the article first to unlock the agent.</p>
               <button
                 onClick={handleScore}
                 disabled={scoring}
@@ -1173,13 +1173,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex-1 flex flex-col min-h-0">
                   <div className="shrink-0 flex items-center gap-2.5 px-4 py-2.5 border-b border-[rgba(184,115,51,0.1)]">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[#B87333]" />
-                    <span className="text-xs text-[#A89070]">Rewriting…</span>
+                    <span className="text-xs text-[var(--cream-dim)]">Rewriting…</span>
                     <span className="text-xs tabular-nums ml-auto text-[#4A3E35]">
                       {(agentMessages[0]?.content.length ?? 0).toLocaleString()} chars
                     </span>
                   </div>
                   <div ref={autoStreamRef} className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
-                    <pre className="text-xs leading-relaxed whitespace-pre-wrap text-[#7A6555]" style={{ fontFamily: 'inherit' }}>
+                    <pre className="text-xs leading-relaxed whitespace-pre-wrap text-[var(--cream-faint)]" style={{ fontFamily: 'inherit' }}>
                       {agentMessages[0]?.content}
                     </pre>
                   </div>
@@ -1189,12 +1189,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                   <CheckCircle2 className="w-8 h-8 text-green-500 mb-3" />
                   <p className="text-sm font-semibold mb-1 text-[#F7F3EC]">Article rewritten</p>
-                  <p className="text-xs mb-6 text-[#A89070]">
+                  <p className="text-xs mb-6 text-[var(--cream-dim)]">
                     Applied to the editor · saving automatically. Use the editor&apos;s undo (⌘/Ctrl+Z) to revert.
                   </p>
                   <button
                     onClick={() => { setAutoApplied(false); setAgentMessages([]) }}
-                    className="text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                    className="text-xs text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
                   >
                     Run again
                   </button>
@@ -1203,10 +1203,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 /* Error state */
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                   <AlertCircle className="w-6 h-6 text-red-400 mb-3" />
-                  <p className="text-xs leading-relaxed text-[#A89070]">{agentMessages[0]?.content}</p>
+                  <p className="text-xs leading-relaxed text-[var(--cream-dim)]">{agentMessages[0]?.content}</p>
                   <button
                     onClick={() => setAgentMessages([])}
-                    className="mt-4 text-xs text-[#7A6555] hover:text-[#A89070] transition-colors"
+                    className="mt-4 text-xs text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
                   >
                     Dismiss
                   </button>
@@ -1214,11 +1214,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               ) : (
                 /* Ready state — focus instructions + run */
                 <div className="flex-1 flex flex-col p-4 gap-4">
-                  <p className="text-xs leading-relaxed text-[#7A6555]">
+                  <p className="text-xs leading-relaxed text-[var(--cream-faint)]">
                     Reads your article, audit scores, and brand profile — then applies every failing criterion in one pass. The rewrite saves automatically; undo in the editor to revert.
                   </p>
                   <div>
-                    <label className="block text-xs font-medium mb-1.5 text-[#A89070]">
+                    <label className="block text-xs font-medium mb-1.5 text-[var(--cream-dim)]">
                       Focus instructions <span className="text-[#4A3E35]">(optional)</span>
                     </label>
                     <textarea
@@ -1229,7 +1229,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       }}
                       placeholder={'e.g. "strengthen the intro" · "add more data points" · "don\'t change the conclusion"'}
                       rows={3}
-                      className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent placeholder-gray-600 bg-[#1C1917] text-[#F7F3EC]"
+                      className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent placeholder-gray-600 bg-[var(--ink)] text-[#F7F3EC]"
                     />
                   </div>
                   <button
@@ -1252,17 +1252,17 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   {selectedText ? (
                     <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                       <p className="text-xs font-semibold text-amber-700 mb-1">&#9999;&#65039; Selected</p>
-                      <p className="text-xs text-[#A89070] line-clamp-2">
+                      <p className="text-xs text-[var(--cream-dim)] line-clamp-2">
                         &ldquo;{selectedText.slice(0, 80)}{selectedText.length > 80 ? '…' : ''}&rdquo;
                       </p>
                     </div>
                   ) : scoreFailures.length > 0 ? (
                     <div>
-                      <p className="text-xs font-semibold text-[#A89070] mb-2">Top issues to fix</p>
+                      <p className="text-xs font-semibold text-[var(--cream-dim)] mb-2">Top issues to fix</p>
                       <div className="space-y-2">
                         {scoreFailures.map((f, i) => (
                           <div key={i} className="flex items-start justify-between gap-3">
-                            <span className="text-xs text-[#A89070] flex-1 leading-snug">{f.label}</span>
+                            <span className="text-xs text-[var(--cream-dim)] flex-1 leading-snug">{f.label}</span>
                             <button
                               onClick={() => {
                                 if (!agentStreaming) {
@@ -1279,7 +1279,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-[#7A6555] text-center py-1">
+                    <p className="text-xs text-[var(--cream-faint)] text-center py-1">
                       Select text in the editor to rewrite it, or pick a score issue to fix.
                     </p>
                   )}
@@ -1289,10 +1289,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               {/* Messages */}
               <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                 {agentMessages.length === 0 && !agentStreaming && agentMode === 'review' && (
-                  <div className="text-center text-xs text-[#7A6555] py-8">Starting review&hellip;</div>
+                  <div className="text-center text-xs text-[var(--cream-faint)] py-8">Starting review&hellip;</div>
                 )}
                 {agentMessages.length === 0 && !agentStreaming && agentMode === 'assist' && (
-                  <div className="text-center text-xs text-[#7A6555] py-8">
+                  <div className="text-center text-xs text-[var(--cream-faint)] py-8">
                     {selectedText ? 'Edit the instruction below, then send.' : 'Use the controls above to pick a fix.'}
                   </div>
                 )}
@@ -1308,7 +1308,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           {msg.content}
                         </div>
                       ) : (
-                        <div className="max-w-[92%] px-3.5 py-2.5 bg-[#231F1B] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
+                        <div className="max-w-[92%] px-3.5 py-2.5 bg-[var(--ink-card)] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
                           {msg.content}
                           {isStreamingThis && (
                             <span className="inline-block w-0.5 h-3.5 bg-[rgba(184,115,51,0.08)]0 ml-0.5 animate-pulse align-middle" />
@@ -1320,7 +1320,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           <Link
                             href="/pricing"
                             title="Upgrade to apply agent suggestions"
-                            className="mt-1 flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.05)] text-[#7A6555] rounded-lg hover:text-[#B87333] hover:bg-[rgba(184,115,51,0.1)] transition-colors border border-[rgba(184,115,51,0.2)]"
+                            className="mt-1 flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.05)] text-[var(--cream-faint)] rounded-lg hover:text-[#B87333] hover:bg-[rgba(184,115,51,0.1)] transition-colors border border-[rgba(184,115,51,0.2)]"
                           >
                             <Lock className="w-2.5 h-2.5" />
                             Apply to article
@@ -1383,7 +1383,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-[#7A6555] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
+                  <p className="text-xs text-[var(--cream-faint)] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
                 </div>
               )}
 
@@ -1421,7 +1421,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-[#7A6555] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
+                  <p className="text-xs text-[var(--cream-faint)] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
                 </div>
               )}
             </>

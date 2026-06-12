@@ -44,14 +44,14 @@ const TOAST_CONFIG: Record<ToastStage, { label: string; progress: number }> = {
 }
 
 function DifficultyBar({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-[#A89070]">—</span>
+  if (value === null) return <span className="text-[var(--cream-dim)]">—</span>
   const color = value < 30 ? 'bg-green-400' : value < 60 ? 'bg-amber-400' : 'bg-red-400'
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-[#2A2420] rounded-full overflow-hidden">
+      <div className="w-16 h-1.5 bg-[var(--ink-deep)] rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${value}%` }} />
       </div>
-      <span className="text-xs text-[#A89070] tabular-nums">{value}</span>
+      <span className="text-xs text-[var(--cream-dim)] tabular-nums">{value}</span>
     </div>
   )
 }
@@ -63,12 +63,12 @@ function SortHeader({
   return (
     <button
       onClick={() => onSort(field)}
-      className="flex items-center gap-1 text-left font-medium text-[#A89070] hover:text-[#A89070] group"
+      className="flex items-center gap-1 text-left font-medium text-[var(--cream-dim)] hover:text-[var(--cream-dim)] group"
     >
       {label}
       <span className="flex flex-col -space-y-1">
-        <ChevronUp className={`w-3 h-3 ${active && sort.dir === 'asc' ? 'text-[#B87333]' : 'text-[#A89070] group-hover:text-[#7A6555]'}`} />
-        <ChevronDown className={`w-3 h-3 ${active && sort.dir === 'desc' ? 'text-[#B87333]' : 'text-[#A89070] group-hover:text-[#7A6555]'}`} />
+        <ChevronUp className={`w-3 h-3 ${active && sort.dir === 'asc' ? 'text-[#B87333]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
+        <ChevronDown className={`w-3 h-3 ${active && sort.dir === 'desc' ? 'text-[#B87333]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
       </span>
     </button>
   )
@@ -371,7 +371,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--cream-faint)]" />
       </div>
     )
   }
@@ -379,7 +379,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
   if (!project) {
     return (
       <div className="p-8">
-        <p className="text-[#A89070]">Project not found.</p>
+        <p className="text-[var(--cream-dim)]">Project not found.</p>
       </div>
     )
   }
@@ -397,13 +397,13 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
         <div>
           <button
             onClick={() => router.push('/keywords')}
-            className="flex items-center gap-1.5 text-sm text-[#7A6555] hover:text-[#A89070] mb-3 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-[var(--cream-faint)] hover:text-[var(--cream-dim)] mb-3 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Keywords
           </button>
           <h1 className="text-2xl font-bold text-[#F7F3EC]">{project.name}</h1>
-          <p className="mt-0.5 text-sm text-[#A89070]">Seed: <span className="font-medium text-[#A89070]">{project.seed_topic}</span></p>
+          <p className="mt-0.5 text-sm text-[var(--cream-dim)]">Seed: <span className="font-medium text-[var(--cream-dim)]">{project.seed_topic}</span></p>
           {resolvedSeeds && resolvedSeeds.length > 0 && (
             <p className="mt-1 flex items-center gap-1.5 text-xs text-[#D4954A]">
               <Sparkles className="w-3 h-3 shrink-0" />
@@ -431,7 +431,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             {/* Staleness badge + refresh control */}
             <div className="flex flex-col items-end gap-1">
               {daysSinceResearch !== null && (
-                <span className="text-xs text-[#7A6555]">
+                <span className="text-xs text-[var(--cream-faint)]">
                   Last updated {daysSinceResearch === 0 ? 'today' : `${daysSinceResearch} day${daysSinceResearch !== 1 ? 's' : ''} ago`}
                 </span>
               )}
@@ -450,7 +450,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                 <button
                   onClick={handleResearch}
                   disabled={researching}
-                  className="text-xs text-[#7A6555] hover:text-[#D4954A] transition-colors disabled:opacity-60"
+                  className="text-xs text-[var(--cream-faint)] hover:text-[#D4954A] transition-colors disabled:opacity-60"
                 >
                   {researching ? 'Refreshing…' : 'Refresh data'}
                 </button>
@@ -509,8 +509,8 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
           <div className="inline-flex p-3 bg-[rgba(184,115,51,0.08)] rounded-xl mb-4">
             <Sparkles className="w-6 h-6 text-[#D4954A]" />
           </div>
-          <h3 className="text-base font-semibold text-[#A89070] mb-2">Ready to research</h3>
-          <p className="text-sm text-[#A89070] max-w-sm mx-auto">
+          <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-2">Ready to research</h3>
+          <p className="text-sm text-[var(--cream-dim)] max-w-sm mx-auto">
             Click &quot;Start Research&quot; to fetch 50 keyword ideas from DataForSEO and automatically cluster them by topic.
           </p>
         </div>
@@ -520,8 +520,8 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
       {(project.status === 'researching' || researching) && (
         <div className="border-2 border-dashed border-[rgba(184,115,51,0.25)] rounded-2xl p-12 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-[#D4954A] mx-auto mb-4" />
-          <h3 className="text-base font-semibold text-[#A89070] mb-1">Researching keywords…</h3>
-          <p className="text-sm text-[#7A6555]">Fetching data + clustering with AI. Takes ~10 seconds.</p>
+          <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-1">Researching keywords…</h3>
+          <p className="text-sm text-[var(--cream-faint)]">Fetching data + clustering with AI. Takes ~10 seconds.</p>
         </div>
       )}
 
@@ -535,12 +535,12 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                 value={manualKw}
                 onChange={(e) => { setManualKw(e.target.value); setManualError(null) }}
                 placeholder="Add a keyword manually…"
-                className="flex-1 max-w-xs px-3 py-2 text-sm bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-lg text-[#F7F3EC] placeholder:text-[#7A6555] focus:outline-none focus:border-[#B87333]"
+                className="flex-1 max-w-xs px-3 py-2 text-sm bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-lg text-[#F7F3EC] placeholder:text-[var(--cream-faint)] focus:outline-none focus:border-[#B87333]"
               />
               <button
                 type="submit"
                 disabled={!manualKw.trim() || addingManual}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#2A2420] text-[#A89070] text-sm font-medium rounded-lg hover:bg-[#332C26] disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 bg-[var(--ink-deep)] text-[var(--cream-dim)] text-sm font-medium rounded-lg hover:bg-[#332C26] disabled:opacity-50 transition-colors"
               >
                 {addingManual
                   ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -562,12 +562,12 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                 className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                   activeCluster === c
                     ? 'bg-[#B87333] text-[#F7F3EC]'
-                    : 'bg-[#2A2420] text-[#A89070] hover:bg-[#2A2420]'
+                    : 'bg-[var(--ink-deep)] text-[var(--cream-dim)] hover:bg-[var(--ink-deep)]'
                 }`}
               >
                 {c}
                 {c !== 'All' && (
-                  <span className={`ml-1.5 ${activeCluster === c ? 'text-[rgba(184,115,51,0.7)]' : 'text-[#7A6555]'}`}>
+                  <span className={`ml-1.5 ${activeCluster === c ? 'text-[rgba(184,115,51,0.7)]' : 'text-[var(--cream-faint)]'}`}>
                     {keywords.filter((k) => k.cluster === c).length}
                   </span>
                 )}
@@ -575,10 +575,10 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             ))}
           </div>
 
-          <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
+          <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[rgba(184,115,51,0.15)] bg-[#231F1B]">
+                <tr className="border-b border-[rgba(184,115,51,0.15)] bg-[var(--ink-card)]">
                   <th className="px-4 py-3 w-10">
                     <input
                       type="checkbox"
@@ -596,11 +596,11 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                   <th className="px-4 py-3 text-left">
                     <SortHeader label="Difficulty" field="keyword_difficulty" sort={sort} onSort={toggleSort} />
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-[#A89070]">Competition</th>
+                  <th className="px-4 py-3 text-left font-medium text-[var(--cream-dim)]">Competition</th>
                   <th className="px-4 py-3 text-left">
                     <SortHeader label="CPC" field="cpc" sort={sort} onSort={toggleSort} />
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-[#A89070]">Cluster</th>
+                  <th className="px-4 py-3 text-left font-medium text-[var(--cream-dim)]">Cluster</th>
                   <th className="w-10" />
                 </tr>
               </thead>
@@ -609,7 +609,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                   <tr
                     key={kw.id}
                     onClick={() => toggleSelect(kw.id)}
-                    className={`cursor-pointer transition-colors ${selected.has(kw.id) ? 'bg-[rgba(184,115,51,0.08)]' : 'hover:bg-[#231F1B]'}`}
+                    className={`cursor-pointer transition-colors ${selected.has(kw.id) ? 'bg-[rgba(184,115,51,0.08)]' : 'hover:bg-[var(--ink-card)]'}`}
                   >
                     <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -620,26 +620,26 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                       />
                     </td>
                     <td className="px-4 py-2.5 font-medium text-[#F7F3EC]">{kw.keyword}</td>
-                    <td className="px-4 py-2.5 tabular-nums text-[#A89070]">
+                    <td className="px-4 py-2.5 tabular-nums text-[var(--cream-dim)]">
                       {kw.avg_monthly_searches != null
                         ? kw.avg_monthly_searches.toLocaleString()
-                        : <span className="text-[#A89070]">—</span>}
+                        : <span className="text-[var(--cream-dim)]">—</span>}
                     </td>
                     <td className="px-4 py-2.5">
                       <DifficultyBar value={kw.keyword_difficulty} />
                     </td>
                     <td className="px-4 py-2.5">
                       {kw.competition ? (
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${COMPETITION_COLORS[kw.competition] ?? 'bg-[#2A2420] text-[#A89070]'}`}>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${COMPETITION_COLORS[kw.competition] ?? 'bg-[var(--ink-deep)] text-[var(--cream-dim)]'}`}>
                           {kw.competition}
                         </span>
-                      ) : <span className="text-[#A89070]">—</span>}
+                      ) : <span className="text-[var(--cream-dim)]">—</span>}
                     </td>
-                    <td className="px-4 py-2.5 tabular-nums text-[#A89070]">
-                      {kw.cpc != null ? `$${kw.cpc.toFixed(2)}` : <span className="text-[#A89070]">—</span>}
+                    <td className="px-4 py-2.5 tabular-nums text-[var(--cream-dim)]">
+                      {kw.cpc != null ? `$${kw.cpc.toFixed(2)}` : <span className="text-[var(--cream-dim)]">—</span>}
                     </td>
                     <td className="px-4 py-2.5">
-                      <span className="text-xs text-[#A89070] bg-[#2A2420] px-2 py-0.5 rounded-full">
+                      <span className="text-xs text-[var(--cream-dim)] bg-[var(--ink-deep)] px-2 py-0.5 rounded-full">
                         {kw.cluster ?? 'Other'}
                       </span>
                     </td>
@@ -656,7 +656,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                           className={`p-1.5 rounded transition-colors ${
                             savedKwIds.has(kw.id) || savingKw === kw.id
                               ? 'text-[#D4954A]'
-                              : 'text-[#A89070] hover:text-[#D4954A]'
+                              : 'text-[var(--cream-dim)] hover:text-[#D4954A]'
                           }`}
                         >
                           {savingKw === kw.id
@@ -667,14 +667,14 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
 
                         {saveMenu?.kwId === kw.id && (
                           <div
-                            className="absolute right-0 bottom-full mb-1 z-50 bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-lg shadow-lg py-1 min-w-40 text-sm"
+                            className="absolute right-0 bottom-full mb-1 z-50 bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-lg shadow-lg py-1 min-w-40 text-sm"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {[...new Set(['General', ...savedFolders])].map((f) => (
                               <button
                                 key={f}
                                 onClick={() => handleSaveKeyword(kw, f)}
-                                className="w-full text-left px-3 py-2 hover:bg-[#231F1B] text-[#A89070]"
+                                className="w-full text-left px-3 py-2 hover:bg-[var(--ink-card)] text-[var(--cream-dim)]"
                               >
                                 {f}
                               </button>
@@ -698,7 +698,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                             ) : (
                               <button
                                 onClick={() => { setShowNewFolderFor(kw.id); setNewFolderText('') }}
-                                className="w-full text-left px-3 py-2 hover:bg-[#231F1B] text-[#B87333] font-medium border-t border-[rgba(184,115,51,0.15)]"
+                                className="w-full text-left px-3 py-2 hover:bg-[var(--ink-card)] text-[#B87333] font-medium border-t border-[rgba(184,115,51,0.15)]"
                               >
                                 + New folder…
                               </button>
@@ -712,7 +712,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
               </tbody>
             </table>
 
-            <div className="px-4 py-3 border-t border-[rgba(184,115,51,0.15)] bg-[#231F1B] flex items-center justify-between text-xs text-[#7A6555]">
+            <div className="px-4 py-3 border-t border-[rgba(184,115,51,0.15)] bg-[var(--ink-card)] flex items-center justify-between text-xs text-[var(--cream-faint)]">
               <span>{filtered.length} keywords{activeCluster !== 'All' ? ` in "${activeCluster}"` : ''}</span>
               {selected.size > 0 && (
                 <span className="text-[#B87333] font-medium">{selected.size} selected</span>
@@ -724,7 +724,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
 
       {/* Research progress toast — bottom-right fixed card */}
       {toastVisible && (
-        <div className="fixed bottom-5 right-5 z-50 w-72 bg-[#1C1917] rounded-xl shadow-xl border border-[rgba(184,115,51,0.2)] p-4">
+        <div className="fixed bottom-5 right-5 z-50 w-72 bg-[var(--ink)] rounded-xl shadow-xl border border-[rgba(184,115,51,0.2)] p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               {toastStage === 'complete' ? (
@@ -738,7 +738,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             </div>
             <button
               onClick={() => setToastVisible(false)}
-              className="text-[#7A6555] hover:text-[#A89070] transition-colors"
+              className="text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
               aria-label="Dismiss"
             >
               <X className="w-3.5 h-3.5" />
@@ -747,13 +747,13 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
 
           <p className={`text-xs mb-3 ${
             toastStage === 'error' ? 'text-red-600' :
-            toastStage === 'complete' ? 'text-green-600' : 'text-[#A89070]'
+            toastStage === 'complete' ? 'text-green-600' : 'text-[var(--cream-dim)]'
           }`}>
             {TOAST_CONFIG[toastStage].label}
             {toastStage === 'error' && toastErrorMsg ? `: ${toastErrorMsg}` : ''}
           </p>
 
-          <div className="w-full h-1.5 bg-[#2A2420] rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-[var(--ink-deep)] rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ease-out ${
                 toastStage === 'error' ? 'bg-red-400' :

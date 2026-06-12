@@ -64,7 +64,7 @@ function PriorityBadge({ priority }: { priority: Gap['priority'] }) {
   const map = {
     high: 'bg-[rgba(220,60,60,0.12)] text-[#f87171] border-[rgba(220,60,60,0.3)]',
     medium: 'bg-[rgba(184,115,51,0.12)] text-[#D4954A] border-[rgba(184,115,51,0.3)]',
-    low: 'bg-[#231F1B] text-[#A89070] border-[rgba(184,115,51,0.2)]',
+    low: 'bg-[var(--ink-card)] text-[var(--cream-dim)] border-[rgba(184,115,51,0.2)]',
   }
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${map[priority]}`}>
@@ -255,11 +255,11 @@ export default function DashboardAuditPage() {
             <BarChart2 className="w-5 h-5 text-[#D4954A]" />
             <h1 className="text-2xl font-bold text-[#F7F3EC]">Content Audit</h1>
           </div>
-          <p className="text-sm text-[#A89070]">
+          <p className="text-sm text-[var(--cream-dim)]">
             {auditUrl ? `Scanning ${auditUrl}` : 'See exactly where your content strategy has gaps.'}
           </p>
           {lastRun && (
-            <p className="text-xs text-[#7A6555] mt-1 flex items-center gap-1">
+            <p className="text-xs text-[var(--cream-faint)] mt-1 flex items-center gap-1">
               <Clock className="w-3 h-3" />
               Last audited {timeAgo(lastRun)}
             </p>
@@ -268,7 +268,7 @@ export default function DashboardAuditPage() {
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setShowUrlInput((v) => !v)}
-            className="px-3 py-1.5 text-xs text-[#A89070] border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[#231F1B] transition-colors"
+            className="px-3 py-1.5 text-xs text-[var(--cream-dim)] border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] transition-colors"
           >
             Change URL
           </button>
@@ -285,8 +285,8 @@ export default function DashboardAuditPage() {
 
       {/* Intro blurb — shown before first run */}
       {status === 'idle' && !result && (
-        <div className="mb-8 rounded-xl px-5 py-4 border border-[rgba(184,115,51,0.18)]" style={{ background: '#231F1B' }}>
-          <p className="text-sm text-[#A89070] leading-relaxed">
+        <div className="mb-8 rounded-xl px-5 py-4 border border-[rgba(184,115,51,0.18)]" style={{ background: 'var(--ink-card)' }}>
+          <p className="text-sm text-[var(--cream-dim)] leading-relaxed">
             Byline scans your site, cross-references your published content against search demand in your niche, and surfaces the topics your competitors are ranking for that you haven&apos;t touched yet. You&apos;ll see your coverage broken down by topic cluster, a prioritized list of gaps worth writing, and the keywords already sitting in your research library that still need articles. Most audits take under 15 seconds.
           </p>
         </div>
@@ -325,12 +325,12 @@ export default function DashboardAuditPage() {
 
       {/* Loading */}
       {status === 'loading' && (
-        <div className="bg-[#231F1B] rounded-2xl p-16 text-center">
+        <div className="bg-[var(--ink-card)] rounded-2xl p-16 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-[#D4954A] mx-auto mb-4" />
-          <p className="text-sm font-medium text-[#A89070]">
+          <p className="text-sm font-medium text-[var(--cream-dim)]">
             Scanning {auditUrl} for content gaps...
           </p>
-          <p className="text-xs text-[#7A6555] mt-2">Takes about 10 seconds.</p>
+          <p className="text-xs text-[var(--cream-faint)] mt-2">Takes about 10 seconds.</p>
         </div>
       )}
 
@@ -352,21 +352,21 @@ export default function DashboardAuditPage() {
               { value: result.gaps.length, label: 'Content gaps', color: 'text-[#B87333]' },
               { value: unwrittenSaved.length, label: 'Saved keywords not yet written', color: 'text-[#D4954A]' },
             ].map(({ value, label, color }) => (
-              <div key={label} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
+              <div key={label} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
                 <div className={`text-2xl font-bold ${color}`}>{value}</div>
-                <div className="text-xs text-[#A89070] mt-0.5">{label}</div>
+                <div className="text-xs text-[var(--cream-dim)] mt-0.5">{label}</div>
               </div>
             ))}
           </div>
 
           {/* Competitor Domain Authority */}
           {(brand?.competitors?.length ?? 0) > 0 && (
-            <div className="rounded-xl p-5 border border-[rgba(184,115,51,0.2)]" style={{ background: '#1C1917' }}>
+            <div className="rounded-xl p-5 border border-[rgba(184,115,51,0.2)]" style={{ background: 'var(--ink)' }}>
               <h2 className="text-sm font-semibold text-[#F7F3EC] mb-1 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-[#D4954A]" />
                 Competitor Domain Authority
               </h2>
-              <p className="text-xs text-[#A89070] mb-3">
+              <p className="text-xs text-[var(--cream-dim)] mb-3">
                 Ahrefs Domain Rating (0–100) for each competitor&apos;s backlink profile. Domains are
                 inferred from competitor names, so some lookups may show &ldquo;—&rdquo;.
               </p>
@@ -377,12 +377,12 @@ export default function DashboardAuditPage() {
                     <div
                       key={name}
                       className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-[rgba(184,115,51,0.15)]"
-                      style={{ background: '#231F1B' }}
+                      style={{ background: 'var(--ink-card)' }}
                     >
                       <div className="min-w-0">
                         <span className="text-sm text-[#F7F3EC]">{name}</span>
                         {domain && domain !== name.toLowerCase() && (
-                          <span className="text-xs text-[#7A6555] ml-2">{domain}</span>
+                          <span className="text-xs text-[var(--cream-faint)] ml-2">{domain}</span>
                         )}
                       </div>
                       <DrBadge rating={competitorDr[domain]} />
@@ -399,7 +399,7 @@ export default function DashboardAuditPage() {
               <h2 className="text-sm font-semibold text-[#F7F3EC] mb-1">
                 You&apos;ve saved these keywords but haven&apos;t written about them yet
               </h2>
-              <p className="text-xs text-[#A89070] mb-3">
+              <p className="text-xs text-[var(--cream-dim)] mb-3">
                 These are already in your research pipeline — write them first.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -407,7 +407,7 @@ export default function DashboardAuditPage() {
                   <Link
                     key={kw}
                     href="/articles/new"
-                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#1C1917] border border-[rgba(184,115,51,0.3)] text-[#D4954A] rounded-full hover:border-[#B87333] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[var(--ink)] border border-[rgba(184,115,51,0.3)] text-[#D4954A] rounded-full hover:border-[#B87333] transition-colors"
                   >
                     {kw}
                     <ArrowRight className="w-3 h-3" />
@@ -428,7 +428,7 @@ export default function DashboardAuditPage() {
                 {result.quickWins.map((w, i) => (
                   <li
                     key={i}
-                    className="flex items-start gap-2 text-sm text-[#A89070] bg-[#1C1917] border border-[rgba(184,115,51,0.15)] rounded-lg px-4 py-2.5"
+                    className="flex items-start gap-2 text-sm text-[var(--cream-dim)] bg-[var(--ink)] border border-[rgba(184,115,51,0.15)] rounded-lg px-4 py-2.5"
                   >
                     <CheckCircle2 className="w-4 h-4 text-[#D4954A] mt-0.5 shrink-0" />
                     {w}
@@ -449,7 +449,7 @@ export default function DashboardAuditPage() {
                   (kw) => kw.toLowerCase() === gap.suggestedKeyword?.toLowerCase()
                 )
                 return (
-                  <div key={i} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
+                  <div key={i} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
                     <div className="flex items-start gap-3 mb-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center flex-wrap gap-2 mb-1">
@@ -461,7 +461,7 @@ export default function DashboardAuditPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-[#A89070]">{gap.description}</p>
+                        <p className="text-sm text-[var(--cream-dim)]">{gap.description}</p>
                         {gap.suggestedKeyword && (
                           <p className="text-xs text-[#B87333] mt-1.5 font-medium">
                             Keyword: {gap.suggestedKeyword}
@@ -472,7 +472,7 @@ export default function DashboardAuditPage() {
                     <div className="flex items-center gap-2 pt-3 border-t border-[rgba(184,115,51,0.15)]">
                       <Link
                         href={`/keywords?seed=${encodeURIComponent(gap.suggestedKeyword || gap.title)}`}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-[rgba(184,115,51,0.2)] text-[#A89070] rounded-lg hover:border-[#B87333] hover:text-[#B87333] transition-colors"
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] rounded-lg hover:border-[#B87333] hover:text-[#B87333] transition-colors"
                       >
                         <Search className="w-3 h-3" />
                         Research this keyword →
@@ -501,11 +501,11 @@ export default function DashboardAuditPage() {
                   return (
                     <div
                       key={tc.cluster}
-                      className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden"
+                      className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden"
                     >
                       <button
                         onClick={() => setExpandedCluster(isOpen ? null : tc.cluster)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#231F1B] transition-colors"
+                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--ink-card)] transition-colors"
                       >
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="text-sm font-medium text-[#F7F3EC]">{tc.cluster}</span>
@@ -517,8 +517,8 @@ export default function DashboardAuditPage() {
                           </span>
                         </div>
                         {isOpen
-                          ? <ChevronUp className="w-4 h-4 text-[#7A6555] shrink-0" />
-                          : <ChevronDown className="w-4 h-4 text-[#7A6555] shrink-0" />
+                          ? <ChevronUp className="w-4 h-4 text-[var(--cream-faint)] shrink-0" />
+                          : <ChevronDown className="w-4 h-4 text-[var(--cream-faint)] shrink-0" />
                         }
                       </button>
                       {isOpen && (
@@ -528,7 +528,7 @@ export default function DashboardAuditPage() {
                               <p className="text-xs font-semibold text-[#D4954A] mb-2">Covered</p>
                               <ul className="space-y-1">
                                 {tc.covered.map((c) => (
-                                  <li key={c} className="flex items-start gap-1.5 text-xs text-[#A89070]">
+                                  <li key={c} className="flex items-start gap-1.5 text-xs text-[var(--cream-dim)]">
                                     <CheckCircle2 className="w-3.5 h-3.5 text-[#D4954A] mt-0.5 shrink-0" />
                                     {c}
                                   </li>
@@ -541,7 +541,7 @@ export default function DashboardAuditPage() {
                               <p className="text-xs font-semibold text-[#f87171] mb-2">Missing</p>
                               <ul className="space-y-1">
                                 {tc.missing.map((m) => (
-                                  <li key={m} className="flex items-start gap-1.5 text-xs text-[#A89070]">
+                                  <li key={m} className="flex items-start gap-1.5 text-xs text-[var(--cream-dim)]">
                                     <div className="w-3.5 h-3.5 rounded-full border border-[rgba(220,60,60,0.4)] mt-0.5 shrink-0 flex-shrink-0" />
                                     {m}
                                   </li>

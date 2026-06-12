@@ -50,7 +50,7 @@ export default function HomePage() {
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 bg-[#1C1917]/95 backdrop-blur border-b border-[rgba(184,115,51,0.15)]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '22px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>byline<span style={{ color: '#B87333' }}>.</span></span>
+          <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '22px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>Byline<span style={{ color: '#B87333' }}>.</span></span>
           <div className="flex items-center gap-4">
             <Link href="/pricing" className="text-sm text-[#A89070] hover:text-[#F7F3EC] transition-colors hidden sm:block">
               Pricing

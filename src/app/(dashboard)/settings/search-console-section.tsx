@@ -114,7 +114,7 @@ export default function SearchConsoleSection({
   return (
     <div
       className="rounded-2xl p-6 mt-6"
-      style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}
+      style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}
     >
       <div className="flex items-center gap-2 mb-5">
         <Search className="w-4 h-4" style={{ color: '#B87333' }} />
@@ -135,13 +135,13 @@ export default function SearchConsoleSection({
       )}
 
       {!brandProfileId ? (
-        <p className="text-sm" style={{ color: '#A89070' }}>
+        <p className="text-sm" style={{ color: 'var(--cream-dim)' }}>
           Set up a brand profile first to connect Search Console.
         </p>
       ) : !status.connected ? (
         // ── Not connected ──────────────────────────────────────────────
         <div className="space-y-4">
-          <p className="text-sm leading-relaxed" style={{ color: '#A89070' }}>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--cream-dim)' }}>
             Connect Google Search Console to see real clicks, impressions, and rankings for your
             site right inside Byline.
           </p>
@@ -156,19 +156,19 @@ export default function SearchConsoleSection({
       ) : !status.has_property || showPicker ? (
         // ── Connected, picking a property ──────────────────────────────
         <div className="space-y-4">
-          <p className="text-sm" style={{ color: '#A89070' }}>
+          <p className="text-sm" style={{ color: 'var(--cream-dim)' }}>
             {status.has_property
               ? 'Choose a different Search Console property for this brand.'
               : 'Connected. Now choose which Search Console property to track.'}
           </p>
 
           {loadingProps ? (
-            <div className="flex items-center gap-2 text-sm" style={{ color: '#7A6555' }}>
+            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--cream-faint)' }}>
               <Loader2 className="w-4 h-4 animate-spin" /> Loading your properties…
             </div>
           ) : properties.length === 0 ? (
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm" style={{ color: '#7A6555' }}>
+              <p className="text-sm" style={{ color: 'var(--cream-faint)' }}>
                 No verified properties found on this Google account.
               </p>
               <button
@@ -189,20 +189,20 @@ export default function SearchConsoleSection({
                     onClick={() => selectProperty(p.siteUrl)}
                     disabled={selecting}
                     className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-left transition-colors disabled:opacity-50"
-                    style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.2)' }}
+                    style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.2)' }}
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate" style={{ color: '#F7F3EC' }}>
                         {p.siteUrl}
                       </div>
-                      <div className="text-xs" style={{ color: '#7A6555' }}>
+                      <div className="text-xs" style={{ color: 'var(--cream-faint)' }}>
                         {p.permissionLevel}
                       </div>
                     </div>
                     {isCurrent ? (
                       <span className="text-xs font-medium shrink-0" style={{ color: '#D4954A' }}>Current</span>
                     ) : selecting ? (
-                      <Loader2 className="w-4 h-4 animate-spin shrink-0" style={{ color: '#7A6555' }} />
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" style={{ color: 'var(--cream-faint)' }} />
                     ) : (
                       <span className="text-xs font-medium shrink-0" style={{ color: '#B87333' }}>Select</span>
                     )}
@@ -216,7 +216,7 @@ export default function SearchConsoleSection({
             onClick={disconnect}
             disabled={disconnecting}
             className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-            style={{ color: '#7A6555' }}
+            style={{ color: 'var(--cream-faint)' }}
           >
             {disconnecting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlink className="w-3 h-3" />}
             Disconnect
@@ -226,13 +226,13 @@ export default function SearchConsoleSection({
         // ── Fully connected ────────────────────────────────────────────
         <div className="space-y-4">
           <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid rgba(184,115,51,0.1)' }}>
-            <span className="text-sm" style={{ color: '#A89070' }}>Status</span>
+            <span className="text-sm" style={{ color: 'var(--cream-dim)' }}>Status</span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border text-green-400 bg-green-900/30 border-green-700/40">
               <CheckCircle2 className="w-3 h-3" /> Connected
             </span>
           </div>
           <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid rgba(184,115,51,0.1)' }}>
-            <span className="text-sm" style={{ color: '#A89070' }}>Property</span>
+            <span className="text-sm" style={{ color: 'var(--cream-dim)' }}>Property</span>
             <span className="text-sm font-semibold truncate max-w-[16rem]" style={{ color: '#F7F3EC' }}>
               {status.property_url}
             </span>
@@ -249,7 +249,7 @@ export default function SearchConsoleSection({
               onClick={disconnect}
               disabled={disconnecting}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ color: '#7A6555' }}
+              style={{ color: 'var(--cream-faint)' }}
             >
               {disconnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5" />}
               Disconnect

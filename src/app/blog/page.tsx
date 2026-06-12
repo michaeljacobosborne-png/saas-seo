@@ -86,7 +86,7 @@ export default async function BlogIndexPage() {
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-[#B87333]/40 font-[family-name:var(--font-playfair)] text-3xl font-black">
-                      byline<span className="text-[#B87333]/60">.</span>
+                      Byline<span className="text-[#B87333]/60">.</span>
                     </div>
                   )}
                 </div>

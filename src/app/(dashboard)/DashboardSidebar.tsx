@@ -46,7 +46,7 @@ export default function DashboardSidebar({ userEmail }: { userEmail: string }) {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
         <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '22px', fontWeight: 900, color: 'var(--cream)', letterSpacing: '-0.01em' }}>
-          byline<span style={{ color: 'var(--copper)' }}>.</span>
+          Byline<span style={{ color: 'var(--copper)' }}>.</span>
         </span>
         {/* Close button — only meaningful inside the mobile drawer */}
         <button
@@ -116,7 +116,7 @@ export default function DashboardSidebar({ userEmail }: { userEmail: string }) {
           <Menu className="w-5 h-5" />
         </button>
         <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '20px', fontWeight: 900, color: 'var(--cream)', letterSpacing: '-0.01em' }}>
-          byline<span style={{ color: 'var(--copper)' }}>.</span>
+          Byline<span style={{ color: 'var(--copper)' }}>.</span>
         </span>
       </div>
 

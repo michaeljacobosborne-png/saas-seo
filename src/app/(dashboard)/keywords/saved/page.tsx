@@ -11,14 +11,14 @@ import {
 } from 'lucide-react'
 
 function DifficultyBar({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-[#A89070]">—</span>
+  if (value === null) return <span className="text-[var(--cream-dim)]">—</span>
   const color = value < 30 ? 'bg-green-400' : value < 60 ? 'bg-amber-400' : 'bg-red-400'
   return (
     <div className="flex items-center gap-2">
-      <div className="w-14 h-1.5 bg-[#2A2420] rounded-full overflow-hidden">
+      <div className="w-14 h-1.5 bg-[var(--ink-deep)] rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${value}%` }} />
       </div>
-      <span className="text-xs text-[#A89070] tabular-nums">{value}</span>
+      <span className="text-xs text-[var(--cream-dim)] tabular-nums">{value}</span>
     </div>
   )
 }
@@ -143,11 +143,11 @@ export default function SavedKeywordsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#F7F3EC]">Saved Keywords</h1>
-          <p className="mt-1 text-sm text-[#A89070]">Keywords saved for future articles, organised by folder.</p>
+          <p className="mt-1 text-sm text-[var(--cream-dim)]">Keywords saved for future articles, organised by folder.</p>
           <div className="flex gap-1 mt-3">
             <Link
               href="/keywords"
-              className="px-3 py-1 text-xs font-medium rounded-full bg-[#2A2420] text-[#A89070] hover:bg-[#2A2420] transition-colors"
+              className="px-3 py-1 text-xs font-medium rounded-full bg-[var(--ink-deep)] text-[var(--cream-dim)] hover:bg-[var(--ink-deep)] transition-colors"
             >
               Projects
             </Link>
@@ -161,7 +161,7 @@ export default function SavedKeywordsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-40">
-          <Loader2 className="w-5 h-5 animate-spin text-[#7A6555]" />
+          <Loader2 className="w-5 h-5 animate-spin text-[var(--cream-faint)]" />
         </div>
       ) : error ? (
         <div className="flex items-center gap-2 text-red-600 text-sm">
@@ -172,8 +172,8 @@ export default function SavedKeywordsPage() {
           <div className="inline-flex p-3 bg-violet-50 rounded-xl mb-4">
             <Bookmark className="w-6 h-6 text-violet-500" />
           </div>
-          <h3 className="text-base font-semibold text-[#A89070] mb-2">No saved keywords yet</h3>
-          <p className="text-sm text-[#A89070] mb-4">
+          <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-2">No saved keywords yet</h3>
+          <p className="text-sm text-[var(--cream-dim)] mb-4">
             Run a keyword research project and bookmark keywords using the
             {' '}<Bookmark className="w-3.5 h-3.5 inline" />{' '}icon on each row.
           </p>
@@ -187,10 +187,10 @@ export default function SavedKeywordsPage() {
       ) : (
         <div className="space-y-3">
           {folderEntries.map(([folder, kws]) => (
-            <div key={folder} className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
+            <div key={folder} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
               {/* Folder header */}
               <div
-                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#231F1B] transition-colors"
+                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[var(--ink-card)] transition-colors"
                 onClick={() => toggleFolder(folder)}
               >
                 <div className="flex items-center gap-2">
@@ -209,21 +209,21 @@ export default function SavedKeywordsPage() {
                       <button type="submit" disabled={renaming} className="p-1 text-green-600 hover:text-green-700">
                         {renaming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                       </button>
-                      <button type="button" onClick={() => setRenamingFolder(null)} className="p-1 text-[#7A6555] hover:text-[#A89070]">
+                      <button type="button" onClick={() => setRenamingFolder(null)} className="p-1 text-[var(--cream-faint)] hover:text-[var(--cream-dim)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </form>
                   ) : (
                     <>
                       <span className="font-semibold text-sm text-[#F7F3EC]">{folder}</span>
-                      <span className="text-xs text-[#7A6555] bg-[#2A2420] px-1.5 py-0.5 rounded-full">{kws.length}</span>
+                      <span className="text-xs text-[var(--cream-faint)] bg-[var(--ink-deep)] px-1.5 py-0.5 rounded-full">{kws.length}</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           setRenamingFolder(folder)
                           setRenameValue(folder)
                         }}
-                        className="p-1 text-[#A89070] hover:text-[#A89070] transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1 text-[var(--cream-dim)] hover:text-[var(--cream-dim)] transition-colors opacity-0 group-hover:opacity-100"
                         title="Rename folder"
                       >
                         <Pencil className="w-3 h-3" />
@@ -232,8 +232,8 @@ export default function SavedKeywordsPage() {
                   )}
                 </div>
                 {openFolders.has(folder)
-                  ? <ChevronUp className="w-4 h-4 text-[#7A6555]" />
-                  : <ChevronDown className="w-4 h-4 text-[#7A6555]" />
+                  ? <ChevronUp className="w-4 h-4 text-[var(--cream-faint)]" />
+                  : <ChevronDown className="w-4 h-4 text-[var(--cream-faint)]" />
                 }
               </div>
 
@@ -241,27 +241,27 @@ export default function SavedKeywordsPage() {
               {openFolders.has(folder) && (
                 <table className="w-full text-sm border-t border-[rgba(184,115,51,0.15)]">
                   <thead>
-                    <tr className="bg-[#231F1B]">
-                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">Keyword</th>
-                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">Volume</th>
-                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">Difficulty</th>
-                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">CPC</th>
-                      <th className="text-left px-4 py-2.5 font-medium text-[#A89070]">Status</th>
+                    <tr className="bg-[var(--ink-card)]">
+                      <th className="text-left px-4 py-2.5 font-medium text-[var(--cream-dim)]">Keyword</th>
+                      <th className="text-left px-4 py-2.5 font-medium text-[var(--cream-dim)]">Volume</th>
+                      <th className="text-left px-4 py-2.5 font-medium text-[var(--cream-dim)]">Difficulty</th>
+                      <th className="text-left px-4 py-2.5 font-medium text-[var(--cream-dim)]">CPC</th>
+                      <th className="text-left px-4 py-2.5 font-medium text-[var(--cream-dim)]">Status</th>
                       <th className="w-24" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {kws.map((kw) => (
-                      <tr key={kw.id} className="hover:bg-[#231F1B] transition-colors">
+                      <tr key={kw.id} className="hover:bg-[var(--ink-card)] transition-colors">
                         <td className="px-4 py-2.5 font-medium text-[#F7F3EC]">{kw.keyword}</td>
-                        <td className="px-4 py-2.5 tabular-nums text-[#A89070]">
-                          {kw.volume != null ? kw.volume.toLocaleString() : <span className="text-[#A89070]">—</span>}
+                        <td className="px-4 py-2.5 tabular-nums text-[var(--cream-dim)]">
+                          {kw.volume != null ? kw.volume.toLocaleString() : <span className="text-[var(--cream-dim)]">—</span>}
                         </td>
                         <td className="px-4 py-2.5">
                           <DifficultyBar value={kw.difficulty} />
                         </td>
-                        <td className="px-4 py-2.5 tabular-nums text-[#A89070]">
-                          {kw.cpc != null ? `$${Number(kw.cpc).toFixed(2)}` : <span className="text-[#A89070]">—</span>}
+                        <td className="px-4 py-2.5 tabular-nums text-[var(--cream-dim)]">
+                          {kw.cpc != null ? `$${Number(kw.cpc).toFixed(2)}` : <span className="text-[var(--cream-dim)]">—</span>}
                         </td>
                         <td className="px-4 py-2.5">
                           {kw.has_article ? (
@@ -270,7 +270,7 @@ export default function SavedKeywordsPage() {
                               Has article
                             </span>
                           ) : (
-                            <span className="text-xs text-[#7A6555]">No article yet</span>
+                            <span className="text-xs text-[var(--cream-faint)]">No article yet</span>
                           )}
                         </td>
                         <td className="px-3 py-2.5">
@@ -293,7 +293,7 @@ export default function SavedKeywordsPage() {
                               <button
                                 onClick={() => router.push(`/articles/${kw.article_id}`)}
                                 title="View article"
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-[#A89070] border border-[rgba(184,115,51,0.2)] hover:bg-[#231F1B] transition-colors"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-[var(--cream-dim)] border border-[rgba(184,115,51,0.2)] hover:bg-[var(--ink-card)] transition-colors"
                               >
                                 <FileText className="w-3 h-3" />
                                 View
@@ -303,7 +303,7 @@ export default function SavedKeywordsPage() {
                               onClick={() => handleDelete(kw.id)}
                               disabled={deletingId === kw.id}
                               title="Remove"
-                              className="p-1.5 text-[#A89070] hover:text-red-500 transition-colors rounded disabled:opacity-50"
+                              className="p-1.5 text-[var(--cream-dim)] hover:text-red-500 transition-colors rounded disabled:opacity-50"
                             >
                               {deletingId === kw.id
                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
