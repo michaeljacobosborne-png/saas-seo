@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: brandProfile } = await (supabase as any)
       .from('brand_profiles')
-      .select('brand_name, industry, target_audience')
+      .select('brand_name, industry, target_audience, website_url, tone_notes, content_goals, avoid_topics, competitors, expertise_notes, signature_angles, avoid_phrases, primary_keywords')
       .eq('user_id', user.id)
       .single()
 
