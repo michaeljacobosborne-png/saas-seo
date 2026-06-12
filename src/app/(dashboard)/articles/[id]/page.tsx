@@ -644,7 +644,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <ArrowLeft className="w-4 h-4" />
               Articles
             </Link>
-            <h1 className="text-xl font-bold text-[#F7F3EC] leading-snug">
+            <h1 className="text-xl font-bold text-[var(--cream)] leading-snug">
               {article.title ?? article.target_keyword ?? 'Untitled'}
             </h1>
             {article.target_keyword && article.title && (
@@ -696,7 +696,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={handleScore}
                 disabled={scoring}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-[#B87333] text-[#F7F3EC] rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-[#B87333] text-white rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
               >
                 {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {scores ? 'Re-score' : 'Score Article'}
@@ -709,7 +709,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 title={article.status === 'published' ? 'Mark as Complete (unpublish)' : 'Mark as Published'}
                 className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 ${
                   article.status === 'published'
-                    ? 'border-[rgba(184,115,51,0.4)] text-[#B87333] bg-[rgba(184,115,51,0.08)]'
+                    ? 'border-[rgba(184,115,51,0.4)] text-[var(--copper)] bg-[rgba(184,115,51,0.08)]'
                     : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
                 }`}
               >
@@ -791,13 +791,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-[#D4954A]" />
-                <h3 className="text-sm font-semibold text-[#F7F3EC]">Featured Image</h3>
+                <ImageIcon className="w-4 h-4 text-[var(--copper-lt)]" />
+                <h3 className="text-sm font-semibold text-[var(--cream)]">Featured Image</h3>
               </div>
               <button
                 onClick={handleGenerateImagePrompts}
                 disabled={generatingImages}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#B87333] text-[#F7F3EC] rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#B87333] text-white rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
               >
                 {generatingImages ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -847,7 +847,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {imageConcepts.map((concept, i) => (
                   <div key={i} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 flex flex-col">
-                    <h4 className="text-sm font-bold text-[#F7F3EC] leading-snug">{concept.headline}</h4>
+                    <h4 className="text-sm font-bold text-[var(--cream)] leading-snug">{concept.headline}</h4>
                     <span
                       className={`mt-2 self-start text-xs font-medium px-2.5 py-1 rounded-full ${
                         STYLE_BADGES[concept.style] ?? 'bg-gray-100 text-gray-600'
@@ -877,7 +877,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           </span>
                           <button
                             onClick={() => handleCopyAlt(concept.alt_text, i)}
-                            className="flex items-center gap-1 text-[10px] font-medium text-[var(--cream-dim)] hover:text-[#F7F3EC] transition-colors"
+                            className="flex items-center gap-1 text-[10px] font-medium text-[var(--cream-dim)] hover:text-[var(--cream)] transition-colors"
                           >
                             {copiedAltIndex === i ? (
                               <CheckCircle2 className="w-3 h-3 text-green-500" />
@@ -892,7 +892,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     )}
                     <button
                       onClick={() => setExpandedRationale((cur) => (cur === i ? null : i))}
-                      className="mt-2.5 flex items-center gap-1 text-xs font-medium text-[#B87333] hover:text-[#A0622A] transition-colors"
+                      className="mt-2.5 flex items-center gap-1 text-xs font-medium text-[var(--copper)] hover:text-[#A0622A] transition-colors"
                     >
                       <ChevronRight
                         className={`w-3.5 h-3.5 transition-transform ${expandedRationale === i ? 'rotate-90' : ''}`}
@@ -917,7 +917,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-                  activeTab === tab ? 'border-[#B87333] text-[#B87333]' : 'border-transparent text-[var(--cream-dim)] hover:text-[var(--cream-dim)]'
+                  activeTab === tab ? 'border-[#B87333] text-[var(--copper)]' : 'border-transparent text-[var(--cream-dim)] hover:text-[var(--cream-dim)]'
                 }`}
               >
                 {tab}
@@ -944,7 +944,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
                 <p className="text-sm text-[var(--cream-dim)] mb-3">No content yet.</p>
                 {article.status === 'brief_ready' && (
-                  <Link href="/articles/new" className="text-sm text-[#B87333] hover:text-[#A0622A] font-medium">
+                  <Link href="/articles/new" className="text-sm text-[var(--copper)] hover:text-[#A0622A] font-medium">
                     Continue in article wizard →
                   </Link>
                 )}
@@ -963,7 +963,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 <button
                   onClick={handleScore}
                   disabled={scoring}
-                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
                 >
                   {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   Score Article
@@ -992,7 +992,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 </div>
 
                 <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
-                  <h3 className="font-semibold text-[#F7F3EC] text-sm mb-4">Score Overview</h3>
+                  <h3 className="font-semibold text-[var(--cream)] text-sm mb-4">Score Overview</h3>
                   <div className="space-y-3">
                     <ScoreBar label="SEO" score={scores.seo.score} />
                     <ScoreBar label="Readability" score={scores.readability.score} />
@@ -1004,7 +1004,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[#F7F3EC] text-sm">SEO Breakdown</h3>
+                      <h3 className="font-semibold text-[var(--cream)] text-sm">SEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.seo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
@@ -1016,7 +1016,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
                   <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[#F7F3EC] text-sm">AEO Breakdown</h3>
+                      <h3 className="font-semibold text-[var(--cream)] text-sm">AEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.aeo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
@@ -1028,7 +1028,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
                   <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[#F7F3EC] text-sm">GEO Breakdown</h3>
+                      <h3 className="font-semibold text-[var(--cream)] text-sm">GEO Breakdown</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.geo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
@@ -1040,7 +1040,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
                   <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[#F7F3EC] text-sm">Readability</h3>
+                      <h3 className="font-semibold text-[var(--cream)] text-sm">Readability</h3>
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.readability.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
@@ -1054,8 +1054,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
-                      <TrendingUp className="w-4 h-4 text-[#D4954A]" />
-                      <h3 className="font-semibold text-[#F7F3EC] text-sm">Ranking Prediction</h3>
+                      <TrendingUp className="w-4 h-4 text-[var(--copper-lt)]" />
+                      <h3 className="font-semibold text-[var(--cream)] text-sm">Ranking Prediction</h3>
                     </div>
                     <p className="text-sm text-[var(--cream-dim)] mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
                     <ConfidenceChip confidence={scores.ranking_prediction.confidence} />
@@ -1063,8 +1063,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
                   <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
-                      <BarChart2 className="w-4 h-4 text-[#D4954A]" />
-                      <h3 className="font-semibold text-[#F7F3EC] text-sm">Traffic Prediction (monthly)</h3>
+                      <BarChart2 className="w-4 h-4 text-[var(--copper-lt)]" />
+                      <h3 className="font-semibold text-[var(--cream)] text-sm">Traffic Prediction (monthly)</h3>
                     </div>
                     <table className="w-full text-xs">
                       <tbody className="divide-y divide-gray-50">
@@ -1099,7 +1099,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(184,115,51,0.15)] shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-2 h-2 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 animate-pulse" />
-              <span className="font-semibold text-[#F7F3EC] text-sm">Byline Agent</span>
+              <span className="font-semibold text-[var(--cream)] text-sm">Byline Agent</span>
               <div className="flex gap-0.5 bg-[var(--ink-deep)] rounded-lg p-0.5">
                 {(['review', 'assist', 'auto'] as const).map((m) => {
                   const locked = m !== 'review' && accountType === 'free'
@@ -1116,7 +1116,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       }}
                       className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1 capitalize ${
                         (agentMode === m && !showUpgradePrompt) || (m === 'review' && showUpgradePrompt)
-                          ? 'bg-[var(--ink)] text-[#F7F3EC] shadow-sm'
+                          ? 'bg-[var(--ink)] text-[var(--cream)] shadow-sm'
                           : 'text-[var(--cream-dim)] hover:text-[var(--cream-dim)]'
                       }`}
                     >
@@ -1141,13 +1141,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <div className="w-12 h-12 rounded-full bg-[var(--ink-deep)] flex items-center justify-center mb-3">
                 <Lock className="w-5 h-5 text-[var(--cream-faint)]" />
               </div>
-              <h3 className="font-semibold text-[#F7F3EC] text-sm mb-2">Assist &amp; Auto are paid features</h3>
+              <h3 className="font-semibold text-[var(--cream)] text-sm mb-2">Assist &amp; Auto are paid features</h3>
               <p className="text-sm text-[var(--cream-dim)] mb-5 leading-relaxed">
                 Upgrade to let the agent rewrite sections directly — or rewrite your entire article automatically.
               </p>
               <Link
                 href="/pricing"
-                className="px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+                className="px-4 py-2 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
               >
                 View plans
               </Link>
@@ -1159,7 +1159,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={handleScore}
                 disabled={scoring}
-                className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
               >
                 {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Score Article
@@ -1172,7 +1172,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 /* Live streaming output */
                 <div className="flex-1 flex flex-col min-h-0">
                   <div className="shrink-0 flex items-center gap-2.5 px-4 py-2.5 border-b border-[rgba(184,115,51,0.1)]">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#B87333]" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--copper)]" />
                     <span className="text-xs text-[var(--cream-dim)]">Rewriting…</span>
                     <span className="text-xs tabular-nums ml-auto text-[#4A3E35]">
                       {(agentMessages[0]?.content.length ?? 0).toLocaleString()} chars
@@ -1188,7 +1188,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 /* Applied — success state */
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                   <CheckCircle2 className="w-8 h-8 text-green-500 mb-3" />
-                  <p className="text-sm font-semibold mb-1 text-[#F7F3EC]">Article rewritten</p>
+                  <p className="text-sm font-semibold mb-1 text-[var(--cream)]">Article rewritten</p>
                   <p className="text-xs mb-6 text-[var(--cream-dim)]">
                     Applied to the editor · saving automatically. Use the editor&apos;s undo (⌘/Ctrl+Z) to revert.
                   </p>
@@ -1229,13 +1229,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       }}
                       placeholder={'e.g. "strengthen the intro" · "add more data points" · "don\'t change the conclusion"'}
                       rows={3}
-                      className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent placeholder-gray-600 bg-[var(--ink)] text-[#F7F3EC]"
+                      className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent placeholder-gray-600 bg-[var(--ink)] text-[var(--cream)]"
                     />
                   </div>
                   <button
                     onClick={() => sendAutoMode(autoInstruction)}
                     disabled={agentStreaming}
-                    className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 bg-[#B87333] text-[#F7F3EC] hover:bg-[#A0622A]"
+                    className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 bg-[#B87333] text-white hover:bg-[#A0622A]"
                   >
                     <Wand2 className="w-4 h-4" />
                     Rewrite Article
@@ -1270,7 +1270,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                                 }
                               }}
                               disabled={agentStreaming}
-                              className="shrink-0 text-xs font-semibold text-[#B87333] hover:text-indigo-800 disabled:opacity-40 whitespace-nowrap"
+                              className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-indigo-800 disabled:opacity-40 whitespace-nowrap"
                             >
                               Fix with Agent &rarr;
                             </button>
@@ -1304,11 +1304,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   return (
                     <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                       {msg.role === 'user' ? (
-                        <div className="max-w-[85%] px-3.5 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm rounded-2xl rounded-tr-sm leading-relaxed">
+                        <div className="max-w-[85%] px-3.5 py-2.5 bg-[#B87333] text-white text-sm rounded-2xl rounded-tr-sm leading-relaxed">
                           {msg.content}
                         </div>
                       ) : (
-                        <div className="max-w-[92%] px-3.5 py-2.5 bg-[var(--ink-card)] border border-[rgba(184,115,51,0.2)] text-[#F7F3EC] text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
+                        <div className="max-w-[92%] px-3.5 py-2.5 bg-[var(--ink-card)] border border-[rgba(184,115,51,0.2)] text-[var(--cream)] text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
                           {msg.content}
                           {isStreamingThis && (
                             <span className="inline-block w-0.5 h-3.5 bg-[rgba(184,115,51,0.08)]0 ml-0.5 animate-pulse align-middle" />
@@ -1320,7 +1320,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           <Link
                             href="/pricing"
                             title="Upgrade to apply agent suggestions"
-                            className="mt-1 flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.05)] text-[var(--cream-faint)] rounded-lg hover:text-[#B87333] hover:bg-[rgba(184,115,51,0.1)] transition-colors border border-[rgba(184,115,51,0.2)]"
+                            className="mt-1 flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.05)] text-[var(--cream-faint)] rounded-lg hover:text-[var(--copper)] hover:bg-[rgba(184,115,51,0.1)] transition-colors border border-[rgba(184,115,51,0.2)]"
                           >
                             <Lock className="w-2.5 h-2.5" />
                             Apply to article
@@ -1328,7 +1328,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         ) : (
                           <button
                             onClick={() => applyContentRef.current?.(applicable)}
-                            className="mt-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.08)] text-[#B87333] rounded-lg hover:bg-[rgba(184,115,51,0.12)] transition-colors border border-[rgba(184,115,51,0.25)]"
+                            className="mt-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.08)] text-[var(--copper)] rounded-lg hover:bg-[rgba(184,115,51,0.12)] transition-colors border border-[rgba(184,115,51,0.25)]"
                           >
                             Apply to article
                           </button>
@@ -1378,7 +1378,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         }
                       }}
                       disabled={!agentInput.trim() || agentStreaming}
-                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-[#F7F3EC] rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-white rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
                     >
                       {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
@@ -1416,7 +1416,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         }
                       }}
                       disabled={!assistInput.trim() || agentStreaming}
-                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-[#F7F3EC] rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-white rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
                     >
                       {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>

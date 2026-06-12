@@ -105,7 +105,7 @@ export default async function BlogIndexPage() {
                     </div>
                   )}
 
-                  <h2 className="font-[family-name:var(--font-playfair)] text-xl font-bold leading-snug text-[#F7F3EC] group-hover:text-[#D4954A] transition-colors">
+                  <h2 className="font-[family-name:var(--font-playfair)] text-xl font-bold leading-snug text-[var(--cream)] group-hover:text-[#D4954A] transition-colors">
                     {post.title}
                   </h2>
 

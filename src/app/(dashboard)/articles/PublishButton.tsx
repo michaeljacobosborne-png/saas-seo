@@ -39,8 +39,8 @@ export default function PublishButton({
       title={isPublished ? 'Mark as Complete (unpublish)' : 'Mark as Published'}
       className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border transition-colors disabled:opacity-50 ${
         isPublished
-          ? 'border-[rgba(184,115,51,0.4)] text-[#B87333] bg-[rgba(184,115,51,0.08)]'
-          : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-faint)] hover:text-[#B87333] hover:border-[rgba(184,115,51,0.4)]'
+          ? 'border-[rgba(184,115,51,0.4)] text-[var(--copper)] bg-[rgba(184,115,51,0.08)]'
+          : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-faint)] hover:text-[var(--copper)] hover:border-[rgba(184,115,51,0.4)]'
       }`}
     >
       {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Globe className="w-3 h-3" />}

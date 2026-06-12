@@ -13,7 +13,7 @@ import DomainAuthority from './domain-authority'
 const IN_PROGRESS = new Set(['draft', 'brief_ready', 'generating', 'expanding', 'polishing', 'ready'])
 
 const ARTICLE_STATUS: Record<string, { label: string; className: string; pulse?: boolean }> = {
-  draft: { label: 'Draft', className: 'bg-[#2A2420] text-[#A89070]' },
+  draft: { label: 'Draft', className: 'bg-[var(--ink-deep)] text-[var(--cream-dim)]' },
   brief_ready: { label: 'Brief Ready', className: 'bg-amber-500/15 text-amber-400' },
   generating: { label: 'Generating', className: 'bg-blue-500/15 text-blue-400', pulse: true },
   expanding: { label: 'Expanding', className: 'bg-blue-500/15 text-blue-400', pulse: true },
@@ -56,14 +56,14 @@ interface ProjectRow {
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: number }) {
   return (
-    <div className="rounded-xl p-5" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+    <div className="rounded-xl p-5" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium uppercase tracking-wider text-[#7A6555]">{label}</span>
+        <span className="text-xs font-medium uppercase tracking-wider text-[var(--cream-faint)]">{label}</span>
         <span className="inline-flex p-1.5 rounded-lg" style={{ background: 'rgba(184,115,51,0.12)' }}>
           <Icon className="w-4 h-4" style={{ color: '#B87333' }} />
         </span>
       </div>
-      <div className="text-3xl font-bold text-[#F7F3EC] tabular-nums">{value.toLocaleString()}</div>
+      <div className="text-3xl font-bold text-[var(--cream)] tabular-nums">{value.toLocaleString()}</div>
     </div>
   )
 }
@@ -149,13 +149,13 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="p-8 max-w-6xl" style={{ background: '#1C1917', minHeight: '100%' }}>
+    <div className="p-8 max-w-6xl" style={{ background: 'var(--ink)', minHeight: '100%' }}>
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#F7F3EC]">
+        <h1 className="text-2xl font-bold text-[var(--cream)]">
           {brandName ? `Welcome back, ${brandName}` : 'Welcome to Byline'}
         </h1>
-        <p className="mt-1 text-sm text-[#A89070]">Here&apos;s what&apos;s happening across your workspace.</p>
+        <p className="mt-1 text-sm text-[var(--cream-dim)]">Here&apos;s what&apos;s happening across your workspace.</p>
       </div>
 
       {/* Row 1 — stats */}
@@ -177,13 +177,13 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Left — in-progress articles */}
         <div className="lg:col-span-2">
-          <div className="rounded-xl overflow-hidden" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+          <div className="rounded-xl overflow-hidden" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(184,115,51,0.15)' }}>
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#B87333]" />
-                <h2 className="text-sm font-semibold text-[#F7F3EC]">In progress</h2>
+                <Clock className="w-4 h-4 text-[var(--copper)]" />
+                <h2 className="text-sm font-semibold text-[var(--cream)]">In progress</h2>
               </div>
-              <Link href="/articles" className="text-xs font-medium text-[#A89070] hover:text-[#B87333] transition-colors flex items-center gap-1">
+              <Link href="/articles" className="text-xs font-medium text-[var(--cream-dim)] hover:text-[var(--copper)] transition-colors flex items-center gap-1">
                 View all <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -191,10 +191,10 @@ export default async function DashboardPage() {
             {inProgress.length === 0 ? (
               <div className="px-5 py-12 text-center">
                 <div className="inline-flex p-3 rounded-xl mb-3" style={{ background: 'rgba(184,115,51,0.08)' }}>
-                  <FileText className="w-5 h-5 text-[#D4954A]" />
+                  <FileText className="w-5 h-5 text-[var(--copper-lt)]" />
                 </div>
-                <p className="text-sm text-[#A89070]">No articles in progress.</p>
-                <Link href="/articles/new" className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-[#B87333] hover:text-[#A0622A] transition-colors">
+                <p className="text-sm text-[var(--cream-dim)]">No articles in progress.</p>
+                <Link href="/articles/new" className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-[var(--copper)] hover:text-[#A0622A] transition-colors">
                   <Plus className="w-3.5 h-3.5" /> Create an article
                 </Link>
               </div>
@@ -209,14 +209,14 @@ export default async function DashboardPage() {
                     <Link
                       key={article.id}
                       href={`/articles/${article.id}`}
-                      className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#2A2420] transition-colors group"
+                      className="flex items-center gap-4 px-5 py-3.5 hover:bg-[var(--ink-deep)] transition-colors group"
                       style={{ borderColor: 'rgba(184,115,51,0.1)' }}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-sm text-[#F7F3EC] group-hover:text-[#B87333] transition-colors line-clamp-1">
+                        <div className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--copper)] transition-colors line-clamp-1">
                           {article.title || article.target_keyword || 'Untitled draft'}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-[#7A6555]">
+                        <div className="flex items-center gap-2 mt-1 text-xs text-[var(--cream-faint)]">
                           {projectName && (
                             <>
                               <span className="truncate max-w-[14rem]">{projectName}</span>
@@ -240,13 +240,13 @@ export default async function DashboardPage() {
 
         {/* Right — keyword projects */}
         <div className="lg:col-span-1">
-          <div className="rounded-xl overflow-hidden" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+          <div className="rounded-xl overflow-hidden" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(184,115,51,0.15)' }}>
               <div className="flex items-center gap-2">
-                <Search className="w-4 h-4 text-[#B87333]" />
-                <h2 className="text-sm font-semibold text-[#F7F3EC]">Keyword projects</h2>
+                <Search className="w-4 h-4 text-[var(--copper)]" />
+                <h2 className="text-sm font-semibold text-[var(--cream)]">Keyword projects</h2>
               </div>
-              <Link href="/keywords" title="New keyword research" className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-[#F7F3EC] bg-[#B87333] hover:bg-[#A0622A] transition-colors">
+              <Link href="/keywords" title="New keyword research" className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-[var(--cream)] bg-[#B87333] hover:bg-[#A0622A] transition-colors">
                 <Plus className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -254,10 +254,10 @@ export default async function DashboardPage() {
             {topProjects.length === 0 ? (
               <div className="px-5 py-12 text-center">
                 <div className="inline-flex p-3 rounded-xl mb-3" style={{ background: 'rgba(184,115,51,0.08)' }}>
-                  <Search className="w-5 h-5 text-[#D4954A]" />
+                  <Search className="w-5 h-5 text-[var(--copper-lt)]" />
                 </div>
-                <p className="text-sm text-[#A89070]">No projects yet.</p>
-                <Link href="/keywords" className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-[#B87333] hover:text-[#A0622A] transition-colors">
+                <p className="text-sm text-[var(--cream-dim)]">No projects yet.</p>
+                <Link href="/keywords" className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-[var(--copper)] hover:text-[#A0622A] transition-colors">
                   <Plus className="w-3.5 h-3.5" /> Start research
                 </Link>
               </div>
@@ -270,21 +270,21 @@ export default async function DashboardPage() {
                       <Link
                         key={p.id}
                         href={`/keywords/${p.id}`}
-                        className="flex items-center gap-3 px-5 py-3 hover:bg-[#2A2420] transition-colors group"
+                        className="flex items-center gap-3 px-5 py-3 hover:bg-[var(--ink-deep)] transition-colors group"
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm text-[#F7F3EC] group-hover:text-[#B87333] transition-colors line-clamp-1">{p.name}</div>
-                          <div className="text-xs text-[#7A6555] mt-0.5">
+                          <div className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--copper)] transition-colors line-clamp-1">{p.name}</div>
+                          <div className="text-xs text-[var(--cream-faint)] mt-0.5">
                             {count} {count === 1 ? 'keyword' : 'keywords'}
                           </div>
                         </div>
-                        <ArrowUpRight className="w-4 h-4 text-[#7A6555] group-hover:text-[#B87333] transition-colors shrink-0" />
+                        <ArrowUpRight className="w-4 h-4 text-[var(--cream-faint)] group-hover:text-[var(--copper)] transition-colors shrink-0" />
                       </Link>
                     )
                   })}
                 </div>
                 <div className="px-5 py-3" style={{ borderTop: '1px solid rgba(184,115,51,0.1)' }}>
-                  <Link href="/keywords" className="text-xs font-medium text-[#A89070] hover:text-[#B87333] transition-colors flex items-center gap-1">
+                  <Link href="/keywords" className="text-xs font-medium text-[var(--cream-dim)] hover:text-[var(--copper)] transition-colors flex items-center gap-1">
                     View all projects <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
@@ -297,7 +297,7 @@ export default async function DashboardPage() {
       {/* Row 3 — quick actions (only when nothing is in progress) */}
       {inProgress.length === 0 && (
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-[#7A6555] mb-3">Quick actions</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)] mb-3">Quick actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               { href: '/keywords', icon: Search, title: 'Start keyword research', desc: 'Discover high-value keywords to target.' },
@@ -308,13 +308,13 @@ export default async function DashboardPage() {
                 key={href}
                 href={href}
                 className="rounded-xl p-5 transition-all group"
-                style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}
+                style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}
               >
                 <div className="inline-flex p-2 rounded-lg mb-4" style={{ background: 'rgba(184,115,51,0.12)' }}>
                   <Icon className="w-5 h-5" style={{ color: '#B87333' }} />
                 </div>
-                <h3 className="font-semibold text-[#F7F3EC] mb-1 text-sm">{title}</h3>
-                <p className="text-sm text-[#A89070] leading-relaxed">{desc}</p>
+                <h3 className="font-semibold text-[var(--cream)] mb-1 text-sm">{title}</h3>
+                <p className="text-sm text-[var(--cream-dim)] leading-relaxed">{desc}</p>
               </Link>
             ))}
           </div>

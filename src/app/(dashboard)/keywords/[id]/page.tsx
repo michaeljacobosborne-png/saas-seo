@@ -67,8 +67,8 @@ function SortHeader({
     >
       {label}
       <span className="flex flex-col -space-y-1">
-        <ChevronUp className={`w-3 h-3 ${active && sort.dir === 'asc' ? 'text-[#B87333]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
-        <ChevronDown className={`w-3 h-3 ${active && sort.dir === 'desc' ? 'text-[#B87333]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
+        <ChevronUp className={`w-3 h-3 ${active && sort.dir === 'asc' ? 'text-[var(--copper)]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
+        <ChevronDown className={`w-3 h-3 ${active && sort.dir === 'desc' ? 'text-[var(--copper)]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
       </span>
     </button>
   )
@@ -402,10 +402,10 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             <ArrowLeft className="w-4 h-4" />
             Keywords
           </button>
-          <h1 className="text-2xl font-bold text-[#F7F3EC]">{project.name}</h1>
+          <h1 className="text-2xl font-bold text-[var(--cream)]">{project.name}</h1>
           <p className="mt-0.5 text-sm text-[var(--cream-dim)]">Seed: <span className="font-medium text-[var(--cream-dim)]">{project.seed_topic}</span></p>
           {resolvedSeeds && resolvedSeeds.length > 0 && (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-[#D4954A]">
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--copper-lt)]">
               <Sparkles className="w-3 h-3 shrink-0" />
               <span>Searching for: <span className="font-medium">{resolvedSeeds.join(', ')}</span></span>
             </p>
@@ -416,7 +416,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
           <button
             onClick={handleResearch}
             disabled={researching}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-60 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-60 transition-colors"
           >
             {researching ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Researching…</>
@@ -450,7 +450,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                 <button
                   onClick={handleResearch}
                   disabled={researching}
-                  className="text-xs text-[var(--cream-faint)] hover:text-[#D4954A] transition-colors disabled:opacity-60"
+                  className="text-xs text-[var(--cream-faint)] hover:text-[var(--copper-lt)] transition-colors disabled:opacity-60"
                 >
                   {researching ? 'Refreshing…' : 'Refresh data'}
                 </button>
@@ -461,7 +461,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             <button
               onClick={handleSaveSelected}
               disabled={saving || selected.size === 0}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
             >
               {saving ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
@@ -488,13 +488,13 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
       {/* Article CTA after saving keywords */}
       {articleCtaCount > 0 && (
         <div className="mb-6 flex items-center justify-between gap-3 bg-[rgba(184,115,51,0.08)] border border-[rgba(184,115,51,0.25)] rounded-xl px-4 py-3">
-          <div className="flex items-center gap-2 text-sm text-[#F7F3EC]">
+          <div className="flex items-center gap-2 text-sm text-[var(--cream)]">
             <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
             <span>Saved {articleCtaCount} keyword{articleCtaCount !== 1 ? 's' : ''}</span>
           </div>
           <Link
             href={`/articles/new?project=${id}`}
-            className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors shrink-0"
+            className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors shrink-0"
           >
             <FileText className="w-4 h-4" />
             Create article from these keywords
@@ -507,7 +507,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
       {project.status === 'pending' && !researching && (
         <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-2xl p-12 text-center">
           <div className="inline-flex p-3 bg-[rgba(184,115,51,0.08)] rounded-xl mb-4">
-            <Sparkles className="w-6 h-6 text-[#D4954A]" />
+            <Sparkles className="w-6 h-6 text-[var(--copper-lt)]" />
           </div>
           <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-2">Ready to research</h3>
           <p className="text-sm text-[var(--cream-dim)] max-w-sm mx-auto">
@@ -519,7 +519,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
       {/* Researching state */}
       {(project.status === 'researching' || researching) && (
         <div className="border-2 border-dashed border-[rgba(184,115,51,0.25)] rounded-2xl p-12 text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#D4954A] mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--copper-lt)] mx-auto mb-4" />
           <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-1">Researching keywords…</h3>
           <p className="text-sm text-[var(--cream-faint)]">Fetching data + clustering with AI. Takes ~10 seconds.</p>
         </div>
@@ -535,7 +535,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                 value={manualKw}
                 onChange={(e) => { setManualKw(e.target.value); setManualError(null) }}
                 placeholder="Add a keyword manually…"
-                className="flex-1 max-w-xs px-3 py-2 text-sm bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-lg text-[#F7F3EC] placeholder:text-[var(--cream-faint)] focus:outline-none focus:border-[#B87333]"
+                className="flex-1 max-w-xs px-3 py-2 text-sm bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-lg text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:border-[#B87333]"
               />
               <button
                 type="submit"
@@ -561,7 +561,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                 onClick={() => setActiveCluster(c)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                   activeCluster === c
-                    ? 'bg-[#B87333] text-[#F7F3EC]'
+                    ? 'bg-[#B87333] text-white'
                     : 'bg-[var(--ink-deep)] text-[var(--cream-dim)] hover:bg-[var(--ink-deep)]'
                 }`}
               >
@@ -584,7 +584,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                       type="checkbox"
                       checked={allVisibleSelected}
                       onChange={() => toggleAll(filtered)}
-                      className="rounded border-[rgba(184,115,51,0.25)] text-[#B87333] focus:ring-[#B87333]"
+                      className="rounded border-[rgba(184,115,51,0.25)] text-[var(--copper)] focus:ring-[#B87333]"
                     />
                   </th>
                   <th className="px-4 py-3 text-left">
@@ -616,10 +616,10 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                         type="checkbox"
                         checked={selected.has(kw.id)}
                         onChange={() => toggleSelect(kw.id)}
-                        className="rounded border-[rgba(184,115,51,0.25)] text-[#B87333] focus:ring-[#B87333]"
+                        className="rounded border-[rgba(184,115,51,0.25)] text-[var(--copper)] focus:ring-[#B87333]"
                       />
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-[#F7F3EC]">{kw.keyword}</td>
+                    <td className="px-4 py-2.5 font-medium text-[var(--cream)]">{kw.keyword}</td>
                     <td className="px-4 py-2.5 tabular-nums text-[var(--cream-dim)]">
                       {kw.avg_monthly_searches != null
                         ? kw.avg_monthly_searches.toLocaleString()
@@ -655,8 +655,8 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                           title={savedKwIds.has(kw.id) ? 'Saved' : 'Save for later'}
                           className={`p-1.5 rounded transition-colors ${
                             savedKwIds.has(kw.id) || savingKw === kw.id
-                              ? 'text-[#D4954A]'
-                              : 'text-[var(--cream-dim)] hover:text-[#D4954A]'
+                              ? 'text-[var(--copper-lt)]'
+                              : 'text-[var(--cream-dim)] hover:text-[var(--copper-lt)]'
                           }`}
                         >
                           {savingKw === kw.id
@@ -698,7 +698,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                             ) : (
                               <button
                                 onClick={() => { setShowNewFolderFor(kw.id); setNewFolderText('') }}
-                                className="w-full text-left px-3 py-2 hover:bg-[var(--ink-card)] text-[#B87333] font-medium border-t border-[rgba(184,115,51,0.15)]"
+                                className="w-full text-left px-3 py-2 hover:bg-[var(--ink-card)] text-[var(--copper)] font-medium border-t border-[rgba(184,115,51,0.15)]"
                               >
                                 + New folder…
                               </button>
@@ -715,7 +715,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             <div className="px-4 py-3 border-t border-[rgba(184,115,51,0.15)] bg-[var(--ink-card)] flex items-center justify-between text-xs text-[var(--cream-faint)]">
               <span>{filtered.length} keywords{activeCluster !== 'All' ? ` in "${activeCluster}"` : ''}</span>
               {selected.size > 0 && (
-                <span className="text-[#B87333] font-medium">{selected.size} selected</span>
+                <span className="text-[var(--copper)] font-medium">{selected.size} selected</span>
               )}
             </div>
           </div>
@@ -732,9 +732,9 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
               ) : toastStage === 'error' ? (
                 <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
               ) : (
-                <Loader2 className="w-4 h-4 text-[#D4954A] animate-spin shrink-0" />
+                <Loader2 className="w-4 h-4 text-[var(--copper-lt)] animate-spin shrink-0" />
               )}
-              <span className="text-sm font-semibold text-[#F7F3EC]">Keyword Research</span>
+              <span className="text-sm font-semibold text-[var(--cream)]">Keyword Research</span>
             </div>
             <button
               onClick={() => setToastVisible(false)}

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function BlogLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-full bg-[#1C1917] text-[#F7F3EC] flex flex-col flex-1">
+    <div className="min-h-full bg-[#1C1917] text-[var(--cream)] flex flex-col flex-1">
       <nav className="sticky top-0 z-50 bg-[#1C1917]/95 backdrop-blur border-b border-[rgba(184,115,51,0.15)]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link
@@ -30,13 +30,13 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
           <div className="flex items-center gap-4">
             <Link
               href="/blog"
-              className="text-sm text-[#A89070] hover:text-[#F7F3EC] transition-colors hidden sm:block"
+              className="text-sm text-[#A89070] hover:text-[var(--cream)] transition-colors hidden sm:block"
             >
               Blog
             </Link>
             <Link
               href="/pricing"
-              className="text-sm text-[#A89070] hover:text-[#F7F3EC] transition-colors hidden sm:block"
+              className="text-sm text-[#A89070] hover:text-[var(--cream)] transition-colors hidden sm:block"
             >
               Pricing
             </Link>

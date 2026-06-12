@@ -46,9 +46,9 @@ export default function DomainAuthority({ websiteUrl }: { websiteUrl: string }) 
   const barPct = Math.max(0, Math.min(100, dr))
 
   return (
-    <div className="rounded-xl p-5" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+    <div className="rounded-xl p-5" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium uppercase tracking-wider text-[#7A6555]">Domain authority</span>
+        <span className="text-xs font-medium uppercase tracking-wider text-[var(--cream-faint)]">Domain authority</span>
         <span className="inline-flex p-1.5 rounded-lg" style={{ background: 'rgba(184,115,51,0.12)' }}>
           <Shield className="w-4 h-4" style={{ color: '#B87333' }} />
         </span>
@@ -56,18 +56,18 @@ export default function DomainAuthority({ websiteUrl }: { websiteUrl: string }) 
 
       {loading ? (
         <div className="py-2">
-          <Loader2 className="w-5 h-5 animate-spin text-[#D4954A]" />
+          <Loader2 className="w-5 h-5 animate-spin text-[var(--copper-lt)]" />
         </div>
       ) : (
         <>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-[#F7F3EC] tabular-nums">
+            <span className="text-3xl font-bold text-[var(--cream)] tabular-nums">
               {rating ? dr : '—'}
             </span>
-            <span className="text-xs text-[#7A6555]">/ 100 DR</span>
+            <span className="text-xs text-[var(--cream-faint)]">/ 100 DR</span>
           </div>
           {rating && rating.ahrefsRank > 0 && (
-            <div className="text-xs text-[#7A6555] mt-0.5 tabular-nums">
+            <div className="text-xs text-[var(--cream-faint)] mt-0.5 tabular-nums">
               Ahrefs Rank #{rating.ahrefsRank.toLocaleString()}
             </div>
           )}
@@ -78,7 +78,7 @@ export default function DomainAuthority({ websiteUrl }: { websiteUrl: string }) 
               style={{ width: `${barPct}%`, background: '#B87333' }}
             />
           </div>
-          <div className="text-xs text-[#7A6555] mt-2 truncate" title={domain}>
+          <div className="text-xs text-[var(--cream-faint)] mt-2 truncate" title={domain}>
             {domain}
           </div>
         </>

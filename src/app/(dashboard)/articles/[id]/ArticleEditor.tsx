@@ -229,7 +229,7 @@ function ToolbarBtn({
       onClick={onClick}
       title={title}
       className={`p-1.5 rounded transition-colors ${
-        active ? 'bg-[var(--ink-deep)] text-[#F7F3EC]' : 'text-[var(--cream-dim)] hover:bg-[var(--ink-deep)] hover:text-[var(--cream-dim)]'
+        active ? 'bg-[var(--ink-deep)] text-[var(--cream)]' : 'text-[var(--cream-dim)] hover:bg-[var(--ink-deep)] hover:text-[var(--cream-dim)]'
       }`}
     >
       {children}

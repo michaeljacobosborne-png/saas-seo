@@ -62,7 +62,7 @@ function StepIndicator({ current }: { current: number }) {
         return (
           <div key={label} className="flex items-center gap-2">
             <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-colors ${
-              done ? 'bg-[#B87333] text-[#F7F3EC]' :
+              done ? 'bg-[#B87333] text-white' :
               active ? 'bg-[rgba(184,115,51,0.12)] text-[#A0622A] ring-2 ring-indigo-600' :
               'bg-[var(--ink-deep)] text-[var(--cream-faint)]'
             }`}>
@@ -93,8 +93,8 @@ function SortBtn({
     <button onClick={() => onSort(field)} className="flex items-center gap-1 font-medium text-[var(--cream-dim)] hover:text-[var(--cream-dim)] group">
       {label}
       <span className="flex flex-col -space-y-1">
-        <ChevronUp className={`w-3 h-3 ${active && sortDir === 'asc' ? 'text-[#B87333]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
-        <ChevronDown className={`w-3 h-3 ${active && sortDir === 'desc' ? 'text-[#B87333]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
+        <ChevronUp className={`w-3 h-3 ${active && sortDir === 'asc' ? 'text-[var(--copper)]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
+        <ChevronDown className={`w-3 h-3 ${active && sortDir === 'desc' ? 'text-[var(--copper)]' : 'text-[var(--cream-dim)] group-hover:text-[var(--cream-faint)]'}`} />
       </span>
     </button>
   )
@@ -516,16 +516,16 @@ function NewArticleWizard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-[var(--ink)] rounded-2xl shadow-xl border border-[rgba(184,115,51,0.2)] p-8 max-w-sm w-full mx-4 text-center">
             <div className="w-12 h-12 rounded-full bg-[rgba(184,115,51,0.08)] flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-6 h-6 text-[#D4954A]" />
+              <FileText className="w-6 h-6 text-[var(--copper-lt)]" />
             </div>
-            <h2 className="text-lg font-bold text-[#F7F3EC] mb-2">Free article used</h2>
+            <h2 className="text-lg font-bold text-[var(--cream)] mb-2">Free article used</h2>
             <p className="text-sm text-[var(--cream-dim)] mb-6">
               You&apos;ve used your free article. Upgrade to write unlimited articles.
             </p>
             <div className="flex flex-col gap-2">
               <Link
                 href="/pricing"
-                className="w-full py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-semibold rounded-lg hover:bg-[#A0622A] transition-colors"
+                className="w-full py-2.5 bg-[#B87333] text-white text-sm font-semibold rounded-lg hover:bg-[#A0622A] transition-colors"
               >
                 View plans
               </Link>
@@ -544,7 +544,7 @@ function NewArticleWizard() {
       {outlineToast && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[var(--ink)] border border-[rgba(184,115,51,0.3)] rounded-lg px-4 py-2.5 shadow-lg">
           <CheckCircle2 className="w-4 h-4 text-green-500" />
-          <span className="text-sm font-medium text-[#F7F3EC]">Outline updated</span>
+          <span className="text-sm font-medium text-[var(--cream)]">Outline updated</span>
         </div>
       )}
 
@@ -555,7 +555,7 @@ function NewArticleWizard() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold text-[#F7F3EC] mb-6">New Article</h1>
+      <h1 className="text-2xl font-bold text-[var(--cream)] mb-6">New Article</h1>
       <StepIndicator current={step} />
 
       {error && (
@@ -680,7 +680,7 @@ function NewArticleWizard() {
             <button onClick={() => setStep(1)} className="text-sm text-[var(--cream-faint)] hover:text-[var(--cream-dim)]">
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <h2 className="text-base font-semibold text-[#F7F3EC]">Select target keywords</h2>
+            <h2 className="text-base font-semibold text-[var(--cream)]">Select target keywords</h2>
           </div>
           <p className="text-sm text-[var(--cream-dim)] mb-1 ml-7">
             Project: <span className="font-medium text-[var(--cream-dim)]">{selectedProject?.name}</span>
@@ -725,10 +725,10 @@ function NewArticleWizard() {
                             type="checkbox"
                             checked={selectedKws.has(kw.keyword)}
                             onChange={() => toggleKw(kw.keyword)}
-                            className="rounded border-[rgba(184,115,51,0.25)] text-[#B87333] focus:ring-[#B87333]"
+                            className="rounded border-[rgba(184,115,51,0.25)] text-[var(--copper)] focus:ring-[#B87333]"
                           />
                         </td>
-                        <td className="px-3 py-2.5 font-medium text-[#F7F3EC]">{kw.keyword}</td>
+                        <td className="px-3 py-2.5 font-medium text-[var(--cream)]">{kw.keyword}</td>
                         <td className="px-3 py-2.5 tabular-nums text-[var(--cream-dim)] text-xs">
                           {kw.avg_monthly_searches?.toLocaleString() ?? '—'}
                         </td>
@@ -741,7 +741,7 @@ function NewArticleWizard() {
                 </table>
                 <div className="px-3 py-2.5 border-t border-[rgba(184,115,51,0.15)] bg-[var(--ink-card)] flex items-center justify-between text-xs text-[var(--cream-faint)]">
                   <span>{keywords.length} keywords</span>
-                  {selectedKws.size > 0 && <span className="text-[#B87333] font-medium">{selectedKws.size} selected</span>}
+                  {selectedKws.size > 0 && <span className="text-[var(--copper)] font-medium">{selectedKws.size} selected</span>}
                 </div>
               </div>
 
@@ -750,7 +750,7 @@ function NewArticleWizard() {
                 <button
                   onClick={handleGenerateBrief}
                   disabled={selectedKws.size === 0 || !brandProfile || loading}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
                 >
                   {loading ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Generating brief…</>
@@ -767,7 +767,7 @@ function NewArticleWizard() {
       {/* ─── Step 3: Brief review ─── */}
       {step === 3 && brief && (
         <div>
-          <h2 className="text-base font-semibold text-[#F7F3EC] mb-1">Review your brief</h2>
+          <h2 className="text-base font-semibold text-[var(--cream)] mb-1">Review your brief</h2>
           <p className="text-sm text-[var(--cream-dim)] mb-5">GPT-4o analyzed your keywords and brand profile to build this content plan.</p>
 
           <div className="space-y-4">
@@ -810,7 +810,7 @@ function NewArticleWizard() {
                         value={s.heading ?? ''}
                         onChange={(e) => updateOutlineField(i, 'heading', e.target.value)}
                         placeholder="Section heading"
-                        className="flex-1 px-2.5 py-1.5 text-sm font-medium bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-md text-[#F7F3EC] placeholder:text-[var(--cream-faint)] focus:outline-none focus:border-[#B87333]"
+                        className="flex-1 px-2.5 py-1.5 text-sm font-medium bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-md text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:border-[#B87333]"
                       />
                       <div className="flex items-center gap-1 shrink-0">
                         <span className="text-xs text-[var(--cream-faint)]">~</span>
@@ -847,7 +847,7 @@ function NewArticleWizard() {
               <button
                 type="button"
                 onClick={addOutlineSection}
-                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#B87333] hover:text-[#A0622A] border border-dashed border-[rgba(184,115,51,0.3)] rounded-lg hover:border-[#B87333] transition-colors"
+                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--copper)] hover:text-[#A0622A] border border-dashed border-[rgba(184,115,51,0.3)] rounded-lg hover:border-[#B87333] transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add section
@@ -866,8 +866,8 @@ function NewArticleWizard() {
                 onClick={() => setOutlineChatOpen((v) => !v)}
                 className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--ink-card)] transition-colors"
               >
-                <span className="flex items-center gap-2 text-sm font-medium text-[#F7F3EC]">
-                  <MessageSquare className="w-4 h-4 text-[#D4954A]" />
+                <span className="flex items-center gap-2 text-sm font-medium text-[var(--cream)]">
+                  <MessageSquare className="w-4 h-4 text-[var(--copper-lt)]" />
                   Edit outline with AI
                 </span>
                 {outlineChatOpen
@@ -888,7 +888,7 @@ function NewArticleWizard() {
                         <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-xs rounded-xl px-3 py-1.5 text-xs leading-relaxed ${
                             m.role === 'user'
-                              ? 'bg-[#B87333] text-[#F7F3EC] rounded-br-sm'
+                              ? 'bg-[#B87333] text-white rounded-br-sm'
                               : 'bg-[var(--ink-card)] text-[var(--cream-dim)] rounded-bl-sm'
                           }`}>
                             {m.text}
@@ -911,13 +911,13 @@ function NewArticleWizard() {
                       }}
                       placeholder="Describe a change to the outline…"
                       disabled={outlineChatSending}
-                      className="flex-1 px-3 py-2 text-sm bg-[var(--ink-card)] border border-[rgba(184,115,51,0.2)] rounded-lg text-[#F7F3EC] placeholder:text-[var(--cream-faint)] focus:outline-none focus:border-[#B87333] disabled:opacity-50"
+                      className="flex-1 px-3 py-2 text-sm bg-[var(--ink-card)] border border-[rgba(184,115,51,0.2)] rounded-lg text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:border-[#B87333] disabled:opacity-50"
                     />
                     <button
                       type="button"
                       onClick={handleOutlineChat}
                       disabled={outlineChatSending || !outlineChatInput.trim()}
-                      className="p-2 bg-[#B87333] text-[#F7F3EC] rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                      className="p-2 bg-[#B87333] text-white rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
                     >
                       {outlineChatSending
                         ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -929,7 +929,7 @@ function NewArticleWizard() {
                     <button
                       type="button"
                       onClick={handleUndoOutline}
-                      className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--cream-dim)] hover:text-[#F7F3EC] transition-colors"
+                      className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--cream-dim)] hover:text-[var(--cream)] transition-colors"
                     >
                       <Undo2 className="w-3.5 h-3.5" />
                       Undo last change
@@ -945,7 +945,7 @@ function NewArticleWizard() {
                 <ul className="space-y-1">
                   {(brief.competitor_gaps as string[]).map((g: string, i: number) => (
                     <li key={i} className="text-sm text-[var(--cream-dim)] flex gap-2">
-                      <span className="text-[#D4954A]">→</span> {g}
+                      <span className="text-[var(--copper-lt)]">→</span> {g}
                     </li>
                   ))}
                 </ul>
@@ -977,14 +977,14 @@ function NewArticleWizard() {
                         onClick={() => setTargetWordCount(n)}
                         className={`relative flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
                           isSelected
-                            ? 'bg-[#B87333] text-[#F7F3EC] border-[#B87333]'
-                            : 'bg-[var(--ink)] text-[var(--cream-dim)] border-[rgba(184,115,51,0.2)] hover:border-[#B87333] hover:text-[#B87333]'
+                            ? 'bg-[#B87333] text-white border-[#B87333]'
+                            : 'bg-[var(--ink)] text-[var(--cream-dim)] border-[rgba(184,115,51,0.2)] hover:border-[#B87333] hover:text-[var(--copper)]'
                         }`}
                       >
                         {n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : n}
                         {isRecommended && (
                           <span className={`absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
-                            isSelected ? 'bg-[rgba(184,115,51,0.12)] text-[#A0622A]' : 'bg-[rgba(184,115,51,0.08)] text-[#B87333]'
+                            isSelected ? 'bg-[rgba(184,115,51,0.12)] text-[#A0622A]' : 'bg-[rgba(184,115,51,0.08)] text-[var(--copper)]'
                           }`}>
                             rec
                           </span>
@@ -1002,7 +1002,7 @@ function NewArticleWizard() {
             <button
               onClick={handleGenerateDraft}
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
             >
               <Sparkles className="w-4 h-4" />
               Generate Full Draft
@@ -1014,7 +1014,7 @@ function NewArticleWizard() {
       {/* ─── Step 4: Generating ─── */}
       {step === 4 && (
         <div className="border-2 border-dashed border-[rgba(184,115,51,0.15)] rounded-2xl p-14 text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-[#D4954A] mx-auto mb-5" />
+          <Loader2 className="w-10 h-10 animate-spin text-[var(--copper-lt)] mx-auto mb-5" />
           {generatingStatus === 'expanding' ? (
             <>
               <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-2">Article came in short — running a second research pass to fill it out…</h3>
@@ -1035,7 +1035,7 @@ function NewArticleWizard() {
           <div className="inline-flex p-4 bg-green-50 rounded-2xl mb-5">
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
-          <h2 className="text-xl font-bold text-[#F7F3EC] mb-2">
+          <h2 className="text-xl font-bold text-[var(--cream)] mb-2">
             {generatingStatus === 'expanded' ? 'Done — article expanded to target length' : 'Article generated and scored'}
           </h2>
           <p className="text-sm text-[var(--cream-dim)] mb-7 max-w-sm mx-auto">
@@ -1049,7 +1049,7 @@ function NewArticleWizard() {
             </Link>
             <Link
               href={`/articles/${articleId}`}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
             >
               <FileText className="w-4 h-4" />
               View Article &amp; Scores

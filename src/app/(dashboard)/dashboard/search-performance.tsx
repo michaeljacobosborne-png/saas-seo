@@ -20,14 +20,14 @@ interface PerfTotals {
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="rounded-xl p-5" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+    <div className="rounded-xl p-5" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium uppercase tracking-wider text-[#7A6555]">{label}</span>
+        <span className="text-xs font-medium uppercase tracking-wider text-[var(--cream-faint)]">{label}</span>
         <span className="inline-flex p-1.5 rounded-lg" style={{ background: 'rgba(184,115,51,0.12)' }}>
           <Icon className="w-4 h-4" style={{ color: '#B87333' }} />
         </span>
       </div>
-      <div className="text-3xl font-bold text-[#F7F3EC] tabular-nums">{value}</div>
+      <div className="text-3xl font-bold text-[var(--cream)] tabular-nums">{value}</div>
     </div>
   )
 }
@@ -75,25 +75,25 @@ export default function SearchPerformance({
       <div className="mt-8">
         <Link
           href="/settings"
-          className="flex items-center justify-between gap-4 rounded-xl p-5 transition-colors hover:bg-[#2A2420] group"
-          style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}
+          className="flex items-center justify-between gap-4 rounded-xl p-5 transition-colors hover:bg-[var(--ink-deep)] group"
+          style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}
         >
           <div className="flex items-center gap-3">
             <span className="inline-flex p-2 rounded-lg" style={{ background: 'rgba(184,115,51,0.12)' }}>
               <TrendingUp className="w-5 h-5" style={{ color: '#B87333' }} />
             </span>
             <div>
-              <h3 className="text-sm font-semibold text-[#F7F3EC]">
+              <h3 className="text-sm font-semibold text-[var(--cream)]">
                 {connected ? 'Finish connecting Search Console' : 'Connect Search Console'}
               </h3>
-              <p className="text-sm text-[#A89070]">
+              <p className="text-sm text-[var(--cream-dim)]">
                 {connected
                   ? 'Pick a property to see your real clicks, impressions, and rankings.'
                   : 'See real clicks, impressions, and rankings for your site.'}
               </p>
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-[#7A6555] group-hover:text-[#B87333] transition-colors shrink-0" />
+          <ArrowRight className="w-4 h-4 text-[var(--cream-faint)] group-hover:text-[var(--copper)] transition-colors shrink-0" />
         </Link>
       </div>
     )
@@ -107,10 +107,10 @@ export default function SearchPerformance({
     <div className="mt-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-[#B87333]" />
-          <h2 className="text-sm font-semibold text-[#F7F3EC]">Search Performance</h2>
+          <TrendingUp className="w-4 h-4 text-[var(--copper)]" />
+          <h2 className="text-sm font-semibold text-[var(--cream)]">Search Performance</h2>
         </div>
-        <span className="text-xs text-[#7A6555]">Last 28 days</span>
+        <span className="text-xs text-[var(--cream-faint)]">Last 28 days</span>
       </div>
 
       {error ? (
@@ -119,8 +119,8 @@ export default function SearchPerformance({
           <p className="text-sm text-[#f87171]">{error}</p>
         </div>
       ) : loading ? (
-        <div className="rounded-xl p-12 text-center" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
-          <Loader2 className="w-6 h-6 animate-spin text-[#D4954A] mx-auto" />
+        <div className="rounded-xl p-12 text-center" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--copper-lt)] mx-auto" />
         </div>
       ) : (
         <>
@@ -133,18 +133,18 @@ export default function SearchPerformance({
           </div>
 
           {/* Top queries */}
-          <div className="rounded-xl overflow-hidden" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+          <div className="rounded-xl overflow-hidden" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
             <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(184,115,51,0.15)' }}>
-              <h3 className="text-sm font-semibold text-[#F7F3EC]">Top queries</h3>
+              <h3 className="text-sm font-semibold text-[var(--cream)]">Top queries</h3>
             </div>
             {rows.length === 0 ? (
-              <div className="px-5 py-10 text-center text-sm text-[#A89070]">
+              <div className="px-5 py-10 text-center text-sm text-[var(--cream-dim)]">
                 No Search Console data for this period yet.
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs uppercase tracking-wider text-[#7A6555]" style={{ borderBottom: '1px solid rgba(184,115,51,0.1)' }}>
+                  <tr className="text-xs uppercase tracking-wider text-[var(--cream-faint)]" style={{ borderBottom: '1px solid rgba(184,115,51,0.1)' }}>
                     <th className="text-left font-medium px-5 py-2.5">Query</th>
                     <th className="text-right font-medium px-3 py-2.5">Clicks</th>
                     <th className="text-right font-medium px-3 py-2.5">Impr.</th>
@@ -154,8 +154,8 @@ export default function SearchPerformance({
                 </thead>
                 <tbody>
                   {rows.slice(0, 5).map((r, i) => (
-                    <tr key={i} className="text-[#A89070]" style={{ borderBottom: i < 4 ? '1px solid rgba(184,115,51,0.08)' : undefined }}>
-                      <td className="px-5 py-3 text-[#F7F3EC] truncate max-w-[18rem]">{r.keys[0] ?? '—'}</td>
+                    <tr key={i} className="text-[var(--cream-dim)]" style={{ borderBottom: i < 4 ? '1px solid rgba(184,115,51,0.08)' : undefined }}>
+                      <td className="px-5 py-3 text-[var(--cream)] truncate max-w-[18rem]">{r.keys[0] ?? '—'}</td>
                       <td className="px-3 py-3 text-right tabular-nums">{fmt(r.clicks)}</td>
                       <td className="px-3 py-3 text-right tabular-nums">{fmt(r.impressions)}</td>
                       <td className="px-3 py-3 text-right tabular-nums">{pct(r.ctr)}</td>

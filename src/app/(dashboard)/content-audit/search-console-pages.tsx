@@ -81,13 +81,13 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
               <Globe className="w-5 h-5" style={{ color: '#B87333' }} />
             </span>
             <div>
-              <h3 className="text-sm font-semibold text-[#F7F3EC]">Connect Search Console</h3>
+              <h3 className="text-sm font-semibold text-[var(--cream)]">Connect Search Console</h3>
               <p className="text-sm text-[var(--cream-dim)]">
                 Connect Search Console to see which pages are driving traffic.
               </p>
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-[var(--cream-faint)] group-hover:text-[#B87333] transition-colors shrink-0" />
+          <ArrowRight className="w-4 h-4 text-[var(--cream-faint)] group-hover:text-[var(--copper)] transition-colors shrink-0" />
         </Link>
       </div>
     )
@@ -95,8 +95,8 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
 
   return (
     <div className="mt-8">
-      <h2 className="text-sm font-semibold text-[#F7F3EC] mb-3 flex items-center gap-2">
-        <Globe className="w-4 h-4 text-[#D4954A]" />
+      <h2 className="text-sm font-semibold text-[var(--cream)] mb-3 flex items-center gap-2">
+        <Globe className="w-4 h-4 text-[var(--copper-lt)]" />
         Top Performing Pages from Search Console
         <span className="text-xs font-normal text-[var(--cream-faint)]">· Last 28 days</span>
       </h2>
@@ -108,7 +108,7 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
         </div>
       ) : state === 'loading' ? (
         <div className="rounded-xl p-10 text-center" style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.2)' }}>
-          <Loader2 className="w-6 h-6 animate-spin text-[#D4954A] mx-auto" />
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--copper-lt)] mx-auto" />
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded-xl p-8 text-center text-sm text-[var(--cream-dim)]" style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.2)' }}>
@@ -136,7 +136,7 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#F7F3EC] hover:text-[#B87333] transition-colors truncate block"
+                        className="text-[var(--cream)] hover:text-[var(--copper)] transition-colors truncate block"
                         title={url}
                       >
                         {shortPath(url)}

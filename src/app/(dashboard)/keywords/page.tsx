@@ -297,7 +297,7 @@ export default function KeywordsPage() {
             Discover high-value keywords for your content strategy.
           </p>
           <div className="flex gap-1 mt-3">
-            <span className="px-3 py-1 text-xs font-medium rounded-full text-[#F7F3EC]" style={{ background: 'var(--copper)' }}>
+            <span className="px-3 py-1 text-xs font-medium rounded-full text-[var(--cream)]" style={{ background: 'var(--copper)' }}>
               Projects
             </span>
             <Link
@@ -312,7 +312,7 @@ export default function KeywordsPage() {
         </div>
         <button
           onClick={openDiscover}
-          className="flex items-center gap-2 px-4 py-2 text-[#F7F3EC] text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-4 py-2 text-[var(--cream)] text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
           style={{ background: 'var(--copper)' }}
         >
           <Plus className="w-4 h-4" />
@@ -336,7 +336,7 @@ export default function KeywordsPage() {
           </p>
           <button
             onClick={openDiscover}
-            className="inline-flex items-center gap-2 px-4 py-2 text-[#F7F3EC] text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-4 py-2 text-[var(--cream)] text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
             style={{ background: 'var(--copper)' }}
           >
             <Plus className="w-4 h-4" />
@@ -464,7 +464,7 @@ export default function KeywordsPage() {
                     className="group flex flex-col items-start text-left p-5 rounded-2xl border-2 bg-[rgba(184,115,51,0.08)] hover:bg-[rgba(184,115,51,0.12)] transition-all relative overflow-hidden"
                     style={{ borderColor: 'var(--copper)' }}
                   >
-                    <span className="absolute top-3.5 right-3.5 text-[10px] font-semibold px-2 py-0.5 rounded-full text-[#F7F3EC] tracking-wide" style={{ background: 'var(--copper)' }}>
+                    <span className="absolute top-3.5 right-3.5 text-[10px] font-semibold px-2 py-0.5 rounded-full text-[var(--cream)] tracking-wide" style={{ background: 'var(--copper)' }}>
                       RECOMMENDED
                     </span>
                     <div className="p-2.5 bg-[rgba(184,115,51,0.12)] rounded-xl mb-4 group-hover:bg-[rgba(184,115,51,0.2)] transition-colors">
@@ -511,7 +511,7 @@ export default function KeywordsPage() {
                   <button
                     type="submit"
                     disabled={directRunning || !directKeyword.trim()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[#F7F3EC] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[var(--cream)] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
                     style={{ background: 'var(--copper)' }}
                   >
                     {directRunning
@@ -555,7 +555,7 @@ export default function KeywordsPage() {
                   <button
                     type="submit"
                     disabled={!topicInput.trim()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[#F7F3EC] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[var(--cream)] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
                     style={{ background: 'var(--copper)' }}
                   >
                     <ArrowRight className="w-4 h-4" /> Continue
@@ -668,7 +668,7 @@ export default function KeywordsPage() {
                     <button
                       onClick={handleRunResearch}
                       disabled={creatingProject}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[#F7F3EC] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[var(--cream)] text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
                       style={{ background: 'var(--copper)' }}
                     >
                       {creatingProject
@@ -702,7 +702,7 @@ export default function KeywordsPage() {
                     <button
                       onClick={handleDiscoverSend}
                       disabled={discoverStreaming || !discoverInput.trim()}
-                      className="p-2.5 text-[#F7F3EC] rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                      className="p-2.5 text-[var(--cream)] rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
                       style={{ background: 'var(--copper)' }}
                     >
                       <Send className="w-4 h-4" />

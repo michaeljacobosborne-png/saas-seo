@@ -6,7 +6,7 @@ function Block({ className = '' }: { className?: string }) {
 
 export default function DashboardLoading() {
   return (
-    <div className="p-8 max-w-6xl" style={{ background: '#1C1917', minHeight: '100%' }}>
+    <div className="p-8 max-w-6xl" style={{ background: 'var(--ink)', minHeight: '100%' }}>
       {/* Header */}
       <div className="mb-8">
         <Block className="h-7 w-64 mb-2" />
@@ -16,7 +16,7 @@ export default function DashboardLoading() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl p-5" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+          <div key={i} className="rounded-xl p-5" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
             <Block className="h-3 w-24 mb-4" />
             <Block className="h-8 w-16" />
           </div>
@@ -25,7 +25,7 @@ export default function DashboardLoading() {
 
       {/* Activity row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 rounded-xl p-5" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+        <div className="lg:col-span-2 rounded-xl p-5" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
           <Block className="h-4 w-28 mb-5" />
           <div className="space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -39,7 +39,7 @@ export default function DashboardLoading() {
             ))}
           </div>
         </div>
-        <div className="lg:col-span-1 rounded-xl p-5" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.18)' }}>
+        <div className="lg:col-span-1 rounded-xl p-5" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
           <Block className="h-4 w-32 mb-5" />
           <div className="space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (

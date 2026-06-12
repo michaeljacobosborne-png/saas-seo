@@ -142,7 +142,7 @@ export default function SavedKeywordsPage() {
     <div className="p-8 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#F7F3EC]">Saved Keywords</h1>
+          <h1 className="text-2xl font-bold text-[var(--cream)]">Saved Keywords</h1>
           <p className="mt-1 text-sm text-[var(--cream-dim)]">Keywords saved for future articles, organised by folder.</p>
           <div className="flex gap-1 mt-3">
             <Link
@@ -151,7 +151,7 @@ export default function SavedKeywordsPage() {
             >
               Projects
             </Link>
-            <span className="px-3 py-1 text-xs font-medium rounded-full bg-[#B87333] text-[#F7F3EC]">
+            <span className="px-3 py-1 text-xs font-medium rounded-full bg-[#B87333] text-white">
               <Bookmark className="w-3 h-3 inline mr-1 -mt-px" />
               Saved Keywords
             </span>
@@ -179,7 +179,7 @@ export default function SavedKeywordsPage() {
           </p>
           <Link
             href="/keywords"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#B87333] text-[#F7F3EC] text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] transition-colors"
           >
             Go to Projects
           </Link>
@@ -215,7 +215,7 @@ export default function SavedKeywordsPage() {
                     </form>
                   ) : (
                     <>
-                      <span className="font-semibold text-sm text-[#F7F3EC]">{folder}</span>
+                      <span className="font-semibold text-sm text-[var(--cream)]">{folder}</span>
                       <span className="text-xs text-[var(--cream-faint)] bg-[var(--ink-deep)] px-1.5 py-0.5 rounded-full">{kws.length}</span>
                       <button
                         onClick={(e) => {
@@ -253,7 +253,7 @@ export default function SavedKeywordsPage() {
                   <tbody className="divide-y divide-gray-50">
                     {kws.map((kw) => (
                       <tr key={kw.id} className="hover:bg-[var(--ink-card)] transition-colors">
-                        <td className="px-4 py-2.5 font-medium text-[#F7F3EC]">{kw.keyword}</td>
+                        <td className="px-4 py-2.5 font-medium text-[var(--cream)]">{kw.keyword}</td>
                         <td className="px-4 py-2.5 tabular-nums text-[var(--cream-dim)]">
                           {kw.volume != null ? kw.volume.toLocaleString() : <span className="text-[var(--cream-dim)]">—</span>}
                         </td>
@@ -280,7 +280,7 @@ export default function SavedKeywordsPage() {
                                 onClick={() => handleWriteArticle(kw)}
                                 disabled={writingId === kw.id}
                                 title="Write article for this keyword"
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-[#B87333] border border-[rgba(184,115,51,0.25)] hover:bg-[rgba(184,115,51,0.08)] disabled:opacity-50 transition-colors"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-[var(--copper)] border border-[rgba(184,115,51,0.25)] hover:bg-[rgba(184,115,51,0.08)] disabled:opacity-50 transition-colors"
                               >
                                 {writingId === kw.id
                                   ? <Loader2 className="w-3 h-3 animate-spin" />
