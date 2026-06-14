@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -216,22 +217,24 @@ export async function POST(request: Request) {
         const msg = err instanceof Error ? err.message : 'Stream error'
         controller.enqueue(encoder.encode(`[Error: ${msg}]`))
       } finally {
-        controller.close()
-      }
-
-      // Fix 3: after the response is delivered, extract brand facts from the full
-      // conversation and upsert them. Runs after close() so the client is never
-      // blocked; awaited here so the work completes before the function suspends.
-      // Skipped on the final-profile turn (the user reviews + saves that explicitly).
-      if (assistantText && !assistantText.includes('<brand_profile>') && messages.some((m) => m.role === 'user')) {
-        try {
-          await extractAndSaveBrandFacts(supabase, user.id, [
-            ...messages,
-            { role: 'assistant', content: assistantText },
-          ])
-        } catch (err) {
-          console.error('brand fact auto-extraction failed:', err)
+        // Fix 3: after the response is delivered, extract brand facts from the full
+        // conversation and upsert them. Registered with waitUntil BEFORE close() so
+        // Vercel's runtime keeps the invocation alive until the upsert resolves —
+        // otherwise the serverless function can suspend the moment the stream closes,
+        // killing the background work before the write completes. The client is never
+        // blocked: waitUntil does not delay the response.
+        // Skipped on the final-profile turn (the user reviews + saves that explicitly).
+        if (assistantText && !assistantText.includes('<brand_profile>') && messages.some((m) => m.role === 'user')) {
+          waitUntil(
+            extractAndSaveBrandFacts(supabase, user.id, [
+              ...messages,
+              { role: 'assistant', content: assistantText },
+            ]).catch((err) => {
+              console.error('brand fact auto-extraction failed:', err)
+            }),
+          )
         }
+        controller.close()
       }
     },
   })
