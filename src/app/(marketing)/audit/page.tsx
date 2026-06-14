@@ -84,6 +84,15 @@ export default function PublicAuditPage() {
   const freeGaps = result?.gaps.slice(0, 3) ?? []
   const lockedGaps = result?.gaps.slice(3) ?? []
 
+  // Lead magnet: the #1 gap (model returns gaps ordered by priority) becomes the
+  // keyword we pre-fill the user's first free article with after signup.
+  const topGap = result?.gaps[0] ?? null
+  const topKeyword = topGap?.suggestedKeyword?.trim() || topGap?.title?.trim() || ''
+  const signupHref = topKeyword
+    ? `/signup?plan=free&ref=audit&audit_keyword=${encodeURIComponent(topKeyword)}` +
+      `&audit_topic=${encodeURIComponent(topGap?.title ?? '')}`
+    : '/signup?plan=free&ref=audit'
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
       {/* Nav */}
@@ -240,6 +249,28 @@ export default function PublicAuditPage() {
               </div>
             )}
 
+            {/* Lead magnet CTA — pre-fills the #1 gap keyword into the free article */}
+            {topKeyword && (
+              <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 text-center">
+                <p className="text-xs font-semibold text-indigo-200 uppercase tracking-wide mb-2">
+                  Your biggest gap
+                </p>
+                <p className="text-xl font-bold text-white mb-1">
+                  &ldquo;{topKeyword}&rdquo;
+                </p>
+                <p className="text-sm text-indigo-100 mb-5 max-w-md mx-auto">
+                  Generate a full, SEO-ready article targeting it — free, no credit card.
+                </p>
+                <Link
+                  href={signupHref}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-50 transition-colors"
+                >
+                  Generate my free article
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
+
             {/* Locked section */}
             {lockedGaps.length > 0 ? (
               <div className="relative">
@@ -278,7 +309,7 @@ export default function PublicAuditPage() {
                     {lockedGaps.length > 2 && ` and ${lockedGaps.length - 2} more`}
                   </p>
                   <Link
-                    href="/signup?plan=free&ref=audit"
+                    href={signupHref}
                     className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
                   >
                     Write your first article free — no credit card needed
@@ -296,7 +327,7 @@ export default function PublicAuditPage() {
               /* CTA when fewer than 4 gaps total */
               <div className="text-center pt-2 pb-4">
                 <Link
-                  href="/signup?plan=free&ref=audit"
+                  href={signupHref}
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
                 >
                   Write your first article free — no credit card needed

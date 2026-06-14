@@ -32,6 +32,55 @@ function extractLocs(xml: string): string[] {
   return locs
 }
 
+/**
+ * Robustly extract a JSON object from an LLM response.
+ *
+ * Haiku frequently wraps the JSON in a ```json code fence and adds preamble
+ * ("Here is the audit:") and/or trailing commentary ("Would you like me to…").
+ * A greedy `/\{[\s\S]*\}/` match breaks the moment that surrounding prose
+ * contains a brace, because it runs to the LAST `}` in the whole string.
+ *
+ * Instead: strip any code fence, then scan each `{` as a candidate start and
+ * return the first balanced object that actually JSON-parses. Brace-counting is
+ * string-aware so braces inside string values don't throw off the depth.
+ */
+function extractJsonObject(text: string): string | null {
+  let s = text.trim()
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fence) s = fence[1].trim()
+
+  for (let start = s.indexOf('{'); start !== -1; start = s.indexOf('{', start + 1)) {
+    let depth = 0
+    let inStr = false
+    let esc = false
+    for (let i = start; i < s.length; i++) {
+      const c = s[i]
+      if (inStr) {
+        if (esc) esc = false
+        else if (c === '\\') esc = true
+        else if (c === '"') inStr = false
+        continue
+      }
+      if (c === '"') inStr = true
+      else if (c === '{') depth++
+      else if (c === '}') {
+        depth--
+        if (depth === 0) {
+          const candidate = s.slice(start, i + 1)
+          try {
+            JSON.parse(candidate)
+            return candidate
+          } catch {
+            // Not valid JSON from this start — fall through to the next `{`.
+          }
+          break
+        }
+      }
+    }
+  }
+  return null
+}
+
 function urlToTitle(url: string): string {
   try {
     const parts = new URL(url).pathname.split('/').filter(Boolean)
@@ -170,8 +219,10 @@ export async function POST(request: Request) {
   try {
     const res = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      system: `You are a content strategist auditing a website's content gaps. Analyze the provided page list and identify specific gaps — topics missing from the site, questions the audience likely has that aren't answered, content pillars that are incomplete or absent. Be specific and actionable. Return a JSON object with: { gaps: [{title, description, priority: 'high'|'medium'|'low', suggestedKeyword}], topicClusters: [{cluster, covered: string[], missing: string[]}], quickWins: string[] }`,
+      max_tokens: 4096,
+      system: `You are a content strategist auditing a website's content gaps. Analyze the provided page list and identify specific gaps — topics missing from the site, questions the audience likely has that aren't answered, content pillars that are incomplete or absent. Be specific and actionable. Order the gaps array by priority, most impactful first.
+
+Return ONLY a single JSON object — no markdown, no code fences, no commentary before or after it. The object must have this exact shape: { "gaps": [{ "title": string, "description": string, "priority": "high" | "medium" | "low", "suggestedKeyword": string }], "topicClusters": [{ "cluster": string, "covered": string[], "missing": string[] }], "quickWins": string[] }`,
       messages: [{ role: 'user', content: userParts.join('\n') }],
     })
     rawText = res.content[0].type === 'text' ? res.content[0].text : ''
@@ -183,10 +234,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Extract JSON object — handles preamble text and code fences
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('No JSON object in response')
-    const analysis = JSON.parse(jsonMatch[0])
+    // Handles code fences, preamble text, and trailing commentary (incl. braces).
+    const jsonStr = extractJsonObject(rawText)
+    if (!jsonStr) throw new Error('No JSON object in response')
+    const analysis = JSON.parse(jsonStr)
     return NextResponse.json({ ...analysis, pageCount: pages.length })
   } catch (err) {
     console.error('Audit parse error:', err, '\nRaw:', rawText?.slice(0, 500))

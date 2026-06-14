@@ -150,7 +150,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   }
 
   return (
-    <div className="min-h-full bg-[#1C1917] text-[#F7F3EC]">
+    <div className="min-h-full bg-[#1C1917] text-[var(--cream)]">
 
       {/* Hero */}
       <div className="px-6 pt-16 pb-10 text-center">
@@ -191,8 +191,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                 onClick={() => setInterval('monthly')}
                 className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
                   interval === 'monthly'
-                    ? 'bg-[#1C1917] text-[#F7F3EC]'
-                    : 'text-[#7A6555] hover:text-[#F7F3EC]'
+                    ? 'bg-[#1C1917] text-[var(--cream)]'
+                    : 'text-[#7A6555] hover:text-[var(--cream)]'
                 }`}
               >
                 Monthly
@@ -201,8 +201,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                 onClick={() => setInterval('annual')}
                 className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
                   interval === 'annual'
-                    ? 'bg-[#1C1917] text-[#F7F3EC]'
-                    : 'text-[#7A6555] hover:text-[#F7F3EC]'
+                    ? 'bg-[#1C1917] text-[var(--cream)]'
+                    : 'text-[#7A6555] hover:text-[var(--cream)]'
                 }`}
               >
                 Annual
@@ -249,11 +249,11 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     </div>
                   )}
 
-                  <h2 className="text-lg font-bold text-[#F7F3EC] mb-1">{plan.name}</h2>
+                  <h2 className="text-lg font-bold text-[var(--cream)] mb-1">{plan.name}</h2>
                   <p className="text-[#A89070] text-sm mb-5 leading-relaxed">{plan.tagline}</p>
 
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-[#F7F3EC]">${price}</span>
+                    <span className="text-4xl font-bold text-[var(--cream)]">${price}</span>
                     <span className="text-sm ml-1 text-[#7A6555]">/mo</span>
                     {interval === 'annual' && (
                       <p className="text-xs mt-1 text-[#A89070]">
@@ -275,7 +275,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     <button
                       onClick={handleManageBilling}
                       disabled={loading === 'portal'}
-                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors bg-[#B87333] text-[#F7F3EC] hover:bg-[#A0622A] disabled:opacity-60"
+                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors bg-[#B87333] text-[var(--cream)] hover:bg-[#A0622A] disabled:opacity-60"
                     >
                       {loading === 'portal' ? 'Loading…' : 'Manage Billing'}
                     </button>
@@ -308,7 +308,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           {/* Enterprise strip */}
           <div className="mt-10 rounded-2xl border border-[rgba(184,115,51,0.2)] px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#231F1B' }}>
             <div>
-              <p className="text-sm font-semibold text-[#F7F3EC] mb-0.5">Need more capacity?</p>
+              <p className="text-sm font-semibold text-[var(--cream)] mb-0.5">Need more capacity?</p>
               <p className="text-sm text-[#A89070]">Custom brand profiles, higher article and keyword limits, team seats, and white-glove onboarding for larger operations.</p>
             </div>
             <a
@@ -348,7 +348,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
               <div key={i} className="border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-[#F7F3EC] hover:bg-[rgba(184,115,51,0.05)] transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-[var(--cream)] hover:bg-[rgba(184,115,51,0.05)] transition-colors"
                 >
                   <span>{faq.q}</span>
                   <span className="ml-4 text-[#A89070] flex-shrink-0 text-base leading-none">
@@ -373,7 +373,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         </h2>
         <Link
           href="/signup"
-          className="inline-flex items-center px-7 py-3 rounded-lg bg-[rgba(184,115,51,0.08)] text-[#F7F3EC] font-semibold hover:bg-[#B87333] transition-colors text-sm"
+          className="inline-flex items-center px-7 py-3 rounded-lg bg-[rgba(184,115,51,0.08)] text-[var(--cream)] font-semibold hover:bg-[#B87333] transition-colors text-sm"
         >
           Get started
         </Link>
@@ -381,12 +381,12 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
 
       {/* Footer */}
       <div className="border-t border-[rgba(184,115,51,0.15)] px-6 py-8">
-        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-[#F7F3EC]/40">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-[var(--cream)]/40">
           <span>&copy; {new Date().getFullYear()} Peacock Creative Services LLC</span>
           <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-[#F7F3EC]/70 transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-[#F7F3EC]/70 transition-colors">Terms</Link>
-            <a href="mailto:policies@bylineseo.com" className="hover:text-[#F7F3EC]/70 transition-colors">Contact</a>
+            <Link href="/privacy" className="hover:text-[var(--cream)]/70 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-[var(--cream)]/70 transition-colors">Terms</Link>
+            <a href="mailto:policies@bylineseo.com" className="hover:text-[var(--cream)]/70 transition-colors">Contact</a>
           </div>
         </div>
       </div>

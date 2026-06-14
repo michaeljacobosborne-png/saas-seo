@@ -184,7 +184,7 @@ export default async function BlogPostPage({
           </div>
         )}
 
-        <h1 className="font-[family-name:var(--font-playfair)] text-3xl sm:text-4xl md:text-5xl font-black leading-[1.1] tracking-tight text-[#F7F3EC]">
+        <h1 className="font-[family-name:var(--font-playfair)] text-3xl sm:text-4xl md:text-5xl font-black leading-[1.1] tracking-tight text-[var(--cream)]">
           {post.title}
         </h1>
 
@@ -200,7 +200,7 @@ export default async function BlogPostPage({
                   className="rounded-full"
                 />
               )}
-              <span className="text-[#F7F3EC] font-medium">
+              <span className="text-[var(--cream)] font-medium">
                 {post.author.name}
               </span>
             </span>
@@ -237,7 +237,7 @@ export default async function BlogPostPage({
 
       {/* Footer CTA to try Byline */}
       <aside className="mt-16 rounded-2xl border border-[rgba(184,115,51,0.25)] bg-[#231F1B] p-8 text-center">
-        <h2 className="font-[family-name:var(--font-playfair)] text-2xl font-bold text-[#F7F3EC]">
+        <h2 className="font-[family-name:var(--font-playfair)] text-2xl font-bold text-[var(--cream)]">
           Ready to publish content that ranks?
         </h2>
         <p className="mt-3 text-[#A89070] max-w-md mx-auto leading-relaxed">
