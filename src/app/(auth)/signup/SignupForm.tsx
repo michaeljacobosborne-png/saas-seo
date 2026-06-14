@@ -117,34 +117,34 @@ export default function SignupForm({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#1C1917' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--ink)' }}>
       <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
-          <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '28px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>
-            Byline<span style={{ color: '#B87333' }}>.</span>
+          <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '28px', fontWeight: 900, color: 'var(--cream)', letterSpacing: '-0.01em' }}>
+            Byline<span style={{ color: 'var(--copper)' }}>.</span>
           </span>
         </div>
-        <div className="rounded-2xl p-8" style={{ background: '#231F1B', border: '1px solid rgba(184,115,51,0.25)' }}>
+        <div className="rounded-2xl p-8" style={{ background: 'var(--ink-card)', border: '1px solid var(--border)' }}>
           <div className="mb-8">
-            <h1 className="text-2xl font-bold" style={{ color: '#F7F3EC' }}>Create your account</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--cream)' }}>Create your account</h1>
             {isFree ? (
               <div className="mt-2">
-                <p className="text-sm" style={{ color: '#A89070' }}>Start with a free article. No credit card needed.</p>
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1" style={{ background: 'rgba(184,115,51,0.12)', border: '1px solid rgba(184,115,51,0.3)' }}>
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} style={{ color: '#B87333' }}>
+                <p className="text-sm" style={{ color: 'var(--cream-dim)' }}>Start with a free article. No credit card needed.</p>
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1" style={{ background: 'rgba(184,115,51,0.12)', border: '1px solid var(--border)' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} style={{ color: 'var(--copper)' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-xs font-semibold" style={{ color: '#D4954A' }}>No credit card required</span>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--copper-lt)' }}>No credit card required</span>
                 </div>
               </div>
             ) : (
-              <p className="mt-1 text-sm" style={{ color: '#A89070' }}>Start building your SEO content engine</p>
+              <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>Start building your SEO content engine</p>
             )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1" style={{ color: '#A89070' }}>
+              <label htmlFor="email" className="block text-sm font-medium mb-1" style={{ color: 'var(--cream-dim)' }}>
                 Email
               </label>
               <input
@@ -154,13 +154,13 @@ export default function SignupForm({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-                style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.3)', color: '#F7F3EC' }}
+                style={{ background: 'var(--ink-deep)', border: '1px solid var(--border)', color: 'var(--cream)' }}
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1" style={{ color: '#A89070' }}>
+              <label htmlFor="password" className="block text-sm font-medium mb-1" style={{ color: 'var(--cream-dim)' }}>
                 Password
               </label>
               <input
@@ -171,7 +171,7 @@ export default function SignupForm({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-                style={{ background: '#1C1917', border: '1px solid rgba(184,115,51,0.3)', color: '#F7F3EC' }}
+                style={{ background: 'var(--ink-deep)', border: '1px solid var(--border)', color: 'var(--cream)' }}
                 placeholder="Min. 6 characters"
               />
             </div>
@@ -180,23 +180,23 @@ export default function SignupForm({
               <p className="text-sm px-3 py-2 rounded-lg" style={{ color: '#e05c5c', background: 'rgba(224,92,92,0.1)' }}>{error}</p>
             )}
             {message && (
-              <p className="text-sm px-3 py-2 rounded-lg" style={{ color: '#B87333', background: 'rgba(184,115,51,0.1)' }}>{message}</p>
+              <p className="text-sm px-3 py-2 rounded-lg" style={{ color: 'var(--copper)', background: 'rgba(184,115,51,0.1)' }}>{message}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
               className="w-full py-2.5 px-4 text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              style={{ background: '#B87333', color: '#1C1917', letterSpacing: '0.04em', textTransform: 'uppercase' }}
+              style={{ background: 'var(--copper)', color: 'var(--ink)', letterSpacing: '0.04em', textTransform: 'uppercase' }}
             >
               {loading ? 'Creating account…' : isFree ? 'Create free account' : 'Create account'}
             </button>
           </form>
 
           <div className="mt-6 flex items-center gap-3">
-            <div className="flex-1 h-px" style={{ background: 'rgba(184,115,51,0.18)' }} />
-            <span className="text-xs font-medium" style={{ color: '#A89070' }}>or continue with</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(184,115,51,0.18)' }} />
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            <span className="text-xs font-medium" style={{ color: 'var(--cream-dim)' }}>or continue with</span>
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
           </div>
 
           <div className="mt-4 flex gap-3">
@@ -205,7 +205,7 @@ export default function SignupForm({
               onClick={() => handleOAuth('google')}
               disabled={oauthLoading !== null}
               className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: '#1C1917', color: '#F7F3EC', border: '1px solid rgba(184,115,51,0.3)' }}
+              style={{ background: 'var(--ink-card)', color: 'var(--cream)', border: '1px solid var(--border)' }}
             >
               <GoogleIcon />
               {oauthLoading === 'google' ? 'Redirecting…' : 'Google'}
@@ -215,7 +215,7 @@ export default function SignupForm({
               onClick={() => handleOAuth('github')}
               disabled={oauthLoading !== null}
               className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: '#1C1917', color: '#F7F3EC', border: '1px solid rgba(184,115,51,0.3)' }}
+              style={{ background: 'var(--ink-card)', color: 'var(--cream)', border: '1px solid var(--border)' }}
             >
               <GitHubIcon />
               {oauthLoading === 'github' ? 'Redirecting…' : 'GitHub'}
@@ -223,14 +223,14 @@ export default function SignupForm({
           </div>
 
           {isFree && (
-            <p className="mt-4 text-center text-xs" style={{ color: '#A89070' }}>
+            <p className="mt-4 text-center text-xs" style={{ color: 'var(--cream-dim)' }}>
               Free plan includes 1 article and 3 AI review turns. Upgrade anytime.
             </p>
           )}
 
-          <p className="mt-4 text-center text-sm" style={{ color: '#A89070' }}>
+          <p className="mt-4 text-center text-sm" style={{ color: 'var(--cream-dim)' }}>
             Already have an account?{' '}
-            <Link href="/login" className="font-medium" style={{ color: '#B87333' }}>
+            <Link href="/login" className="font-medium" style={{ color: 'var(--copper)' }}>
               Sign in
             </Link>
           </p>

@@ -68,19 +68,19 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--ink)' }}>
       <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
-          <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '28px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>
-            Byline<span style={{ color: '#B87333' }}>.</span>
+          <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '28px', fontWeight: 900, color: 'var(--cream)', letterSpacing: '-0.01em' }}>
+            Byline<span style={{ color: 'var(--copper)' }}>.</span>
           </span>
         </div>
-        <div className="rounded-2xl p-8" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.25)' }}>
+        <div className="rounded-2xl p-8" style={{ background: 'var(--ink-card)', border: '1px solid var(--border)' }}>
           <div className="mb-8">
-            <h1 className="text-2xl font-bold" style={{ color: '#F7F3EC' }}>Welcome back</h1>
-            <p className="mt-1 text-sm" style={{ color: '#A89070' }}>Sign in to your workspace</p>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--cream)' }}>Welcome back</h1>
+            <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>Sign in to your workspace</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1" style={{ color: '#A89070' }}>
+              <label htmlFor="email" className="block text-sm font-medium mb-1" style={{ color: 'var(--cream-dim)' }}>
                 Email
               </label>
               <input
@@ -90,13 +90,13 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-                style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.3)', color: '#F7F3EC' }}
+                style={{ background: 'var(--ink-deep)', border: '1px solid var(--border)', color: 'var(--cream)' }}
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1" style={{ color: '#A89070' }}>
+              <label htmlFor="password" className="block text-sm font-medium mb-1" style={{ color: 'var(--cream-dim)' }}>
                 Password
               </label>
               <input
@@ -106,7 +106,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-                style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.3)', color: '#F7F3EC' }}
+                style={{ background: 'var(--ink-deep)', border: '1px solid var(--border)', color: 'var(--cream)' }}
                 placeholder="••••••••"
               />
             </div>
@@ -119,16 +119,16 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full py-2.5 px-4 text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              style={{ background: '#B87333', color: 'var(--ink)', letterSpacing: '0.04em', textTransform: 'uppercase' }}
+              style={{ background: 'var(--copper)', color: 'var(--ink)', letterSpacing: '0.04em', textTransform: 'uppercase' }}
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
 
           <div className="mt-6 flex items-center gap-3">
-            <div className="flex-1 h-px" style={{ background: 'rgba(184,115,51,0.18)' }} />
-            <span className="text-xs font-medium" style={{ color: '#A89070' }}>or continue with</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(184,115,51,0.18)' }} />
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            <span className="text-xs font-medium" style={{ color: 'var(--cream-dim)' }}>or continue with</span>
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
           </div>
 
           <div className="mt-4 flex gap-3">
@@ -137,7 +137,7 @@ export default function LoginPage() {
               onClick={() => handleOAuth('google')}
               disabled={oauthLoading !== null}
               className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: 'var(--ink)', color: '#F7F3EC', border: '1px solid rgba(184,115,51,0.3)' }}
+              style={{ background: 'var(--ink-card)', color: 'var(--cream)', border: '1px solid var(--border)' }}
             >
               <GoogleIcon />
               {oauthLoading === 'google' ? 'Redirecting…' : 'Google'}
@@ -147,16 +147,16 @@ export default function LoginPage() {
               onClick={() => handleOAuth('github')}
               disabled={oauthLoading !== null}
               className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: 'var(--ink)', color: '#F7F3EC', border: '1px solid rgba(184,115,51,0.3)' }}
+              style={{ background: 'var(--ink-card)', color: 'var(--cream)', border: '1px solid var(--border)' }}
             >
               <GitHubIcon />
               {oauthLoading === 'github' ? 'Redirecting…' : 'GitHub'}
             </button>
           </div>
 
-          <p className="mt-6 text-center text-sm" style={{ color: '#A89070' }}>
+          <p className="mt-6 text-center text-sm" style={{ color: 'var(--cream-dim)' }}>
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-medium" style={{ color: '#B87333' }}>
+            <Link href="/signup" className="font-medium" style={{ color: 'var(--copper)' }}>
               Sign up
             </Link>
           </p>
