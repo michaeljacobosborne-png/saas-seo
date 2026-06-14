@@ -332,59 +332,64 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       body.fixInstruction = assist.fixInstruction
     }
 
-    const res = await fetch(`/api/articles/${id}/agent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
-      setAgentMessages((prev) => [...prev, { role: 'assistant', content: errorMsg }])
-      setAgentStreaming(false)
-      return
-    }
-    if (!res.body) {
-      setAgentMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
-      setAgentStreaming(false)
-      return
-    }
-
-    setAgentMessages((prev) => [...prev, { role: 'assistant', content: '' }])
-
-    const reader = res.body.getReader()
-    const decoder = new TextDecoder()
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      const text = decoder.decode(value)
-      lastResponseRef.current += text
-      setAgentMessages((prev) => {
-        const updated = [...prev]
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          content: updated[updated.length - 1].content + text,
-        }
-        return updated
+    try {
+      const res = await fetch(`/api/articles/${id}/agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       })
-    }
 
-    setAgentStreaming(false)
-
-    if (isAssist && lastResponseRef.current) {
-      const html = marked.parse(lastResponseRef.current) as string
-      if (assist.selectionRange) {
-        applyAtRangeRef.current?.(assist.selectionRange.from, assist.selectionRange.to, html)
-      } else {
-        applyContentRef.current?.(lastResponseRef.current)
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
+        setAgentMessages((prev) => [...prev, { role: 'assistant', content: errorMsg }])
+        return
       }
-      setAssistApplied(true)
-      setTimeout(() => setAssistApplied(false), 2500)
-      setSelectionRange(null)
-      setSelectedText('')
-      setAssistInput('')
+      if (!res.body) {
+        setAgentMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+        return
+      }
+
+      setAgentMessages((prev) => [...prev, { role: 'assistant', content: '' }])
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const text = decoder.decode(value)
+        lastResponseRef.current += text
+        setAgentMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            content: updated[updated.length - 1].content + text,
+          }
+          return updated
+        })
+      }
+
+      if (isAssist && lastResponseRef.current) {
+        const html = marked.parse(lastResponseRef.current) as string
+        if (assist.selectionRange) {
+          applyAtRangeRef.current?.(assist.selectionRange.from, assist.selectionRange.to, html)
+        } else {
+          applyContentRef.current?.(lastResponseRef.current)
+        }
+        setAssistApplied(true)
+        setTimeout(() => setAssistApplied(false), 2500)
+        setSelectionRange(null)
+        setSelectedText('')
+        setAssistInput('')
+      }
+    } catch (err) {
+      // Network drop / aborted stream / parse failure — surface gracefully instead of
+      // letting the rejection bubble up and crash the page via the Next.js error overlay.
+      console.error('[agent] Stream failed:', err)
+      setAgentMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+    } finally {
+      setAgentStreaming(false)
     }
   }, [id])
 
@@ -393,48 +398,54 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setAutoApplied(false)
     setAgentStreaming(true)
 
-    const res = await fetch(`/api/articles/${id}/agent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [], mode: 'auto', userInstruction: instruction?.trim() || undefined }),
-    })
-
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
-      setAgentMessages([{ role: 'assistant', content: errorMsg }])
-      setAgentStreaming(false)
-      return
-    }
-    if (!res.body) {
-      setAgentMessages([{ role: 'assistant', content: 'Something went wrong. Please try again.' }])
-      setAgentStreaming(false)
-      return
-    }
-
-    setAgentMessages([{ role: 'assistant', content: '' }])
-    const reader = res.body.getReader()
-    const decoder = new TextDecoder()
-    let fullResult = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      const text = decoder.decode(value)
-      fullResult += text
-      setAgentMessages((prev) => {
-        const updated = [...prev]
-        updated[updated.length - 1] = { ...updated[updated.length - 1], content: updated[updated.length - 1].content + text }
-        return updated
+    try {
+      const res = await fetch(`/api/articles/${id}/agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [], mode: 'auto', userInstruction: instruction?.trim() || undefined }),
       })
-    }
 
-    setAgentStreaming(false)
-    if (fullResult) {
-      // Full replacement via replaceContentRef (setContent, not insertContent at cursor).
-      // Autosave persists it; the editor's undo (⌘/Ctrl+Z) reverts.
-      replaceContentRef.current?.(fullResult)
-      setAutoApplied(true)
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
+        setAgentMessages([{ role: 'assistant', content: errorMsg }])
+        return
+      }
+      if (!res.body) {
+        setAgentMessages([{ role: 'assistant', content: 'Something went wrong. Please try again.' }])
+        return
+      }
+
+      setAgentMessages([{ role: 'assistant', content: '' }])
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let fullResult = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const text = decoder.decode(value)
+        fullResult += text
+        setAgentMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { ...updated[updated.length - 1], content: updated[updated.length - 1].content + text }
+          return updated
+        })
+      }
+
+      if (fullResult) {
+        // Full replacement via replaceContentRef (setContent, not insertContent at cursor).
+        // Autosave persists it; the editor's undo (⌘/Ctrl+Z) reverts.
+        replaceContentRef.current?.(fullResult)
+        setAutoApplied(true)
+      }
+    } catch (err) {
+      // Network drop / aborted stream / parse failure — surface gracefully instead of
+      // letting the rejection bubble up and crash the page via the Next.js error overlay.
+      console.error('[auto-mode] Rewrite failed:', err)
+      setAgentMessages([{ role: 'assistant', content: 'The rewrite was interrupted. Please try again.' }])
+    } finally {
+      setAgentStreaming(false)
     }
   }, [id])
 
