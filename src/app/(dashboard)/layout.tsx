@@ -1,14 +1,7 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, LogOut } from 'lucide-react'
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/brand', label: 'Brand', icon: Building2 },
-  { href: '/keywords', label: 'Keywords', icon: Search },
-  { href: '/articles', label: 'Articles', icon: FileText },
-]
+import DashboardSidebar from './DashboardSidebar'
+import SupportWidget from '@/app/_components/SupportWidget'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -16,45 +9,40 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect('/login')
 
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('status', ['active', 'trialing'])
+    .limit(1)
+    .maybeSingle()
+
+  if (!sub) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    // No active/trialing subscription: allow through only if the profile grants
+    // paid access (e.g. comped accounts, or before the subscription row lands).
+    // Genuinely free or unprovisioned users get sent to pricing.
+    if (!profile || profile.account_type === 'free') redirect('/pricing')
+  }
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <span className="text-lg font-bold text-indigo-600">SEO Studio</span>
-        </div>
+    <div className="flex h-screen" style={{ background: 'var(--ink)' }}>
+      {/* Sidebar: desktop rail + mobile hamburger/drawer (client component) */}
+      <DashboardSidebar userEmail={user.email ?? ''} />
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors group"
-            >
-              <Icon className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="px-3 py-4 border-t border-gray-200">
-          <div className="px-3 py-2 text-xs text-gray-400 truncate mb-1">{user.email}</div>
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign out
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      {/* Main content — pt-14 on mobile clears the fixed hamburger top bar */}
+      <main className="flex-1 overflow-y-auto pt-14 md:pt-0" style={{ background: 'var(--ink)' }}>
         {children}
       </main>
+
+      {/* Floating customer-support agent (available across the dashboard) */}
+      <SupportWidget />
     </div>
   )
 }
