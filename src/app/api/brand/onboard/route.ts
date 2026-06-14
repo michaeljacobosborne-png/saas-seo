@@ -2,9 +2,123 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 
+export const maxDuration = 30
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 type Message = { role: 'user' | 'assistant'; content: string }
+
+// ─── Fix 2: web browsing for the onboarding agent ──────────────────────────────
+
+// Pull http(s) URLs and bare domains (e.g. "givesuite.com") out of a message.
+function extractUrls(text: string): string[] {
+  const re = /\b(?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s)]*)?/gi
+  const found = new Set<string>()
+  for (const raw of text.match(re) ?? []) {
+    // Skip email addresses (preceded by @ is handled by \b, but guard anyway).
+    if (raw.includes('@')) continue
+    const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
+    found.add(url)
+    if (found.size >= 2) break // cap to bound latency
+  }
+  return [...found]
+}
+
+// Fetch a page and return a compact text snapshot (title + description + body text).
+async function fetchPageSnapshot(url: string): Promise<string | null> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5000)
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Byline-BrandOnboard/1.0' },
+    })
+    if (!res.ok) return null
+    const contentType = res.headers.get('content-type') ?? ''
+    if (!contentType.includes('text/html') && !contentType.includes('text/plain')) return null
+
+    const html = await res.text()
+    const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '').trim()
+    const description = (
+      html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i)?.[1] ??
+      html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["']/i)?.[1] ??
+      ''
+    ).trim()
+    const body = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&[a-z]+;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 2000)
+
+    return `Content fetched from ${url}:\nTitle: ${title || '(none)'}\nDescription: ${description || '(none)'}\n\n${body}`
+  } catch {
+    return null // network error / timeout / abort — continue without page content
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+// ─── Fix 3: auto-extract brand facts from the conversation and upsert ───────────
+
+async function extractAndSaveBrandFacts(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string,
+  conversation: Message[],
+): Promise<void> {
+  const transcript = conversation.map((m) => `${m.role}: ${m.content}`).join('\n\n')
+
+  const res = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 512,
+    system:
+      'You extract structured brand facts from an onboarding conversation. Return ONLY a JSON object — no prose, no markdown fences. Include only the fields you have real, confident information about; omit any field you are unsure of. Fields: brand_name (string), industry (string), target_audience (string), brand_voice (string), tone_notes (string), competitors (string[]), primary_keywords (string[]).',
+    messages: [{ role: 'user', content: `Conversation:\n\n${transcript}\n\nExtract the brand facts as JSON.` }],
+  })
+
+  const text = res.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
+
+  const jsonStart = text.indexOf('{')
+  const jsonEnd = text.lastIndexOf('}')
+  if (jsonStart === -1 || jsonEnd <= jsonStart) return
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let facts: Record<string, any>
+  try {
+    facts = JSON.parse(text.slice(jsonStart, jsonEnd + 1))
+  } catch {
+    return
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload: Record<string, any> = { user_id: userId }
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+
+  if (str(facts.brand_name)) payload.brand_name = str(facts.brand_name)
+  if (str(facts.industry)) payload.industry = str(facts.industry)
+  if (str(facts.target_audience)) payload.target_audience = str(facts.target_audience)
+  // The descriptive brand voice maps to the tone_notes column (brand_voice is enum-style).
+  const tone = str(facts.tone_notes) ?? str(facts.brand_voice)
+  if (tone) payload.tone_notes = tone
+  if (Array.isArray(facts.competitors) && facts.competitors.length) {
+    payload.competitors = facts.competitors.filter((c: unknown) => typeof c === 'string' && c.trim())
+  }
+  if (Array.isArray(facts.primary_keywords) && facts.primary_keywords.length) {
+    payload.primary_keywords = facts.primary_keywords.filter((k: unknown) => typeof k === 'string' && k.trim())
+  }
+
+  // Nothing confident beyond user_id — skip the write.
+  if (Object.keys(payload).length <= 1) return
+
+  await supabase.from('brand_profiles').upsert(payload, { onConflict: 'user_id' })
+}
 
 const SYSTEM_PROMPT = `You are a brand strategist onboarding a new user to Byline. Your job is to build their brand profile through a natural conversation — not a form. Ask one question at a time. Be warm, specific, and curious.
 
@@ -65,18 +179,36 @@ export async function POST(request: Request) {
     apiMessages = messages
   }
 
+  // Fix 2: if the latest user message references any URLs, fetch them server-side
+  // and inject the page content so the agent can reason about the real site.
+  let systemPrompt = SYSTEM_PROMPT
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user')
+  if (lastUser) {
+    const urls = extractUrls(lastUser.content)
+    if (urls.length) {
+      const snapshots = (await Promise.all(urls.map(fetchPageSnapshot))).filter(
+        (s): s is string => Boolean(s),
+      )
+      if (snapshots.length) {
+        systemPrompt += `\n\n---\nThe user referenced one or more URLs. Below is live content fetched from those pages. Use it to understand their brand and to inform your questions and the final profile. You CAN access this content — never tell the user you can't browse the web.\n\n${snapshots.join('\n\n---\n\n')}`
+      }
+    }
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder()
+      let assistantText = ''
       try {
         const anthropicStream = anthropic.messages.stream({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
-          system: SYSTEM_PROMPT,
+          system: systemPrompt,
           messages: apiMessages,
         })
         for await (const event of anthropicStream) {
           if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            assistantText += event.delta.text
             controller.enqueue(encoder.encode(event.delta.text))
           }
         }
@@ -85,6 +217,21 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`[Error: ${msg}]`))
       } finally {
         controller.close()
+      }
+
+      // Fix 3: after the response is delivered, extract brand facts from the full
+      // conversation and upsert them. Runs after close() so the client is never
+      // blocked; awaited here so the work completes before the function suspends.
+      // Skipped on the final-profile turn (the user reviews + saves that explicitly).
+      if (assistantText && !assistantText.includes('<brand_profile>') && messages.some((m) => m.role === 'user')) {
+        try {
+          await extractAndSaveBrandFacts(supabase, user.id, [
+            ...messages,
+            { role: 'assistant', content: assistantText },
+          ])
+        } catch (err) {
+          console.error('brand fact auto-extraction failed:', err)
+        }
       }
     },
   })
