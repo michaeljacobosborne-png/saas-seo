@@ -22,6 +22,7 @@ interface Keyword {
   keyword_difficulty: number | null
   cluster: string | null
   selected: boolean
+  source: string | null
 }
 
 type SortField = 'keyword' | 'avg_monthly_searches' | 'keyword_difficulty' | 'cpc'
@@ -352,10 +353,15 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
   // Cluster tabs
   const clusters = ['All', ...Array.from(new Set(keywords.map((k) => k.cluster ?? 'Other'))).sort()]
 
-  // Filter + sort
+  // Filter + sort. The forced exact-match keyword is always pinned to the top,
+  // regardless of the active sort — it often has null volume/difficulty and would
+  // otherwise sink to the bottom.
   const filtered = keywords
     .filter((k) => activeCluster === 'All' || k.cluster === activeCluster)
     .sort((a, b) => {
+      if ((a.source === 'exact') !== (b.source === 'exact')) {
+        return a.source === 'exact' ? -1 : 1
+      }
       const aVal = a[sort.field] ?? -Infinity
       const bVal = b[sort.field] ?? -Infinity
       if (typeof aVal === 'string' && typeof bVal === 'string') {
@@ -619,7 +625,19 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                         className="rounded border-[rgba(184,115,51,0.25)] text-[var(--copper)] focus:ring-[#B87333]"
                       />
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-[var(--cream)]">{kw.keyword}</td>
+                    <td className="px-4 py-2.5 font-medium text-[var(--cream)]">
+                      <span className="inline-flex items-center gap-2">
+                        {kw.keyword}
+                        {kw.source === 'exact' && (
+                          <span
+                            className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[rgba(184,115,51,0.12)] text-[var(--copper-lt)] border border-[rgba(184,115,51,0.3)] shrink-0"
+                            title="The exact phrase you searched — forced into your results"
+                          >
+                            Exact match
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-4 py-2.5 tabular-nums text-[var(--cream-dim)]">
                       {kw.avg_monthly_searches != null
                         ? kw.avg_monthly_searches.toLocaleString()

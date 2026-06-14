@@ -177,24 +177,40 @@ export async function POST(request: Request) {
       }
     }
 
-    // Merge cached + fresh results
+    // Merge cached + fresh results. We intentionally do NOT filter by relevance,
+    // difficulty, or search volume — the user should see every suggestion the API
+    // surfaced and be free to force any keyword, however competitive.
     const allIdeas = [...cachedIdeas, ...freshIdeas]
 
-    // Filter: keep keywords that share at least one significant word with the topic,
-    // OR have a relevance score (if DataForSEO provides one) above threshold.
-    // Simple approach: filter ideas where keyword text overlaps with any seed word (length > 4 chars)
-    const topicText = (typeof brief?.topic === 'string' && brief.topic) || seedsToUse.join(' ')
-    const topicWords = new Set(
-      topicText.toLowerCase().split(/\s+/).filter((w) => w.length > 4)
-    )
-    const filteredIdeas = allIdeas.filter((kw) => {
-      const kwWords = kw.keyword.toLowerCase().split(/\s+/)
-      const relevanceScore = (kw as { relevance_score?: number }).relevance_score
-      return kwWords.some((w) => topicWords.has(w)) ||
-             (relevanceScore != null && relevanceScore > 0.5)
-    })
-    // Fall back to all ideas if filter removes everything (or leaves too few to be useful)
-    const ideas = filteredIdeas.length >= 5 ? filteredIdeas : allIdeas
+    // The exact phrase the user typed. For the direct path this is the raw seed
+    // topic; for the discovery-brief path it's the brief topic. We ALWAYS surface
+    // this as a first-class result so a user can force a competitive head term
+    // ("what is SEO") even when the intent layer rewrote it into cleaner seeds and
+    // DataForSEO never returned the literal phrase.
+    const exactPhrase = (rawSeedTopic || (typeof brief?.topic === 'string' ? brief.topic : '')).trim()
+    const exactKey = exactPhrase.toLowerCase()
+
+    // Reuse DataForSEO metrics if the exact phrase happened to come back in the
+    // results; otherwise synthesize a row with null metrics so it's still usable.
+    let exactIdea: KeywordIdea | null = null
+    if (exactPhrase) {
+      exactIdea = allIdeas.find((k) => k.keyword.toLowerCase() === exactKey) ?? {
+        keyword: exactPhrase,
+        search_volume: null,
+        competition: null,
+        competition_index: null,
+        cpc: null,
+        keyword_difficulty: null,
+      }
+    }
+
+    // Everything except the exact phrase (prepended separately, deduped).
+    const otherIdeas = exactPhrase
+      ? allIdeas.filter((k) => k.keyword.toLowerCase() !== exactKey)
+      : allIdeas
+
+    // Exact phrase first, then all other suggestions.
+    const ideas = exactIdea ? [exactIdea, ...otherIdeas] : otherIdeas
 
     if (ideas.length === 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,8 +221,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No keyword ideas returned' }, { status: 502 })
     }
 
-    // Cluster keywords with AI
-    const clusters = await clusterKeywords(ideas.map((k) => k.keyword))
+    // Cluster the AI-suggested keywords (the forced exact phrase is its own cluster).
+    const clusters = await clusterKeywords(otherIdeas.map((k) => k.keyword))
 
     const clusterMap = new Map<string, string>()
     clusters.forEach((c) => {
@@ -220,18 +236,23 @@ export async function POST(request: Request) {
       .delete()
       .eq('project_id', project_id)
 
-    // Insert keywords into DB
-    const rows = ideas.map((k) => ({
-      project_id,
-      keyword: k.keyword,
-      avg_monthly_searches: k.search_volume,
-      competition: k.competition,
-      competition_index: k.competition_index,
-      cpc: k.cpc,
-      keyword_difficulty: k.keyword_difficulty,
-      cluster: clusterMap.get(k.keyword.toLowerCase()) ?? 'Other',
-      selected: false,
-    }))
+    // Insert keywords into DB. The forced phrase is tagged source='exact' and put
+    // in its own "Exact match" cluster so the UI can badge and pin it.
+    const rows = ideas.map((k) => {
+      const isExact = exactIdea != null && k.keyword.toLowerCase() === exactKey
+      return {
+        project_id,
+        keyword: k.keyword,
+        avg_monthly_searches: k.search_volume,
+        competition: k.competition,
+        competition_index: k.competition_index,
+        cpc: k.cpc,
+        keyword_difficulty: k.keyword_difficulty,
+        cluster: isExact ? 'Exact match' : (clusterMap.get(k.keyword.toLowerCase()) ?? 'Other'),
+        source: isExact ? 'exact' : 'dataforseo',
+        selected: false,
+      }
+    })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: insertError } = await (supabase as any)
