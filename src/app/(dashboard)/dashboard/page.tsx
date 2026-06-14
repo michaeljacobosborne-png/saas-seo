@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import SearchPerformance from './search-performance'
 import DomainAuthority from './domain-authority'
+import QuickWrite from '../QuickWrite'
 
 // The DB lifecycle is broader than the (stale) Article TS union, so we key off
 // raw status strings: draft -> brief_ready -> generating -> expanding ->
@@ -156,6 +157,11 @@ export default async function DashboardPage() {
           {brandName ? `Welcome back, ${brandName}` : 'Welcome to Byline'}
         </h1>
         <p className="mt-1 text-sm text-[var(--cream-dim)]">Here&apos;s what&apos;s happening across your workspace.</p>
+      </div>
+
+      {/* Quick Write — fast lane straight to article generation */}
+      <div className="mb-8">
+        <QuickWrite />
       </div>
 
       {/* Row 1 — stats */}

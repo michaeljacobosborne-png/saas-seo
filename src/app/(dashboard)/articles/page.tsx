@@ -4,6 +4,7 @@ import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe } from 'l
 import type { Article } from '@/lib/supabase/types'
 import DuplicateArticleButton from './DuplicateArticleButton'
 import PublishButton from './PublishButton'
+import QuickWrite from '../QuickWrite'
 
 const STATUS_CONFIG: Record<Article['status'], { label: string; className: string; icon: React.ElementType; spin?: boolean }> = {
   draft: { label: 'Draft', className: 'bg-[var(--ink-card)] text-[var(--cream-dim)]', icon: Clock },
@@ -52,6 +53,10 @@ export default async function ArticlesPage() {
           <Plus className="w-4 h-4" />
           New Article
         </Link>
+      </div>
+
+      <div className="mb-8">
+        <QuickWrite />
       </div>
 
       {list.length === 0 ? (

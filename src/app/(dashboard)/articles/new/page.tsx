@@ -118,6 +118,7 @@ function NewArticleWizard() {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const projectParam = searchParams.get('project')
+  const keywordParam = searchParams.get('keyword')
 
   // TODO(lead-magnet): pick up the audit funnel keyword and pre-fill the brief.
   // The /audit → /signup CTA stashes localStorage `byline_audit_intent` =
@@ -196,6 +197,23 @@ function NewArticleWizard() {
       setStep(2)
     }
   }, [projectParam, projectsLoading, projects])
+
+  // Arriving from a "Quick Write" entry point via ?keyword=<phrase>: pre-fill the
+  // quick-write topic and (once the brand profile has loaded) jump straight to
+  // generating the brief — skipping the keyword/project selection entirely. If
+  // no brand profile exists, we stay on Step 1's Quick Write panel (which shows
+  // the "set up brand first" notice) rather than firing a request that can't run.
+  const quickAutoStarted = useRef(false)
+  useEffect(() => {
+    if (quickAutoStarted.current || !keywordParam || projectsLoading) return
+    quickAutoStarted.current = true
+    const topic = keywordParam.trim()
+    if (!topic) return
+    setWriteMode('quick')
+    setQuickWriteTopic(topic)
+    if (brandProfile) void handleQuickWriteBrief(topic)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keywordParam, projectsLoading, brandProfile])
 
   // Load keywords when project changes
   useEffect(() => {
@@ -302,9 +320,11 @@ function NewArticleWizard() {
     setLoading(false)
   }
 
-  // Quick-write: topic → keyword seeds (via intent layer) → brief (no project needed)
-  async function handleQuickWriteBrief() {
-    const topic = quickWriteTopic.trim()
+  // Quick-write: topic → keyword seeds (via intent layer) → brief (no project needed).
+  // Accepts an explicit topic so the ?keyword= auto-trigger doesn't race the
+  // quickWriteTopic state update.
+  async function handleQuickWriteBrief(topicArg?: string) {
+    const topic = (topicArg ?? quickWriteTopic).trim()
     if (!topic || !brandProfile) return
     setLoading(true)
     setError(null)
