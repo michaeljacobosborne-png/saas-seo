@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Bot, X, Send, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 type Message = { role: 'user' | 'assistant'; content: string }
@@ -19,6 +20,11 @@ const QUICK_ACTIONS = [
 ]
 
 export default function SupportWidget() {
+  const pathname = usePathname()
+  // The /brand page has its own bottom-anchored chat input. On mobile the floating
+  // launcher overlaps that page's send button, so hide it there on small screens.
+  const onBrandPage = pathname === '/brand'
+
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<View>('chat')
   const [messages, setMessages] = useState<Message[]>([GREETING])
@@ -150,16 +156,20 @@ export default function SupportWidget() {
 
   return (
     <>
-      {/* Launcher */}
+      {/* Launcher — icon-only on mobile (smaller footprint so it doesn't overlap
+          bottom chat inputs); full pill on md+. Hidden on /brand on mobile, where
+          the page has its own bottom-anchored send button. */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
           aria-label="Open support"
-          className="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-transform hover:scale-105"
+          className={`fixed bottom-5 right-5 z-50 items-center gap-2 p-3.5 md:px-4 md:py-3 rounded-full shadow-lg transition-transform hover:scale-105 ${
+            onBrandPage ? 'hidden md:flex' : 'flex'
+          }`}
           style={{ background: '#B87333', color: '#F7F3EC' }}
         >
           <Bot className="w-5 h-5" />
-          <span className="text-sm font-semibold">Support</span>
+          <span className="hidden md:inline text-sm font-semibold">Support</span>
         </button>
       )}
 
