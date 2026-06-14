@@ -197,6 +197,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   // Auto mode state
   const [autoInstruction, setAutoInstruction] = useState('')
   const [autoApplied, setAutoApplied] = useState(false)
+  // Buffered full-article rewrite awaiting the user's accept/reject decision.
+  // Nothing touches the editor until the user explicitly applies it.
+  const [autoProposal, setAutoProposal] = useState<string | null>(null)
   const autoStreamRef = useRef<HTMLDivElement>(null)
 
   // Assist mode state
@@ -290,6 +293,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       setAgentMessages([])
       setAssistApplied(false)
       setAutoApplied(false)
+      setAutoProposal(null)
     }
   }, [agentMode])
 
@@ -396,13 +400,26 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const sendAutoMode = useCallback(async (instruction?: string) => {
     setAgentMessages([])
     setAutoApplied(false)
+    setAutoProposal(null)
     setAgentStreaming(true)
 
+    // Watchdog: if the stream stalls (serverless timeout severs the connection
+    // without a clean close), reader.read() would hang forever and freeze the
+    // spinner. Abort on inactivity so the catch/finally always runs.
+    const controller = new AbortController()
+    let watchdog: ReturnType<typeof setTimeout> | undefined
+    const resetWatchdog = () => {
+      if (watchdog) clearTimeout(watchdog)
+      watchdog = setTimeout(() => controller.abort(), 90_000)
+    }
+
     try {
+      resetWatchdog()
       const res = await fetch(`/api/articles/${id}/agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: [], mode: 'auto', userInstruction: instruction?.trim() || undefined }),
+        signal: controller.signal,
       })
 
       if (!res.ok) {
@@ -424,6 +441,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
+        resetWatchdog()
         const text = decoder.decode(value)
         fullResult += text
         setAgentMessages((prev) => {
@@ -433,21 +451,46 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         })
       }
 
-      if (fullResult) {
-        // Full replacement via replaceContentRef (setContent, not insertContent at cursor).
-        // Autosave persists it; the editor's undo (⌘/Ctrl+Z) reverts.
-        replaceContentRef.current?.(fullResult)
-        setAutoApplied(true)
+      if (fullResult.trim()) {
+        // Buffer the rewrite for review — do NOT auto-apply. The user accepts or
+        // dismisses it with a single click before anything touches the editor.
+        setAutoProposal(fullResult)
+      } else {
+        setAgentMessages([{ role: 'assistant', content: 'The rewrite came back empty. Please try again.' }])
       }
     } catch (err) {
       // Network drop / aborted stream / parse failure — surface gracefully instead of
       // letting the rejection bubble up and crash the page via the Next.js error overlay.
       console.error('[auto-mode] Rewrite failed:', err)
-      setAgentMessages([{ role: 'assistant', content: 'The rewrite was interrupted. Please try again.' }])
+      const aborted = err instanceof DOMException && err.name === 'AbortError'
+      setAgentMessages([{
+        role: 'assistant',
+        content: aborted
+          ? 'The rewrite timed out. Please try again.'
+          : 'The rewrite was interrupted. Please try again.',
+      }])
     } finally {
+      if (watchdog) clearTimeout(watchdog)
       setAgentStreaming(false)
     }
   }, [id])
+
+  const applyAutoProposal = useCallback(() => {
+    setAutoProposal((proposal) => {
+      if (proposal) {
+        // Full replacement via replaceContentRef (setContent, not insertContent at cursor).
+        // Autosave persists it; the editor's undo (⌘/Ctrl+Z) reverts.
+        replaceContentRef.current?.(proposal)
+        setAutoApplied(true)
+      }
+      return null
+    })
+  }, [])
+
+  const dismissAutoProposal = useCallback(() => {
+    setAutoProposal(null)
+    setAgentMessages([])
+  }, [])
 
   function openAgent(currentArticle: Article) {
     setAgentOpen(true)
@@ -1193,6 +1236,42 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     <pre className="text-xs leading-relaxed whitespace-pre-wrap text-[var(--cream-faint)]" style={{ fontFamily: 'inherit' }}>
                       {agentMessages[0]?.content}
                     </pre>
+                  </div>
+                </div>
+              ) : autoProposal ? (
+                /* Review step — proposed rewrite awaiting accept/reject */
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="shrink-0 flex items-center gap-2.5 px-4 py-2.5 border-b border-[rgba(184,115,51,0.1)]">
+                    <Sparkles className="w-3.5 h-3.5 text-[var(--copper)]" />
+                    <span className="text-xs font-semibold text-[var(--cream)]">Proposed rewrite</span>
+                    <span className="text-xs tabular-nums ml-auto text-[#4A3E35]">
+                      {autoProposal.length.toLocaleString()} chars
+                    </span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+                    <pre className="text-xs leading-relaxed whitespace-pre-wrap text-[var(--cream-dim)]" style={{ fontFamily: 'inherit' }}>
+                      {autoProposal}
+                    </pre>
+                  </div>
+                  <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-4 py-3">
+                    <p className="text-xs text-[var(--cream-faint)] mb-2.5 leading-relaxed">
+                      Review the rewrite above. Nothing changes until you apply it — then it saves automatically and you can undo (⌘/Ctrl+Z) in the editor.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={applyAutoProposal}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-[#B87333] text-white hover:bg-[#A0622A] transition-colors"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Apply changes
+                      </button>
+                      <button
+                        onClick={dismissAutoProposal}
+                        className="px-4 py-2.5 text-sm font-medium rounded-xl border border-[rgba(184,115,51,0.25)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)] transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : autoApplied ? (

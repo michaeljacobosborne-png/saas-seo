@@ -5,6 +5,12 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+// Auto-mode rewrites stream up to 8192 tokens, which can run well past the
+// default serverless timeout. When the platform kills the function mid-stream,
+// the connection is severed without a clean close and the client's reader.read()
+// hangs forever (frozen spinner). Give the function room to finish the stream.
+export const maxDuration = 60
+
 type Message = { role: 'user' | 'assistant'; content: string }
 
 function buildFailedList(breakdown: Record<string, { label: string; passed?: boolean }>): string {
