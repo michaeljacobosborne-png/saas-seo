@@ -95,10 +95,8 @@ export default async function ArticlesPage() {
                 return (
                   <tr
                     key={article.id}
-                    className="transition-colors"
+                    className="transition-colors hover:bg-[var(--ink-card)]"
                     style={{ borderColor: 'var(--border)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--ink-card)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                   >
                     <td className="px-4 py-3">
                       <Link href={`/articles/${article.id}`} className="group">
