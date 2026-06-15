@@ -219,6 +219,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [assistInput, setAssistInput] = useState('')
   const [assistApplied, setAssistApplied] = useState(false)
   const agentModeRef = useRef<'review' | 'assist' | 'auto'>('review')
+  // Tracks the in-flight agent fetch so a mode switch can cancel it. Without this,
+  // an orphaned stream keeps writing into a message list that the mode-switch effect
+  // just cleared — and its updater would crash on the (now missing) last element.
+  const agentAbortRef = useRef<AbortController | null>(null)
 
   // Free tier state
   const [accountType, setAccountType] = useState<string | null>(null)
@@ -315,6 +319,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   // Clear messages when entering Assist or Auto mode
   useEffect(() => {
+    // Cancel any in-flight agent stream first. Otherwise a still-streaming review
+    // (auto-started when the panel opened) would keep firing its updater after we
+    // clear the message list below, dereferencing a last element that no longer
+    // exists and crashing the render. Aborting is silent (see the catch handlers).
+    agentAbortRef.current?.abort()
     if (agentMode === 'assist' || agentMode === 'auto') {
       setAgentMessages([])
       setAssistApplied(false)
@@ -355,6 +364,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     if (!isAssist) setAgentInput('')
     setAgentStreaming(true)
 
+    // Cancel any prior stream and register this one so a mode switch can abort it.
+    agentAbortRef.current?.abort()
+    const controller = new AbortController()
+    agentAbortRef.current = controller
+
     const body: Record<string, unknown> = { messages: newMessages, articleId: id }
     if (isAssist) {
       body.mode = 'assist'
@@ -367,6 +381,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       })
 
       if (!res.ok) {
@@ -391,11 +406,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         const text = decoder.decode(value)
         lastResponseRef.current += text
         setAgentMessages((prev) => {
+          // The list was cleared mid-stream (the user switched modes). Drop the
+          // chunk instead of dereferencing a last element that no longer exists.
+          if (prev.length === 0) return prev
           const updated = [...prev]
-          updated[updated.length - 1] = {
-            ...updated[updated.length - 1],
-            content: updated[updated.length - 1].content + text,
-          }
+          const last = updated[updated.length - 1]
+          updated[updated.length - 1] = { ...last, content: last.content + text }
           return updated
         })
       }
@@ -414,11 +430,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         setAssistInput('')
       }
     } catch (err) {
-      // Network drop / aborted stream / parse failure — surface gracefully instead of
-      // letting the rejection bubble up and crash the page via the Next.js error overlay.
+      // A mode switch aborts the stream on purpose — stay silent, the new mode owns the UI.
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      // Network drop / parse failure — surface gracefully instead of letting the
+      // rejection bubble up and crash the page via the Next.js error overlay.
       console.error('[agent] Stream failed:', err)
       setAgentMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
     } finally {
+      if (agentAbortRef.current === controller) agentAbortRef.current = null
       setAgentStreaming(false)
     }
   }, [id])
@@ -432,11 +451,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     // Watchdog: if the stream stalls (serverless timeout severs the connection
     // without a clean close), reader.read() would hang forever and freeze the
     // spinner. Abort on inactivity so the catch/finally always runs.
+    agentAbortRef.current?.abort()
     const controller = new AbortController()
+    agentAbortRef.current = controller
     let watchdog: ReturnType<typeof setTimeout> | undefined
+    let timedOut = false
     const resetWatchdog = () => {
       if (watchdog) clearTimeout(watchdog)
-      watchdog = setTimeout(() => controller.abort(), 90_000)
+      watchdog = setTimeout(() => { timedOut = true; controller.abort() }, 90_000)
     }
 
     try {
@@ -471,8 +493,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         const text = decoder.decode(value)
         fullResult += text
         setAgentMessages((prev) => {
+          // The list was cleared mid-stream (the user switched modes). Drop the
+          // chunk instead of dereferencing a last element that no longer exists.
+          if (prev.length === 0) return prev
           const updated = [...prev]
-          updated[updated.length - 1] = { ...updated[updated.length - 1], content: updated[updated.length - 1].content + text }
+          const last = updated[updated.length - 1]
+          updated[updated.length - 1] = { ...last, content: last.content + text }
           return updated
         })
       }
@@ -485,10 +511,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         setAgentMessages([{ role: 'assistant', content: 'The rewrite came back empty. Please try again.' }])
       }
     } catch (err) {
-      // Network drop / aborted stream / parse failure — surface gracefully instead of
-      // letting the rejection bubble up and crash the page via the Next.js error overlay.
-      console.error('[auto-mode] Rewrite failed:', err)
       const aborted = err instanceof DOMException && err.name === 'AbortError'
+      // A mode switch aborts the stream on purpose (timedOut stays false) — stay
+      // silent, the new mode owns the UI. Only the watchdog should surface a message.
+      if (aborted && !timedOut) return
+      // Network drop / parse failure — surface gracefully instead of letting the
+      // rejection bubble up and crash the page via the Next.js error overlay.
+      console.error('[auto-mode] Rewrite failed:', err)
       setAgentMessages([{
         role: 'assistant',
         content: aborted
@@ -497,6 +526,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       }])
     } finally {
       if (watchdog) clearTimeout(watchdog)
+      if (agentAbortRef.current === controller) agentAbortRef.current = null
       setAgentStreaming(false)
     }
   }, [id])
