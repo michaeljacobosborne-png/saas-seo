@@ -48,6 +48,18 @@ function splitName(name: string | null | undefined): { firstName: string; lastNa
   return { firstName, lastName: rest.join(' ') }
 }
 
+function getSubscriptionPeriodEnd(sub: Stripe.Subscription): string | null {
+  // In Stripe API >= 2024-09-30.acacia, current_period_end moved from
+  // the top-level Subscription to subscription items.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fromItem = (sub.items?.data?.[0] as any)?.current_period_end
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fromTop = (sub as any).current_period_end
+  const timestamp = fromItem ?? fromTop
+  if (!timestamp || typeof timestamp !== 'number') return null
+  return new Date(timestamp * 1000).toISOString()
+}
+
 // Grant paid access. This is the single most important side effect of the whole
 // webhook — if profiles.account_type stays 'free', the dashboard layout bounces
 // the (paying) user to /pricing. Returns false on failure so the caller can
@@ -113,6 +125,7 @@ export async function POST(request: Request) {
   // flip this — they swallow their own errors.
   let criticalFailure = false
 
+  try {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
@@ -154,7 +167,7 @@ export async function POST(request: Request) {
           // Use the real status — a trial checkout lands as 'trialing', not 'active'.
           status: mapStripeStatus(subscription.status) ?? 'active',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          current_period_end: getSubscriptionPeriodEnd(subscription) ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end,
         }, { onConflict: 'stripe_subscription_id' })
 
@@ -286,7 +299,7 @@ export async function POST(request: Request) {
         .update({
           status,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          current_period_end: getSubscriptionPeriodEnd(subscription) ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end,
           ...(planInfo ? { plan: planInfo.plan, billing_interval: planInfo.interval } : {}),
           updated_at: new Date().toISOString(),
@@ -393,6 +406,10 @@ export async function POST(request: Request) {
       }
       break
     }
+  }
+  } catch (err) {
+    console.error('Webhook: unhandled error in event processing', err, { eventType: event.type, eventId: event.id })
+    criticalFailure = true
   }
 
   if (criticalFailure) {
