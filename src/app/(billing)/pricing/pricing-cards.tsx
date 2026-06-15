@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
 import { analytics } from '@/lib/analytics'
+import TestimonialsSection from '@/app/_components/TestimonialsSection'
 
 type Plan = 'starter' | 'pro' | 'agency'
 type Interval = 'monthly' | 'annual'
@@ -179,6 +180,9 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           </span>
         </div>
       </div>
+
+      {/* Social proof — trust signals right before the price */}
+      <TestimonialsSection />
 
       {/* Pricing section */}
       <div className="px-6 pb-20">
