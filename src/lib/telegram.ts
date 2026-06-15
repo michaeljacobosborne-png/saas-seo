@@ -10,15 +10,19 @@ export interface TelegramResult {
 }
 
 /**
- * Send a Markdown message to the configured Telegram chat.
+ * Send a Markdown message to a Telegram chat.
  * Returns a result object rather than throwing, so callers can degrade gracefully.
+ * Pass `chatId` to target a non-default channel (e.g. signup notifications);
+ * defaults to TELEGRAM_CHAT_ID, which the customer-support flow relies on.
  */
-export async function sendTelegramMessage(text: string): Promise<TelegramResult> {
+export async function sendTelegramMessage(
+  text: string,
+  chatId: string | undefined = process.env.TELEGRAM_CHAT_ID,
+): Promise<TelegramResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
 
   if (!token || !chatId) {
-    console.warn('[telegram] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set — skipping escalation send')
+    console.warn('[telegram] TELEGRAM_BOT_TOKEN or chat id not set — skipping escalation send')
     return { ok: false, skipped: true }
   }
 

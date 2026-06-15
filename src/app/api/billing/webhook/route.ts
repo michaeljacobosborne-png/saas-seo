@@ -199,6 +199,7 @@ export async function POST(request: Request) {
           ]
             .filter(Boolean)
             .join('\n'),
+          process.env.TELEGRAM_SIGNUP_CHAT_ID,
         )
       } catch (telegramErr) {
         console.error('Webhook checkout.session.completed: telegram notify failed', telegramErr)

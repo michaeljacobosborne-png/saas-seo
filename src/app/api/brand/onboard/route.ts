@@ -138,6 +138,7 @@ async function extractAndSaveBrandFacts(
         `👤 ${escapeMarkdown(userEmail ?? 'unknown')}`,
         '📋 Free tier',
       ].join('\n'),
+      process.env.TELEGRAM_SIGNUP_CHAT_ID,
     )
   }
 }
