@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { CreditCard, CheckCircle2, AlertCircle, Settings } from 'lucide-react'
+import { CreditCard, CheckCircle2, AlertCircle, Settings, Globe, ChevronRight } from 'lucide-react'
 import ManageBillingButton from './manage-billing-button'
 import SearchConsoleSection from './search-console-section'
 
@@ -187,6 +188,22 @@ export default async function SettingsPage() {
       <Suspense fallback={null}>
         <SearchConsoleSection brandProfileId={brandProfileId} initial={gscInitial} />
       </Suspense>
+
+      {/* Publishing connections */}
+      <Link
+        href="/settings/connections"
+        className="flex items-center justify-between rounded-2xl p-6 mt-6 transition-colors hover:bg-[var(--ink)]"
+        style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}
+      >
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4" style={{ color: '#B87333' }} />
+          <div>
+            <h2 className="text-base font-semibold" style={{ color: '#F7F3EC' }}>Publishing Connections</h2>
+            <p className="text-sm" style={{ color: 'var(--cream-faint)' }}>Connect WordPress to publish articles in one click</p>
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--cream-faint)' }} />
+      </Link>
     </div>
   )
 }

@@ -10,7 +10,7 @@ import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
-  Image as ImageIcon, RefreshCw, ChevronRight, Globe,
+  Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -171,6 +171,15 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const applyContentRef = useRef<((markdown: string) => void) | null>(null)
   const applyAtRangeRef = useRef<((from: number, to: number, html: string) => void) | null>(null)
   const [publishing, setPublishing] = useState(false)
+
+  // WordPress publishing
+  const [wpConnections, setWpConnections] = useState<Array<{ id: string; display_name: string | null; site_url: string }>>([])
+  const [wpModalOpen, setWpModalOpen] = useState(false)
+  const [wpSelectedId, setWpSelectedId] = useState<string | null>(null)
+  const [wpPublishing, setWpPublishing] = useState(false)
+  const [wpPublishError, setWpPublishError] = useState<string | null>(null)
+  const [wpPublishedUrl, setWpPublishedUrl] = useState<string | null>(null)
+
   const [metaDesc, setMetaDesc] = useState('')
   const [metaSaving, setMetaSaving] = useState(false)
   const [generatingMeta, setGeneratingMeta] = useState(false)
@@ -271,6 +280,21 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
     loadBrandProfiles()
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Load publishing connections so we can show the WordPress button + picker.
+  useEffect(() => {
+    async function loadConnections() {
+      try {
+        const res = await fetch('/api/publish/connections')
+        if (!res.ok) return
+        const data = await res.json()
+        setWpConnections(data.connections ?? [])
+      } catch {
+        // Non-fatal — the button just won't appear.
+      }
+    }
+    loadConnections()
   }, [])
 
   useEffect(() => {
@@ -647,6 +671,40 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setPublishing(false)
   }
 
+  function openWpModal() {
+    setWpPublishError(null)
+    setWpPublishedUrl(null)
+    setWpSelectedId((cur) => cur ?? wpConnections[0]?.id ?? null)
+    setWpModalOpen(true)
+  }
+
+  async function handleWpPublish() {
+    if (wpPublishing) return
+    const connectionId = wpSelectedId ?? wpConnections[0]?.id
+    if (!connectionId) return
+    setWpPublishing(true)
+    setWpPublishError(null)
+    setWpPublishedUrl(null)
+    try {
+      const res = await fetch(`/api/articles/${id}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.url) {
+        setWpPublishError(json.error ?? 'Failed to publish to WordPress')
+        return
+      }
+      setWpPublishedUrl(json.url)
+      if (article) setArticle({ ...article, published_url: json.url })
+    } catch {
+      setWpPublishError('Failed to publish to WordPress')
+    } finally {
+      setWpPublishing(false)
+    }
+  }
+
   async function handleScore() {
     setScoring(true)
     setScoreError(null)
@@ -769,6 +827,16 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               >
                 {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
                 {article.status === 'published' ? 'Published' : 'Publish'}
+              </button>
+            )}
+            {(article.status === 'complete' || article.status === 'published') && wpConnections.length > 0 && (
+              <button
+                onClick={openWpModal}
+                title="Publish to WordPress as a draft"
+                className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)] transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Publish to WordPress
               </button>
             )}
             {article.content && (
@@ -1516,6 +1584,111 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Publish to WordPress modal */}
+      {wpModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          onClick={() => !wpPublishing && setWpModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6"
+            style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.25)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Upload className="w-4 h-4" style={{ color: '#B87333' }} />
+                <h3 className="text-base font-semibold text-[var(--cream)]">Publish to WordPress</h3>
+              </div>
+              <button
+                onClick={() => !wpPublishing && setWpModalOpen(false)}
+                className="text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {wpPublishedUrl ? (
+              <div className="text-center py-2">
+                <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-[var(--cream)] mb-1">Published as a draft</p>
+                <p className="text-xs text-[var(--cream-dim)] mb-4">
+                  Review and publish it from your WordPress dashboard.
+                </p>
+                <a
+                  href={wpPublishedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[#B87333] text-white hover:bg-[#A0622A] transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Open draft in WordPress
+                </a>
+                <div>
+                  <button
+                    onClick={() => setWpModalOpen(false)}
+                    className="mt-4 text-xs text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-[var(--cream-dim)] mb-4 leading-relaxed">
+                  This sends the article to WordPress as a <span className="font-medium text-[var(--cream)]">draft</span>.
+                  Nothing goes live until you publish it there.
+                </p>
+
+                {wpConnections.length > 1 && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-[var(--cream-dim)] mb-1.5">Site</label>
+                    <select
+                      value={wpSelectedId ?? ''}
+                      onChange={(e) => setWpSelectedId(e.target.value)}
+                      className="w-full text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent appearance-none cursor-pointer bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] text-[var(--cream)]"
+                    >
+                      {wpConnections.map((c) => (
+                        <option key={c.id} value={c.id}>{c.display_name || c.site_url}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {wpConnections.length === 1 && (
+                  <p className="text-xs text-[var(--cream-faint)] mb-4">
+                    Publishing to <span className="font-medium text-[var(--cream-dim)]">{wpConnections[0].display_name || wpConnections[0].site_url}</span>
+                  </p>
+                )}
+
+                {wpPublishError && (
+                  <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-xs font-medium text-red-400 bg-red-900/30 border border-red-700/40">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {wpPublishError}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleWpPublish}
+                    disabled={wpPublishing}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-[#B87333] text-white hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                  >
+                    {wpPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {wpPublishing ? 'Publishing…' : 'Publish draft'}
+                  </button>
+                  <button
+                    onClick={() => setWpModalOpen(false)}
+                    disabled={wpPublishing}
+                    className="px-4 py-2.5 text-sm font-medium rounded-xl border border-[rgba(184,115,51,0.25)] text-[var(--cream-dim)] hover:bg-[var(--ink)] disabled:opacity-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
