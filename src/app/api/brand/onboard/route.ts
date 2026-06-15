@@ -132,16 +132,38 @@ async function extractAndSaveBrandFacts(
 
   await supabase.from('brand_profiles').upsert(payload, { onConflict: 'user_id' })
 
+  // Only the first-ever profile creation is a candidate for a signup ping.
   if (!existing) {
-    await sendTelegramMessage(
-      [
-        '🆕 *New free signup*',
-        `👤 ${escapeMarkdown(userEmail ?? 'unknown')}`,
-        '📋 Free tier',
-        `📣 Source: ${escapeMarkdown(signupSourceLabel(signupSource))}`,
-      ].join('\n'),
-      process.env.TELEGRAM_SIGNUP_CHAT_ID,
-    )
+    // Don't notify immediately. For paid signups, Stripe's
+    // checkout.session.completed webhook flips profiles.account_type to 'paid'
+    // shortly after the brand profile is created — and that webhook fires its
+    // own richer "New Byline subscriber" Telegram message. Pinging here right
+    // away would race the webhook and mislabel paying customers as "Free tier".
+    // So wait a few seconds, re-read account_type, and only send the free-tier
+    // ping when the user is still free/null (no paid webhook is coming). This
+    // whole function already runs under waitUntil, so the delay doesn't block
+    // the client response and the invocation stays alive until it resolves.
+    await new Promise((r) => setTimeout(r, 4000))
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    const accountType = profile?.account_type as string | null | undefined
+    if (!accountType || accountType === 'free') {
+      await sendTelegramMessage(
+        [
+          '🆕 *New free signup*',
+          `👤 ${escapeMarkdown(userEmail ?? 'unknown')}`,
+          '📋 Free tier',
+          `📣 Source: ${escapeMarkdown(signupSourceLabel(signupSource))}`,
+        ].join('\n'),
+        process.env.TELEGRAM_SIGNUP_CHAT_ID,
+      )
+    }
+    // Paid tier → skip; the Stripe webhook sends the paid notification.
   }
 }
 
