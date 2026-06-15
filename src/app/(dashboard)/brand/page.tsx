@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, KeyboardEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandProfile } from '@/lib/supabase/types'
 import {
@@ -122,6 +123,7 @@ export default function BrandPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatInitialized = useRef(false)
   const supabase = createClient()
+  const router = useRouter()
 
   // ── Data fetching ────────────────────────────────────────────────────────────
 
@@ -229,6 +231,9 @@ export default function BrandPage() {
 
   async function saveProfile() {
     if (!parsedProfile) return
+    // First-time setup (no existing profile, not an explicit update) → send the
+    // user straight into the product once their brand is saved.
+    const isFirstTimeSetup = !existingProfile && !isUpdate
     setSaving(true)
     setSaveError(null)
     try {
@@ -239,6 +244,10 @@ export default function BrandPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Save failed')
+      if (isFirstTimeSetup) {
+        router.push('/dashboard')
+        return
+      }
       chatInitialized.current = false
       await fetchProfile()
     } catch (err) {
@@ -307,6 +316,18 @@ export default function BrandPage() {
             Answer a few questions and we'll build your profile automatically.
           </p>
         </div>
+
+        {/* First-time welcome banner */}
+        {!isUpdate && !existingProfile && (
+          <div className="px-8 pt-5">
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-[rgba(184,115,51,0.08)] border border-[rgba(184,115,51,0.25)]">
+              <Building2 className="w-4 h-4 text-[var(--copper-lt)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--cream)]">
+                Welcome! Let&apos;s set up your brand so Byline can write in your voice.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">

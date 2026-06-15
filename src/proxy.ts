@@ -4,7 +4,15 @@ import { createServerClient } from '@supabase/ssr'
 const AUTH_PROTECTED = ['/dashboard', '/brand', '/keywords', '/articles']
 
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  // Forward the current path to Server Components via a request header so the
+  // dashboard layout can decide whether to push the user to brand onboarding.
+  const forwardedHeaders = () => {
+    const headers = new Headers(request.headers)
+    headers.set('x-pathname', request.nextUrl.pathname)
+    return headers
+  }
+
+  let supabaseResponse = NextResponse.next({ request: { headers: forwardedHeaders() } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +24,7 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = NextResponse.next({ request: { headers: forwardedHeaders() } })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
