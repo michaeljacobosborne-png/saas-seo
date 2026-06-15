@@ -55,3 +55,12 @@ export async function sendTelegramMessage(
 export function escapeMarkdown(value: string): string {
   return value.replace(/([_*`\[\]])/g, '\\$1')
 }
+
+/**
+ * Human label for the signup `source` stored in auth user_metadata.
+ * Used in signup notifications so we can tell lead-magnet (content audit)
+ * conversions apart from direct/organic ones.
+ */
+export function signupSourceLabel(source: string | null | undefined): string {
+  return source === 'lead_magnet' ? 'Lead magnet (content audit)' : 'Direct / organic'
+}

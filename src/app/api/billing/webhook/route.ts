@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { sendMetaCapiEvent } from '@/lib/meta-capi'
 import { sendGa4Purchase } from '@/lib/analytics-server'
 import { subscriptionEventId } from '@/lib/analytics-events'
-import { sendTelegramMessage, escapeMarkdown } from '@/lib/telegram'
+import { sendTelegramMessage, escapeMarkdown, signupSourceLabel } from '@/lib/telegram'
 import Stripe from 'stripe'
 
 export const runtime = 'nodejs'
@@ -189,6 +189,12 @@ export async function POST(request: Request) {
           .filter((name): name is string => Boolean(name))
         const couponUsed = couponNames.length ? couponNames.join(', ') : null
 
+        // Attribution: pull the signup `source` off the auth user (stamped at
+        // signup from the ref=audit lead-magnet funnel) so paid conversions are
+        // tagged the same way free signups are.
+        const { data: authUser } = await supabase.auth.admin.getUserById(userId)
+        const signupSource = authUser?.user?.user_metadata?.source as string | undefined
+
         await sendTelegramMessage(
           [
             '🎉 *New Byline subscriber*',
@@ -196,6 +202,7 @@ export async function POST(request: Request) {
             `📧 ${escapeMarkdown(customerEmail)}`,
             `💳 ${escapeMarkdown(planName)}`,
             couponUsed ? `🏷️ Coupon: ${escapeMarkdown(couponUsed)}` : null,
+            `📣 Source: ${escapeMarkdown(signupSourceLabel(signupSource))}`,
           ]
             .filter(Boolean)
             .join('\n'),

@@ -27,15 +27,23 @@ function GitHubIcon() {
 export default function SignupForm({
   plan,
   interval,
+  referrer,
   auditKeyword,
   auditTopic,
 }: {
   plan?: string
   interval?: string
+  referrer?: string
   auditKeyword?: string
   auditTopic?: string
 }) {
   const isFree = plan === 'free'
+
+  // Attribution: the public content-audit funnel sends users here with ref=audit.
+  // We stamp the signup `source` into auth user_metadata so it survives email
+  // confirmation / OAuth (query params don't) and the server can later tell
+  // lead-magnet conversions apart from direct/organic signups in notifications.
+  const signupSource = referrer === 'audit' ? 'lead_magnet' : 'organic'
 
   // Build the post-confirmation callback URL. For a paid signup we carry the
   // chosen plan/interval through email confirmation / OAuth so /auth/callback
@@ -82,7 +90,7 @@ export default function SignupForm({
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: callbackUrl() },
+      options: { emailRedirectTo: callbackUrl(), data: { source: signupSource } },
     })
 
     if (error) {

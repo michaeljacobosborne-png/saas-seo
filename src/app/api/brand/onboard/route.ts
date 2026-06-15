@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { waitUntil } from '@vercel/functions'
 import { createClient } from '@/lib/supabase/server'
-import { sendTelegramMessage, escapeMarkdown } from '@/lib/telegram'
+import { sendTelegramMessage, escapeMarkdown, signupSourceLabel } from '@/lib/telegram'
 import Anthropic from '@anthropic-ai/sdk'
 
 export const maxDuration = 30
@@ -72,6 +72,7 @@ async function extractAndSaveBrandFacts(
   userId: string,
   conversation: Message[],
   userEmail: string | undefined,
+  signupSource: string | undefined,
 ): Promise<void> {
   const transcript = conversation.map((m) => `${m.role}: ${m.content}`).join('\n\n')
 
@@ -137,6 +138,7 @@ async function extractAndSaveBrandFacts(
         '🆕 *New free signup*',
         `👤 ${escapeMarkdown(userEmail ?? 'unknown')}`,
         '📋 Free tier',
+        `📣 Source: ${escapeMarkdown(signupSourceLabel(signupSource))}`,
       ].join('\n'),
       process.env.TELEGRAM_SIGNUP_CHAT_ID,
     )
@@ -251,7 +253,7 @@ export async function POST(request: Request) {
             extractAndSaveBrandFacts(supabase, user.id, [
               ...messages,
               { role: 'assistant', content: assistantText },
-            ], user.email).catch((err) => {
+            ], user.email, user.user_metadata?.source as string | undefined).catch((err) => {
               console.error('brand fact auto-extraction failed:', err)
             }),
           )
