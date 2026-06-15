@@ -119,6 +119,7 @@ function NewArticleWizard() {
   const searchParams = useSearchParams()
   const projectParam = searchParams.get('project')
   const keywordParam = searchParams.get('keyword')
+  const articleIdParam = searchParams.get('articleId')
 
   // TODO(lead-magnet): pick up the audit funnel keyword and pre-fill the brief.
   // The /audit → /signup CTA stashes localStorage `byline_audit_intent` =
@@ -214,6 +215,46 @@ function NewArticleWizard() {
     if (brandProfile) void handleQuickWriteBrief(topic)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keywordParam, projectsLoading, brandProfile])
+
+  // Continuing an existing article via ?articleId=<id> (e.g. the "Continue in
+  // article wizard" link from the detail page). Fetch the saved article and
+  // restore the wizard to the brief-review step so the user resumes where they
+  // left off instead of dropping back to Step 1 (project picker).
+  const articleRestored = useRef(false)
+  useEffect(() => {
+    if (articleRestored.current || !articleIdParam) return
+    articleRestored.current = true
+    let active = true
+    async function restore() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !active) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('articles')
+        .select('id, brief, status, target_word_count')
+        .eq('id', articleIdParam)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!active || !data) return
+      setArticleId(data.id as string)
+      if (data.brief) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const restoredBrief = data.brief as Record<string, any>
+        setBrief(restoredBrief)
+        const savedWordCount = data.target_word_count as number | null
+        setTargetWordCount(
+          (WORD_COUNT_OPTIONS as readonly number[]).includes(savedWordCount ?? 0)
+            ? (savedWordCount as WordCountOption)
+            : suggestWordCount((restoredBrief.target_keyword as string) ?? '')
+        )
+        // brief_ready / draft with a saved brief → jump to the Brief review step.
+        if (data.status === 'brief_ready' || data.status === 'draft') setStep(3)
+      }
+    }
+    void restore()
+    return () => { active = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articleIdParam])
 
   // Load keywords when project changes
   useEffect(() => {

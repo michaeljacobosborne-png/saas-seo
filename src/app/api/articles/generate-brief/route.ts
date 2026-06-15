@@ -180,6 +180,9 @@ Rules: outline must include an FAQ section (H2) with 3-5 H3 questions and a Key 
       target_keyword: brief.target_keyword as string ?? null,
       title: (brief.h1_options as string[])?.[0] ?? null,
       supporting_keywords: brief.secondary_keywords ?? [],
+      // Persist the brief's meta description to the dedicated column so the
+      // article detail page pre-fills it (instead of showing an empty 0/160).
+      meta_description: (brief.meta_description as string) ?? null,
     })
     .eq('id', articleId)
     .eq('user_id', user.id)

@@ -163,11 +163,18 @@ Write the full article now.`
 
   // Mark as generating
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any)
+  const { error: generatingErr } = await (supabase as any)
     .from('articles')
     .update({ status: 'generating' })
     .eq('id', articleId)
     .eq('user_id', user.id)
+  if (generatingErr) {
+    // Fatal: if we can't even flip to 'generating' (RLS, status constraint, etc.)
+    // the final save will fail too. Bail out now — before spending on OpenAI —
+    // and leave the article in 'brief_ready' so the user can retry.
+    console.error(`generate-draft: failed to set status=generating for article ${articleId}: ${generatingErr.message}`)
+    return NextResponse.json({ error: generatingErr.message }, { status: 500 })
+  }
 
   // ─── Pass 1 ───
   let content: string
@@ -204,11 +211,17 @@ Write the full article now.`
 
     // Signal the UI that expansion is running
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    const { error: expandingErr } = await (supabase as any)
       .from('articles')
       .update({ status: 'expanding' })
       .eq('id', articleId)
       .eq('user_id', user.id)
+    if (expandingErr) {
+      // Non-fatal: this is only a progress indicator for the polling UI. Log it,
+      // but keep generating — aborting would throw away the Pass 1 content we
+      // already paid OpenAI for. The final save still verifies its own error.
+      console.error(`generate-draft: failed to set status=expanding for article ${articleId}: ${expandingErr.message}`)
+    }
 
     // Step A: identify expansion angles (GPT-4o-mini — cheap)
     let expansionAngles: string[] = []
@@ -335,11 +348,16 @@ Write the full article now.`
   // ─── Polish Pass: Growth/Agency plans only ───
   if (runPolishPass) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any)
+  const { error: polishingErr } = await (supabase as any)
     .from('articles')
     .update({ status: 'polishing' })
     .eq('id', articleId)
     .eq('user_id', user.id)
+  if (polishingErr) {
+    // Non-fatal progress indicator — log and continue to the polish work and the
+    // final save (which has its own error handling + brief_ready reset).
+    console.error(`generate-draft: failed to set status=polishing for article ${articleId}: ${polishingErr.message}`)
+  }
 
   try {
     const firstH2Pos = content.indexOf('\n## ')

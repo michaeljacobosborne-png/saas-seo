@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe } from 'lucide-react'
 import type { Article } from '@/lib/supabase/types'
 import DuplicateArticleButton from './DuplicateArticleButton'
+import DeleteArticleButton from './DeleteArticleButton'
 import PublishButton from './PublishButton'
 import QuickWrite from '../QuickWrite'
 
@@ -141,7 +142,10 @@ export default async function ArticlesPage() {
                       {new Date(article.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <DuplicateArticleButton articleId={article.id} />
+                      <div className="flex items-center justify-end gap-2">
+                        <DuplicateArticleButton articleId={article.id} />
+                        <DeleteArticleButton articleId={article.id} />
+                      </div>
                     </td>
                   </tr>
                 )

@@ -10,7 +10,7 @@ import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
-  Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink,
+  Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink, Trash2,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -164,6 +164,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [copied, setCopied] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
   const [duplicateError, setDuplicateError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'content' | 'scores'>('content')
   const getEditorTextRef = useRef<(() => string) | null>(null)
   const replaceContentRef = useRef<((markdown: string) => void) | null>(null)
@@ -631,6 +633,26 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  async function handleDelete() {
+    if (deleting) return
+    if (!window.confirm('Delete this article? This cannot be undone.')) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setDeleteError(json.error ?? 'Failed to delete article')
+        setDeleting(false)
+        return
+      }
+      router.push('/articles')
+    } catch {
+      setDeleteError('Failed to delete article')
+      setDeleting(false)
+    }
+  }
+
   async function handleSwitchBrand(newBrandId: string) {
     if (!article || switchingBrand) return
     if (newBrandId === (article.brand_profile_id ?? '')) return
@@ -852,8 +874,24 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 Agent
               </button>
             )}
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Delete article"
+              className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
           </div>
         </div>
+
+        {deleteError && (
+          <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {deleteError}
+          </div>
+        )}
 
         {scoreError && (
           <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
@@ -1066,7 +1104,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
                 <p className="text-sm text-[var(--cream-dim)] mb-3">No content yet.</p>
                 {article.status === 'brief_ready' && (
-                  <Link href="/articles/new" className="text-sm text-[var(--copper)] hover:text-[#A0622A] font-medium">
+                  <Link href={`/articles/new?articleId=${id}`} className="text-sm text-[var(--copper)] hover:text-[#A0622A] font-medium">
                     Continue in article wizard →
                   </Link>
                 )}
