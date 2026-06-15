@@ -134,15 +134,16 @@ async function extractAndSaveBrandFacts(
 
   // Only the first-ever profile creation is a candidate for a signup ping.
   if (!existing) {
-    // Don't notify immediately. For paid signups, Stripe's
-    // checkout.session.completed webhook flips profiles.account_type to 'paid'
-    // shortly after the brand profile is created — and that webhook fires its
-    // own richer "New Byline subscriber" Telegram message. Pinging here right
-    // away would race the webhook and mislabel paying customers as "Free tier".
-    // So wait a few seconds, re-read account_type, and only send the free-tier
-    // ping when the user is still free/null (no paid webhook is coming). This
-    // whole function already runs under waitUntil, so the delay doesn't block
-    // the client response and the invocation stays alive until it resolves.
+    // Only notify for genuine free signups. Paid users are notified by Stripe's
+    // checkout.session.completed webhook, which fires its own richer "New Byline
+    // subscriber" message — pinging here too would double-notify them and (worse)
+    // mislabel paying customers as "Free tier". A paid user is identified two
+    // ways, either of which disqualifies the free ping:
+    //   • profiles.account_type === 'paid' (the webhook flips this), or
+    //   • a row exists in the subscriptions table for this user.
+    // The brand profile is created right around checkout, so the webhook may not
+    // have landed yet; a short delay (we already run under waitUntil, so this
+    // never blocks the client) gives it time to write before we decide.
     await new Promise((r) => setTimeout(r, 4000))
 
     const { data: profile } = await supabase
@@ -151,8 +152,14 @@ async function extractAndSaveBrandFacts(
       .eq('user_id', userId)
       .maybeSingle()
 
-    const accountType = profile?.account_type as string | null | undefined
-    if (!accountType || accountType === 'free') {
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    // Send only when the user is NOT paid and has NO subscription row.
+    if (profile?.account_type !== 'paid' && !sub) {
       await sendTelegramMessage(
         [
           '🆕 *New free signup*',
@@ -163,7 +170,8 @@ async function extractAndSaveBrandFacts(
         process.env.TELEGRAM_SIGNUP_CHAT_ID,
       )
     }
-    // Paid tier → skip; the Stripe webhook sends the paid notification.
+    // Paid (account_type='paid' or a subscriptions row) → skip; the Stripe
+    // webhook sends the paid notification.
   }
 }
 
