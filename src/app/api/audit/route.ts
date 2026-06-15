@@ -1,4 +1,6 @@
-export const maxDuration = 30
+// Crawl phase is hard-capped at 45s (see CRAWL_TIMEOUT_MS); allow headroom for
+// the analysis call on top of that.
+export const maxDuration = 60
 
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
@@ -6,18 +8,46 @@ import { createClient } from '@/lib/supabase/server'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+// A real browser UA — many sites (Cloudflare, etc.) 403 obvious bot agents, which
+// would make the crawl silently return nothing. We're only reading public HTML.
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+
+// Skip non-content URLs when scraping homepage links so the AI only sees real pages.
+const ASSET_RE =
+  /\.(css|js|mjs|json|xml|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|pdf|zip|mp4|webm|mp3|avi)(\?|#|$)/i
+const SKIP_PATH_RE = /\/(wp-json|wp-admin|wp-content|wp-includes|feed|cdn-cgi|xmlrpc)\b/i
+
+// Cap the crawl so we never walk an enormous site indefinitely.
+const MAX_PAGES = 30
+// Hard ceiling on the whole crawl phase. If we hit it, we analyze whatever
+// pages we managed to collect — partial results beat no results.
+const CRAWL_TIMEOUT_MS = 45_000
+// Below this we don't have enough signal to produce a useful audit.
+const MIN_PAGES = 3
+
 interface PageEntry {
   url: string
   title: string
 }
 
-async function fetchWithTimeout(url: string, ms = 7000): Promise<Response> {
+interface Analysis {
+  gaps: Array<{ title: string; description: string; priority: 'high' | 'medium' | 'low'; suggestedKeyword: string }>
+  topicClusters: Array<{ cluster: string; covered: string[]; missing: string[] }>
+  quickWins: string[]
+}
+
+async function fetchWithTimeout(url: string, ms = 9000): Promise<Response> {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), ms)
   try {
     return await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'Byline-ContentAudit/1.0' },
+      redirect: 'follow',
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
     })
   } finally {
     clearTimeout(id)
@@ -49,75 +79,180 @@ function urlToTitle(url: string): string {
   }
 }
 
-async function fetchPages(rawUrl: string): Promise<PageEntry[]> {
+function isContentUrl(url: string): boolean {
+  return !ASSET_RE.test(url) && !SKIP_PATH_RE.test(url)
+}
+
+// Mutable crawl accumulator. We push pages into this as we discover them so that
+// if the crawl phase times out mid-flight (CRAWL_TIMEOUT_MS) we still have
+// whatever was collected so far to hand off to analysis.
+type CrawlState = { pages: PageEntry[]; blocked: boolean }
+
+// Absorb a batch of raw URLs into the state, de-duping and honoring MAX_PAGES.
+function absorb(state: CrawlState, urls: string[]): void {
+  const seen = new Set(state.pages.map((p) => p.url))
+  for (const u of urls) {
+    if (state.pages.length >= MAX_PAGES) break
+    if (!isContentUrl(u) || seen.has(u)) continue
+    seen.add(u)
+    state.pages.push({ url: u, title: urlToTitle(u) })
+  }
+}
+
+// A <sitemapindex> points at child sitemaps; pull URLs from the first few,
+// absorbing incrementally so a timeout still leaves us partial results.
+async function collectFromSitemapIndex(state: CrawlState, xml: string): Promise<void> {
+  const subs = extractLocs(xml).slice(0, 5)
+  for (const sub of subs) {
+    if (state.pages.length >= MAX_PAGES) break
+    try {
+      const r = await fetchWithTimeout(sub)
+      if (r.ok) absorb(state, extractLocs(await r.text()))
+    } catch {
+      /* skip this child sitemap */
+    }
+  }
+}
+
+// Crawl into the provided state. Pages are accumulated incrementally; callers
+// race this against CRAWL_TIMEOUT_MS and read state.pages regardless of outcome.
+async function crawl(rawUrl: string, state: CrawlState): Promise<void> {
   const base = rawUrl.replace(/\/+$/, '').replace(/^(?!https?:\/\/)/, 'https://')
+  const noteBlock = (status: number) => {
+    if (status === 403 || status === 429) state.blocked = true
+  }
 
-  // Try /sitemap.xml
-  try {
-    const r = await fetchWithTimeout(`${base}/sitemap.xml`)
-    if (r.ok) {
-      const xml = await r.text()
-      if (xml.includes('<loc>')) {
-        if (xml.includes('<sitemapindex')) {
-          const subs = extractLocs(xml)
-          if (subs.length > 0) {
-            const sub = await fetchWithTimeout(subs[0])
-            if (sub.ok) {
-              return extractLocs(await sub.text())
-                .slice(0, 50)
-                .map((u) => ({ url: u, title: urlToTitle(u) }))
-            }
+  // Try /sitemap.xml and /sitemap_index.xml
+  for (const path of ['/sitemap.xml', '/sitemap_index.xml']) {
+    try {
+      const r = await fetchWithTimeout(`${base}${path}`)
+      noteBlock(r.status)
+      if (r.ok) {
+        const xml = await r.text()
+        if (xml.includes('<loc>')) {
+          if (xml.includes('<sitemapindex')) {
+            await collectFromSitemapIndex(state, xml)
+          } else {
+            absorb(state, extractLocs(xml))
           }
-        } else {
-          return extractLocs(xml)
-            .slice(0, 50)
-            .map((u) => ({ url: u, title: urlToTitle(u) }))
+          if (state.pages.length > 0) return
         }
       }
+    } catch {
+      /* fall through to next strategy */
     }
-  } catch { /* fall through */ }
+  }
 
-  // Try /sitemap_index.xml
-  try {
-    const r = await fetchWithTimeout(`${base}/sitemap_index.xml`)
-    if (r.ok) {
-      const xml = await r.text()
-      const subs = extractLocs(xml)
-      if (subs.length > 0) {
-        const sub = await fetchWithTimeout(subs[0])
-        if (sub.ok) {
-          return extractLocs(await sub.text())
-            .slice(0, 50)
-            .map((u) => ({ url: u, title: urlToTitle(u) }))
-        }
-      }
-    }
-  } catch { /* fall through */ }
-
-  // Fallback: scrape homepage links
+  // Fallback: scrape internal links off the homepage.
   try {
     const r = await fetchWithTimeout(base)
+    noteBlock(r.status)
     if (r.ok) {
       const html = await r.text()
-      const pages: PageEntry[] = []
-      const seen = new Set<string>()
+      const urls: string[] = []
       const re = /href=["']([^"'#?]+)["']/gi
       let m
-      while ((m = re.exec(html)) !== null && pages.length < 50) {
+      while ((m = re.exec(html)) !== null && urls.length < MAX_PAGES * 2) {
         const href = m[1]
-        let full = ''
-        if (href.startsWith('/') && !href.startsWith('//')) full = `${base}${href}`
-        else if (href.startsWith(base)) full = href
-        if (full && !seen.has(full)) {
-          seen.add(full)
-          pages.push({ url: full, title: urlToTitle(full) })
-        }
+        if (href.startsWith('/') && !href.startsWith('//')) urls.push(`${base}${href}`)
+        else if (href.startsWith(base)) urls.push(href)
       }
-      return pages
+      absorb(state, urls)
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
+}
 
-  return []
+// LLMs sometimes wrap JSON in prose or code fences. Try fenced block, then the
+// outermost braces, then the raw string.
+function parseAnalysis(text: string): unknown | null {
+  if (!text) return null
+  const candidates: string[] = []
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenced) candidates.push(fenced[1])
+  const brace = text.match(/\{[\s\S]*\}/)
+  if (brace) candidates.push(brace[0])
+  candidates.push(text)
+  for (const c of candidates) {
+    try {
+      return JSON.parse(c.trim())
+    } catch {
+      /* try next candidate */
+    }
+  }
+  return null
+}
+
+// Coerce whatever the model returned into the exact shape the UI renders, so a
+// missing or malformed field can never crash the client (which does `gaps.map`).
+function normalizeAnalysis(raw: unknown): Analysis {
+  const obj = (raw ?? {}) as Record<string, unknown>
+  const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+  const asStrings = (v: unknown): string[] =>
+    asArray(v).map((s) => String(s ?? '').trim()).filter(Boolean)
+
+  const gaps = asArray(obj.gaps)
+    .map((g) => {
+      const o = (g ?? {}) as Record<string, unknown>
+      const priority = o.priority
+      return {
+        title: String(o.title ?? '').trim(),
+        description: String(o.description ?? '').trim(),
+        priority: (priority === 'high' || priority === 'medium' || priority === 'low'
+          ? priority
+          : 'medium') as 'high' | 'medium' | 'low',
+        suggestedKeyword: String(o.suggestedKeyword ?? '').trim(),
+      }
+    })
+    .filter((g) => g.title)
+
+  const topicClusters = asArray(obj.topicClusters)
+    .map((tc) => {
+      const o = (tc ?? {}) as Record<string, unknown>
+      return {
+        cluster: String(o.cluster ?? '').trim(),
+        covered: asStrings(o.covered),
+        missing: asStrings(o.missing),
+      }
+    })
+    .filter((tc) => tc.cluster)
+
+  return { gaps, topicClusters, quickWins: asStrings(obj.quickWins) }
+}
+
+const SYSTEM_PROMPT = `You are a content strategist auditing a website's content gaps. Analyze the provided page list and identify specific, actionable gaps: topics missing from the site, questions the audience likely has that aren't answered, and content pillars that are incomplete or absent.
+
+Respond with ONLY a JSON object — no markdown, no code fences, no preamble or explanation. Use exactly this shape:
+{
+  "gaps": [{ "title": string, "description": string, "priority": "high" | "medium" | "low", "suggestedKeyword": string }],
+  "topicClusters": [{ "cluster": string, "covered": string[], "missing": string[] }],
+  "quickWins": string[]
+}
+
+Provide 6-12 gaps ordered by priority, 3-6 topic clusters, and 3-5 quick wins. "suggestedKeyword" must be a concrete search query a reader would type. Keep descriptions to one or two sentences.`
+
+async function loadEnrichment(
+  userId: string
+): Promise<{ savedKeywords: string[]; writtenArticles: string[] }> {
+  try {
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+    const [kwRes, artRes] = await Promise.all([
+      sb.from('saved_keywords').select('keyword').eq('user_id', userId).limit(100),
+      sb.from('articles').select('title, target_keyword').eq('user_id', userId).limit(100),
+    ])
+    return {
+      savedKeywords: (kwRes.data ?? []).map((k: { keyword: string }) => k.keyword).filter(Boolean),
+      writtenArticles: (artRes.data ?? [])
+        .map((a: { title: string | null; target_keyword: string | null }) => a.title ?? a.target_keyword)
+        .filter(Boolean),
+    }
+  } catch {
+    /* non-fatal — continue without enrichment */
+    return { savedKeywords: [], writtenArticles: [] }
+  }
 }
 
 export async function POST(request: Request) {
@@ -129,67 +264,101 @@ export async function POST(request: Request) {
   }
 
   const { url, userId } = body
-  if (!url) return NextResponse.json({ error: 'url is required' }, { status: 400 })
-
-  const pages = await fetchPages(url)
-  if (pages.length === 0) {
-    return NextResponse.json(
-      { error: 'Could not fetch any pages from that URL. Check that the site is publicly accessible.' },
-      { status: 422 }
-    )
+  if (!url || !url.trim()) {
+    return NextResponse.json({ error: 'url is required' }, { status: 400 })
   }
+  const target = url.trim()
 
-  let savedKeywords: string[] = []
-  let writtenArticles: string[] = []
+  // Stream newline-delimited JSON: progress events as we work, then a final
+  // `result` (or `error`) event. The client renders progress as it arrives.
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (obj: unknown) =>
+        controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
 
-  if (userId) {
-    try {
-      const supabase = await createClient()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any
-      const [kwRes, artRes] = await Promise.all([
-        sb.from('saved_keywords').select('keyword').eq('user_id', userId).limit(100),
-        sb.from('articles').select('title, target_keyword').eq('user_id', userId).limit(100),
-      ])
-      savedKeywords = (kwRes.data ?? []).map((k: { keyword: string }) => k.keyword).filter(Boolean)
-      writtenArticles = (artRes.data ?? [])
-        .map((a: { title: string | null; target_keyword: string | null }) => a.title ?? a.target_keyword)
-        .filter(Boolean)
-    } catch { /* non-fatal — continue without enrichment */ }
-  }
+      try {
+        // Step 1 — crawl, hard-capped at CRAWL_TIMEOUT_MS.
+        send({ type: 'progress', message: 'Crawling site...', step: 1, total: 3 })
+        const state: CrawlState = { pages: [], blocked: false }
+        await Promise.race([
+          crawl(target, state),
+          new Promise<void>((resolve) => setTimeout(resolve, CRAWL_TIMEOUT_MS)),
+        ])
+        const { pages, blocked } = state
+        console.log(
+          `[audit] crawled ${pages.length} page(s) for ${target} (blocked=${blocked})`
+        )
 
-  const pageList = pages.map((p) => `- ${p.title}: ${p.url}`).join('\n')
-  const userParts = [
-    `Website: ${url}`,
-    `\nExisting pages:\n${pageList}`,
-    writtenArticles.length ? `\nAlready written articles: ${writtenArticles.join(', ')}` : '',
-    savedKeywords.length ? `\nSaved keywords: ${savedKeywords.join(', ')}` : '',
-  ].filter(Boolean)
+        if (pages.length < MIN_PAGES) {
+          send({
+            type: 'error',
+            error: blocked
+              ? "This site is blocking automated requests (bot protection), so we couldn't read its pages to run the audit."
+              : "Couldn't crawl enough pages — try a specific section URL (e.g. /blog) instead of the homepage.",
+          })
+          controller.close()
+          return
+        }
 
-  let rawText: string
-  try {
-    const res = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      system: `You are a content strategist auditing a website's content gaps. Analyze the provided page list and identify specific gaps — topics missing from the site, questions the audience likely has that aren't answered, content pillars that are incomplete or absent. Be specific and actionable. Return a JSON object with: { gaps: [{title, description, priority: 'high'|'medium'|'low', suggestedKeyword}], topicClusters: [{cluster, covered: string[], missing: string[]}], quickWins: string[] }`,
-      messages: [{ role: 'user', content: userParts.join('\n') }],
-    })
-    rawText = res.content[0].type === 'text' ? res.content[0].text : ''
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Analysis failed: ${err instanceof Error ? err.message : String(err)}` },
-      { status: 500 }
-    )
-  }
+        const { savedKeywords, writtenArticles } = userId
+          ? await loadEnrichment(userId)
+          : { savedKeywords: [], writtenArticles: [] }
 
-  try {
-    // Extract JSON object — handles preamble text and code fences
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('No JSON object in response')
-    const analysis = JSON.parse(jsonMatch[0])
-    return NextResponse.json({ ...analysis, pageCount: pages.length })
-  } catch (err) {
-    console.error('Audit parse error:', err, '\nRaw:', rawText?.slice(0, 500))
-    return NextResponse.json({ error: 'Failed to parse analysis response' }, { status: 500 })
-  }
+        // Step 2 — analysis.
+        send({ type: 'progress', message: 'Analyzing content gaps...', step: 2, total: 3 })
+
+        const pageList = pages.map((p) => `- ${p.title}: ${p.url}`).join('\n')
+        const userContent = [
+          `Website: ${target}`,
+          `\nExisting pages:\n${pageList}`,
+          writtenArticles.length ? `\nAlready written articles: ${writtenArticles.join(', ')}` : '',
+          savedKeywords.length ? `\nSaved keywords: ${savedKeywords.join(', ')}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n')
+
+        // Call the model, retrying once if the response isn't parseable JSON.
+        let analysis: unknown | null = null
+        for (let attempt = 0; attempt < 2 && analysis === null; attempt++) {
+          const res = await anthropic.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 2048,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: userContent }],
+          })
+          const block = res.content.find((b) => b.type === 'text')
+          const rawText = block && block.type === 'text' ? block.text : ''
+          analysis = parseAnalysis(rawText)
+        }
+
+        if (analysis === null) {
+          send({
+            type: 'error',
+            error: 'The analysis service returned an unexpected response. Please try again.',
+          })
+          controller.close()
+          return
+        }
+
+        // Step 3 — done.
+        send({ type: 'result', ...normalizeAnalysis(analysis), pageCount: pages.length })
+        controller.close()
+      } catch (err) {
+        send({
+          type: 'error',
+          error: `Analysis failed: ${err instanceof Error ? err.message : String(err)}`,
+        })
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'X-Accel-Buffering': 'no',
+    },
+  })
 }

@@ -99,6 +99,10 @@ export default function DashboardAuditPage() {
   const [expandedCluster, setExpandedCluster] = useState<string | null>(null)
   const [pageLoaded, setPageLoaded] = useState(false)
   const [urlForRun, setUrlForRun] = useState<string | null>(null)
+  // Live crawl/analysis progress streamed from /api/audit.
+  const [progress, setProgress] = useState<{ message: string; step: number; total: number } | null>(null)
+  // Shown after 15s so users on large sites know the longer wait is expected.
+  const [showSlowHint, setShowSlowHint] = useState(false)
   // Competitor Domain Ratings, keyed by the guessed domain (competitorToDomain).
   const [competitorDr, setCompetitorDr] = useState<Record<string, DomainRating | null>>({})
 
@@ -172,6 +176,8 @@ export default function DashboardAuditPage() {
     setStatus('loading')
     setError(null)
     setResult(null)
+    setProgress(null)
+    setShowSlowHint(false)
 
     try {
       const res = await fetch('/api/audit', {
@@ -179,19 +185,77 @@ export default function DashboardAuditPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: targetUrl.trim(), userId: userId ?? undefined }),
       })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error ?? 'Audit failed')
+
+      // Early validation failures (400/422) come back as plain JSON, not a stream.
+      if (!res.ok || !res.body) {
+        let msg = 'Audit failed'
+        try {
+          const data = await res.json()
+          msg = data.error ?? msg
+        } catch { /* keep default */ }
+        setError(msg)
         setStatus('error')
         return
       }
-      setResult(data)
+
+      // Consume the newline-delimited JSON stream: progress events, then a
+      // terminal result or error event.
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let finalResult: AuditResult | null = null
+      let streamError: string | null = null
+
+      const handleLine = (line: string) => {
+        const trimmed = line.trim()
+        if (!trimmed) return
+        let evt: { type?: string; message?: string; step?: number; total?: number; error?: string; [k: string]: unknown }
+        try {
+          evt = JSON.parse(trimmed)
+        } catch {
+          return
+        }
+        if (evt.type === 'progress') {
+          setProgress({ message: evt.message ?? '', step: evt.step ?? 0, total: evt.total ?? 0 })
+        } else if (evt.type === 'result') {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { type, ...data } = evt
+          finalResult = data as unknown as AuditResult
+        } else if (evt.type === 'error') {
+          streamError = evt.error ?? 'Audit failed'
+        }
+      }
+
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let nl
+        while ((nl = buffer.indexOf('\n')) !== -1) {
+          handleLine(buffer.slice(0, nl))
+          buffer = buffer.slice(nl + 1)
+        }
+      }
+      handleLine(buffer) // flush any trailing line
+
+      if (streamError) {
+        setError(streamError)
+        setStatus('error')
+        return
+      }
+      if (!finalResult) {
+        setError('Audit failed. Please try again.')
+        setStatus('error')
+        return
+      }
+
+      setResult(finalResult)
       setStatus('done')
       const now = new Date()
       setLastRun(now)
       localStorage.setItem(LS_KEY, now.toISOString())
 
-      const toCache: CachedAudit = { result: data, url: targetUrl.trim(), runAt: now.toISOString() }
+      const toCache: CachedAudit = { result: finalResult, url: targetUrl.trim(), runAt: now.toISOString() }
       localStorage.setItem(LS_RESULT_KEY, JSON.stringify(toCache))
       // Also persist to brand_profiles for cross-device access (non-fatal)
       try {
@@ -221,6 +285,16 @@ export default function DashboardAuditPage() {
     runAudit(urlForRun)
     setUrlForRun(null)
   }, [pageLoaded, urlForRun, status, runAudit])
+
+  // After 15s of loading, surface the "large sites can take a while" hint.
+  useEffect(() => {
+    if (status !== 'loading') {
+      setShowSlowHint(false)
+      return
+    }
+    const t = setTimeout(() => setShowSlowHint(true), 15000)
+    return () => clearTimeout(t)
+  }, [status])
 
   // Batch-fetch competitor Domain Ratings once the audit result is shown.
   useEffect(() => {
@@ -328,9 +402,18 @@ export default function DashboardAuditPage() {
         <div className="bg-[var(--ink-card)] rounded-2xl p-16 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-[var(--copper-lt)] mx-auto mb-4" />
           <p className="text-sm font-medium text-[var(--cream-dim)]">
-            Scanning {auditUrl} for content gaps...
+            {progress?.message ?? `Scanning ${auditUrl} for content gaps...`}
           </p>
-          <p className="text-xs text-[var(--cream-faint)] mt-2">Takes about 10 seconds.</p>
+          {progress && progress.total > 0 && (
+            <p className="text-xs text-[var(--copper-lt)] mt-2">
+              Step {progress.step} of {progress.total} — {progress.message.replace(/\.+$/, '')}
+            </p>
+          )}
+          {showSlowHint && (
+            <p className="text-xs text-[var(--cream-faint)] mt-2">
+              Large sites may take up to 60 seconds...
+            </p>
+          )}
         </div>
       )}
 
@@ -349,7 +432,7 @@ export default function DashboardAuditPage() {
           <div className="grid grid-cols-3 gap-4">
             {[
               { value: result.pageCount, label: 'Pages scanned', color: 'text-[var(--cream)]' },
-              { value: result.gaps.length, label: 'Content gaps', color: 'text-[var(--copper)]' },
+              { value: result.gaps?.length ?? 0, label: 'Content gaps', color: 'text-[var(--copper)]' },
               { value: unwrittenSaved.length, label: 'Saved keywords not yet written', color: 'text-[var(--copper-lt)]' },
             ].map(({ value, label, color }) => (
               <div key={label} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
@@ -441,10 +524,10 @@ export default function DashboardAuditPage() {
           {/* All gaps */}
           <div>
             <h2 className="text-sm font-semibold text-[var(--cream)] mb-3">
-              All Content Gaps ({result.gaps.length})
+              All Content Gaps ({result.gaps?.length ?? 0})
             </h2>
             <div className="space-y-3">
-              {result.gaps.map((gap, i) => {
+              {(result.gaps ?? []).map((gap, i) => {
                 const isSaved = savedKeywords.some(
                   (kw) => kw.toLowerCase() === gap.suggestedKeyword?.toLowerCase()
                 )
