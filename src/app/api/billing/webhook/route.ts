@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { sendMetaCapiEvent } from '@/lib/meta-capi'
 import { sendGa4Purchase } from '@/lib/analytics-server'
 import { subscriptionEventId } from '@/lib/analytics-events'
+import { sendTelegramMessage, escapeMarkdown } from '@/lib/telegram'
 import Stripe from 'stripe'
 
 export const runtime = 'nodejs'
@@ -163,6 +164,44 @@ export async function POST(request: Request) {
         }
       } else {
         console.error('Webhook checkout.session.completed: missing plan/interval metadata; subscription row not written', { userId, plan, interval, sessionId: session.id })
+      }
+
+      // Telegram ping so we see paid signups in real time. Best-effort: wrapped
+      // so a Stripe API hiccup (line-item/coupon lookup) can't stop us returning
+      // 200, and sendTelegramMessage already swallows its own errors.
+      try {
+        const customerEmail = session.customer_details?.email ?? session.customer_email ?? 'unknown'
+        const customerName = session.customer_details?.name ?? ''
+
+        // Re-fetch the session with line items + the applied coupon expanded; the
+        // raw webhook payload carries neither, so the plan name and any coupon
+        // would otherwise be invisible.
+        const full = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: ['line_items', 'discounts.coupon'],
+        })
+        const planName = full.line_items?.data[0]?.description ?? plan ?? 'Unknown plan'
+        const couponNames = (full.discounts ?? [])
+          .map((d) => {
+            const coupon = d.coupon
+            if (!coupon) return null
+            return typeof coupon === 'string' ? coupon : (coupon.name ?? coupon.id)
+          })
+          .filter((name): name is string => Boolean(name))
+        const couponUsed = couponNames.length ? couponNames.join(', ') : null
+
+        await sendTelegramMessage(
+          [
+            '🎉 *New Byline subscriber*',
+            `👤 ${escapeMarkdown(customerName || customerEmail)}`,
+            `📧 ${escapeMarkdown(customerEmail)}`,
+            `💳 ${escapeMarkdown(planName)}`,
+            couponUsed ? `🏷️ Coupon: ${escapeMarkdown(couponUsed)}` : null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        )
+      } catch (telegramErr) {
+        console.error('Webhook checkout.session.completed: telegram notify failed', telegramErr)
       }
 
       // Server-side conversion tracking. Wrapped so analytics failures never

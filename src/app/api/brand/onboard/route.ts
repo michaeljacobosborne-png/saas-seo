@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { waitUntil } from '@vercel/functions'
 import { createClient } from '@/lib/supabase/server'
+import { sendTelegramMessage, escapeMarkdown } from '@/lib/telegram'
 import Anthropic from '@anthropic-ai/sdk'
 
 export const maxDuration = 30
@@ -70,6 +71,7 @@ async function extractAndSaveBrandFacts(
   supabase: any,
   userId: string,
   conversation: Message[],
+  userEmail: string | undefined,
 ): Promise<void> {
   const transcript = conversation.map((m) => `${m.role}: ${m.content}`).join('\n\n')
 
@@ -118,7 +120,26 @@ async function extractAndSaveBrandFacts(
   // Nothing confident beyond user_id — skip the write.
   if (Object.keys(payload).length <= 1) return
 
+  // Detect first-ever profile creation so we ping Telegram once per free signup.
+  // Checking existence before the upsert is the only reliable signal — upsert
+  // reports success identically for an insert vs. an update.
+  const { data: existing } = await supabase
+    .from('brand_profiles')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
   await supabase.from('brand_profiles').upsert(payload, { onConflict: 'user_id' })
+
+  if (!existing) {
+    await sendTelegramMessage(
+      [
+        '🆕 *New free signup*',
+        `👤 ${escapeMarkdown(userEmail ?? 'unknown')}`,
+        '📋 Free tier',
+      ].join('\n'),
+    )
+  }
 }
 
 const SYSTEM_PROMPT = `You are a brand strategist onboarding a new user to Byline. Your job is to build their brand profile through a natural conversation — not a form. Ask one question at a time. Be warm, specific, and curious.
@@ -229,7 +250,7 @@ export async function POST(request: Request) {
             extractAndSaveBrandFacts(supabase, user.id, [
               ...messages,
               { role: 'assistant', content: assistantText },
-            ]).catch((err) => {
+            ], user.email).catch((err) => {
               console.error('brand fact auto-extraction failed:', err)
             }),
           )
