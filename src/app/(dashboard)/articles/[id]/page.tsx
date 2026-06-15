@@ -1116,29 +1116,31 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           </div>
         )}
 
-        {/* Content tab */}
-        {(activeTab === 'content' || !article.content) && (
-          <div>
-            {article.content ? (
-              <ArticleEditor
-                articleId={id}
-                initialContent={article.content}
-                getTextRef={getEditorTextRef}
-                getWordCountRef={getWordCountRef}
-                replaceContentRef={replaceContentRef}
-                applyContentRef={applyContentRef}
-                applyAtRangeRef={applyAtRangeRef}
-                onSelectionChange={handleSelectionChange}
-              />
-            ) : (
-              <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
-                <p className="text-sm text-[var(--cream-dim)] mb-3">No content yet.</p>
-                {article.status === 'brief_ready' && (
-                  <Link href={`/articles/new?articleId=${id}`} className="text-sm text-[var(--copper)] hover:text-[#A0622A] font-medium">
-                    Continue in article wizard →
-                  </Link>
-                )}
-              </div>
+        {/* Content tab.
+            When content exists we keep the editor mounted on every tab (hidden via CSS
+            when not active) so the apply refs stay live — otherwise switching to the
+            scores tab unmounts the editor, leaving applyContentRef null and making the
+            agent's "Apply to article" button a silent no-op. */}
+        {article.content ? (
+          <div className={activeTab === 'content' ? '' : 'hidden'}>
+            <ArticleEditor
+              articleId={id}
+              initialContent={article.content}
+              getTextRef={getEditorTextRef}
+              getWordCountRef={getWordCountRef}
+              replaceContentRef={replaceContentRef}
+              applyContentRef={applyContentRef}
+              applyAtRangeRef={applyAtRangeRef}
+              onSelectionChange={handleSelectionChange}
+            />
+          </div>
+        ) : (
+          <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
+            <p className="text-sm text-[var(--cream-dim)] mb-3">No content yet.</p>
+            {article.status === 'brief_ready' && (
+              <Link href={`/articles/new?articleId=${id}`} className="text-sm text-[var(--copper)] hover:text-[#A0622A] font-medium">
+                Continue in article wizard →
+              </Link>
             )}
           </div>
         )}
@@ -1553,7 +1555,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           </Link>
                         ) : (
                           <button
-                            onClick={() => applyContentRef.current?.(applicable)}
+                            onClick={() => {
+                              // Make sure the editor is the visible tab so the user sees
+                              // the suggestion land (suggestions are often applied from the
+                              // scores tab right after a review).
+                              setActiveTab('content')
+                              applyContentRef.current?.(applicable)
+                            }}
                             className="mt-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.08)] text-[var(--copper)] rounded-lg hover:bg-[rgba(184,115,51,0.12)] transition-colors border border-[rgba(184,115,51,0.25)]"
                           >
                             Apply to article

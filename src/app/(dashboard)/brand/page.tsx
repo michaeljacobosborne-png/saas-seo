@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, KeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, KeyboardEvent, ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandProfile } from '@/lib/supabase/types'
 import {
   Loader2, Send, X, Plus, Building2, Target, MessageSquare,
-  TrendingUp, Shield, Users, CheckCircle2, Pencil,
+  TrendingUp, Shield, Users, CheckCircle2, Pencil, Globe, ArrowRight, Sparkles,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -98,9 +98,20 @@ function TagInput({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BrandPage() {
-  const [pageState, setPageState] = useState<'loading' | 'chat' | 'profile'>('loading')
+  const [pageState, setPageState] = useState<'loading' | 'quickstart' | 'chat' | 'profile'>('loading')
   const [existingProfile, setExistingProfile] = useState<BrandProfile | null>(null)
   const [isUpdate, setIsUpdate] = useState(false)
+
+  // Quick-start onboarding (structured form) — Step 1 is the short required core,
+  // Step 2 is optional detail. Built to replace the long open-ended chat for new
+  // users; the AI chat remains available as an opt-in.
+  const [quickStep, setQuickStep] = useState<1 | 2>(1)
+  const [quickForm, setQuickForm] = useState<EditForm>({
+    brand_name: '', website_url: '', industry: '', target_audience: '',
+    tone_notes: '', content_goals: '', avoid_topics: '', competitors: [], primary_keywords: [],
+  })
+  const [quickSaving, setQuickSaving] = useState(false)
+  const [quickError, setQuickError] = useState<string | null>(null)
 
   // Chat state
   const [messages, setMessages] = useState<Message[]>([])
@@ -129,7 +140,7 @@ export default function BrandPage() {
 
   const fetchProfile = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setPageState('chat'); return }
+    if (!user) { setPageState('quickstart'); return }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
@@ -154,7 +165,7 @@ export default function BrandPage() {
       })
       setPageState('profile')
     } else {
-      setPageState('chat')
+      setPageState('quickstart')
     }
   }, [supabase])
 
@@ -257,6 +268,41 @@ export default function BrandPage() {
     }
   }
 
+  // Normalize a bare domain ("acme.com") into a full URL so the audit/crawl works.
+  function normalizeUrl(raw: string): string {
+    const t = raw.trim()
+    if (!t) return ''
+    return /^https?:\/\//i.test(t) ? t : `https://${t}`
+  }
+
+  // Save the quick-start form (Step 1 required + whatever optional Step 2 detail was
+  // filled) and drop the user straight into the product.
+  async function saveQuickStart() {
+    setQuickSaving(true)
+    setQuickError(null)
+    try {
+      const payload = { ...quickForm, website_url: normalizeUrl(quickForm.website_url) }
+      const res = await fetch('/api/brand/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Save failed')
+      router.push('/dashboard')
+    } catch (err) {
+      setQuickError(err instanceof Error ? err.message : 'Save failed')
+      setQuickSaving(false)
+    }
+  }
+
+  // Opt out of the quick form into the conversational AI onboarding.
+  function startChatOnboarding() {
+    chatInitialized.current = false
+    setIsUpdate(false)
+    setPageState('chat')
+  }
+
   function enterUpdateMode() {
     const companyName = existingProfile?.brand_name ?? 'your company'
     chatInitialized.current = true
@@ -296,6 +342,201 @@ export default function BrandPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-5 h-5 animate-spin text-[var(--cream-faint)]" />
+      </div>
+    )
+  }
+
+  // ── Quick-start onboarding (structured, short) ─────────────────────────────────
+
+  if (pageState === 'quickstart') {
+    const canContinue = quickForm.website_url.trim() !== '' && quickForm.brand_name.trim() !== ''
+    const set = (
+      key: 'website_url' | 'brand_name' | 'target_audience' | 'tone_notes' | 'content_goals' | 'avoid_topics',
+    ) => (
+      e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    ) => setQuickForm((f) => ({ ...f, [key]: e.target.value }))
+
+    return (
+      <div className="p-8 max-w-xl mx-auto">
+        {/* Header + progress */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-[var(--cream)]">Set up your brand</h1>
+          <p className="mt-1 text-sm text-[var(--cream-dim)]">
+            {quickStep === 1
+              ? 'Just three quick things to get started — you can add more later.'
+              : 'Optional detail. Add what you like, or skip it for now.'}
+          </p>
+          <div className="mt-4 flex items-center gap-2">
+            <div className={`h-1.5 flex-1 rounded-full ${quickStep >= 1 ? 'bg-[#B87333]' : 'bg-[rgba(184,115,51,0.2)]'}`} />
+            <div className={`h-1.5 flex-1 rounded-full ${quickStep >= 2 ? 'bg-[#B87333]' : 'bg-[rgba(184,115,51,0.2)]'}`} />
+          </div>
+          <p className="mt-1.5 text-xs text-[var(--cream-faint)]">Step {quickStep} of 2</p>
+        </div>
+
+        {/* ── Step 1: required core ── */}
+        {quickStep === 1 && (
+          <div className="space-y-6">
+            {/* Website — first and most prominent */}
+            <div>
+              <label className="flex items-center gap-2 text-base font-semibold text-[var(--cream)] mb-2">
+                <Globe className="w-4 h-4 text-[var(--copper-lt)]" />
+                Your website
+              </label>
+              <input
+                type="url"
+                autoFocus
+                value={quickForm.website_url}
+                onChange={set('website_url')}
+                placeholder="https://yourcompany.com"
+                className="w-full px-4 py-3.5 text-base border-2 border-[rgba(184,115,51,0.35)] rounded-xl bg-[var(--ink)] text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent"
+              />
+              <p className="mt-1.5 text-xs text-[var(--cream-dim)]">
+                We scan this to learn your content and find gaps.
+              </p>
+            </div>
+
+            {/* Brand / business name */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1.5">
+                Brand / business name
+              </label>
+              <input
+                type="text"
+                value={quickForm.brand_name}
+                onChange={set('brand_name')}
+                placeholder="Acme Corp"
+                className="w-full px-3 py-2.5 border border-[rgba(184,115,51,0.25)] rounded-lg text-sm bg-[var(--ink)] text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent"
+              />
+            </div>
+
+            {/* Target audience */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1.5">
+                Who are you writing for? <span className="text-[var(--cream-faint)] font-normal">(1–2 sentences)</span>
+              </label>
+              <textarea
+                value={quickForm.target_audience}
+                onChange={set('target_audience')}
+                rows={2}
+                placeholder="Marketing managers at mid-market B2B SaaS companies who care about organic growth."
+                className="w-full px-3 py-2.5 border border-[rgba(184,115,51,0.25)] rounded-lg text-sm bg-[var(--ink)] text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none"
+              />
+            </div>
+
+            {quickError && (
+              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{quickError}</p>
+            )}
+
+            <div className="flex items-center gap-4 pt-1">
+              <button
+                onClick={() => { setQuickError(null); setQuickStep(2) }}
+                disabled={!canContinue}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Continue
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={startChatOnboarding}
+                className="flex items-center gap-1.5 text-sm text-[var(--cream-dim)] hover:text-[var(--copper-lt)] transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Prefer to chat? Set up with the AI agent
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: optional detail ── */}
+        {quickStep === 2 && (
+          <div className="space-y-5">
+            <div className="rounded-xl px-4 py-3 bg-[rgba(184,115,51,0.07)] border border-[rgba(184,115,51,0.2)]">
+              <p className="text-sm text-[var(--cream-dim)]">
+                The more we know, the more your content sounds like <span className="text-[var(--cream)] font-medium">you</span> — but none of this is required.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1.5">Competitors</label>
+              <TagInput
+                tags={quickForm.competitors}
+                onChange={(tags) => setQuickForm((f) => ({ ...f, competitors: tags }))}
+                placeholder="Type a competitor and press Enter…"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1.5">Voice &amp; tone preferences</label>
+              <textarea
+                value={quickForm.tone_notes}
+                onChange={set('tone_notes')}
+                rows={2}
+                placeholder="Direct, data-backed, no jargon."
+                className="w-full px-3 py-2.5 border border-[rgba(184,115,51,0.25)] rounded-lg text-sm bg-[var(--ink)] text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1.5">Content topics &amp; goals</label>
+              <textarea
+                value={quickForm.content_goals}
+                onChange={set('content_goals')}
+                rows={2}
+                placeholder="Build search authority around content marketing and SEO; generate inbound leads."
+                className="w-full px-3 py-2.5 border border-[rgba(184,115,51,0.25)] rounded-lg text-sm bg-[var(--ink)] text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1.5">Topics to avoid</label>
+              <textarea
+                value={quickForm.avoid_topics}
+                onChange={set('avoid_topics')}
+                rows={2}
+                placeholder="Don't mention competitors by name; no ROI guarantees."
+                className="w-full px-3 py-2.5 border border-[rgba(184,115,51,0.25)] rounded-lg text-sm bg-[var(--ink)] text-[var(--cream)] placeholder:text-[var(--cream-faint)] focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1.5">Primary keywords</label>
+              <TagInput
+                tags={quickForm.primary_keywords}
+                onChange={(tags) => setQuickForm((f) => ({ ...f, primary_keywords: tags }))}
+                placeholder="Type a keyword and press Enter…"
+              />
+            </div>
+
+            {quickError && (
+              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{quickError}</p>
+            )}
+
+            <div className="flex items-center gap-4 pt-1">
+              <button
+                onClick={saveQuickStart}
+                disabled={quickSaving}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+              >
+                {quickSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {quickSaving ? 'Saving…' : 'Finish setup'}
+              </button>
+              <button
+                onClick={saveQuickStart}
+                disabled={quickSaving}
+                className="text-sm text-[var(--cream-dim)] hover:text-[var(--copper-lt)] transition-colors disabled:opacity-50"
+              >
+                Skip for now — I&apos;ll add this later
+              </button>
+            </div>
+            <button
+              onClick={() => { setQuickError(null); setQuickStep(1) }}
+              disabled={quickSaving}
+              className="text-xs text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors disabled:opacity-50"
+            >
+              ← Back
+            </button>
+          </div>
+        )}
       </div>
     )
   }

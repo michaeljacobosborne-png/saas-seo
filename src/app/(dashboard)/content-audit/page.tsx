@@ -329,8 +329,17 @@ export default function DashboardAuditPage() {
             <BarChart2 className="w-5 h-5 text-[var(--copper-lt)]" />
             <h1 className="text-2xl font-bold text-[var(--cream)]">Content Audit</h1>
           </div>
-          <p className="text-sm text-[var(--cream-dim)]">
-            {auditUrl ? `Scanning ${auditUrl}` : 'See exactly where your content strategy has gaps.'}
+          <p className="text-sm text-[var(--cream-dim)] flex items-center gap-1.5">
+            {status === 'loading' ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--copper-lt)]" />
+                Scanning {auditUrl}…
+              </>
+            ) : auditUrl ? (
+              `Audit for ${auditUrl}`
+            ) : (
+              'See exactly where your content strategy has gaps.'
+            )}
           </p>
           {lastRun && (
             <p className="text-xs text-[var(--cream-faint)] mt-1 flex items-center gap-1">
@@ -397,21 +406,41 @@ export default function DashboardAuditPage() {
         </div>
       )}
 
-      {/* Loading */}
+      {/* Loading — must be unmissable so users know the scan is running */}
       {status === 'loading' && (
-        <div className="bg-[var(--ink-card)] rounded-2xl p-16 text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[var(--copper-lt)] mx-auto mb-4" />
-          <p className="text-sm font-medium text-[var(--cream-dim)]">
-            {progress?.message ?? `Scanning ${auditUrl} for content gaps...`}
+        <div className="bg-[var(--ink-card)] rounded-2xl p-16 text-center border border-[rgba(184,115,51,0.25)]">
+          <style>{`@keyframes audit-progress {0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}`}</style>
+          <Loader2 className="w-10 h-10 animate-spin text-[var(--copper-lt)] mx-auto mb-4" />
+          <p className="text-base font-semibold text-[var(--cream)]">
+            Scanning {auditUrl}…
           </p>
+          <p className="text-sm text-[var(--cream-dim)] mt-1">
+            {progress?.message ?? 'Crawling your site and cross-referencing search demand…'}
+          </p>
+
+          {/* Progress bar — determinate when we have step/total, else an animated indeterminate bar */}
+          <div className="mt-5 max-w-sm mx-auto h-1.5 rounded-full overflow-hidden bg-[rgba(184,115,51,0.15)]">
+            {progress && progress.total > 0 ? (
+              <div
+                className="h-full bg-[var(--copper)] rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${Math.min(100, Math.round((progress.step / progress.total) * 100))}%` }}
+              />
+            ) : (
+              <div
+                className="h-full w-1/4 bg-[var(--copper)] rounded-full"
+                style={{ animation: 'audit-progress 1.2s ease-in-out infinite' }}
+              />
+            )}
+          </div>
+
           {progress && progress.total > 0 && (
             <p className="text-xs text-[var(--copper-lt)] mt-2">
-              Step {progress.step} of {progress.total} — {progress.message.replace(/\.+$/, '')}
+              Step {progress.step} of {progress.total}
             </p>
           )}
           {showSlowHint && (
             <p className="text-xs text-[var(--cream-faint)] mt-2">
-              Large sites may take up to 60 seconds...
+              Large sites may take up to 60 seconds…
             </p>
           )}
         </div>
