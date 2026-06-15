@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   Search, ChevronRight, Loader2, AlertCircle, Lock,
-  ArrowRight, CheckCircle2,
+  ArrowRight, CheckCircle2, Mail, Sparkles,
 } from 'lucide-react'
 
 type Gap = {
@@ -46,6 +46,38 @@ export default function PublicAuditPage() {
   const [progressStep, setProgressStep] = useState(0)
   const [result, setResult] = useState<AuditResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState('')
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+
+  // Best-effort display domain for the funnel copy ("...on yourdomain.com").
+  function displayDomain(raw: string): string {
+    try {
+      const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
+      return new URL(withProto).hostname.replace(/^www\./, '')
+    } catch {
+      return raw.replace(/^https?:\/\//i, '').replace(/^www\./, '').split('/')[0]
+    }
+  }
+
+  async function sendReport() {
+    const trimmed = email.trim()
+    if (!trimmed || emailStatus === 'sending') return
+    setEmailStatus('sending')
+    try {
+      const res = await fetch('/api/audit/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: trimmed,
+          url: url.trim(),
+          gapCount: result?.gaps?.length ?? 0,
+        }),
+      })
+      setEmailStatus(res.ok ? 'sent' : 'error')
+    } catch {
+      setEmailStatus('error')
+    }
+  }
 
   async function runAudit() {
     const trimmed = url.trim()
@@ -55,34 +87,89 @@ export default function PublicAuditPage() {
     setError(null)
     setResult(null)
 
-    const timers = [0, 2200, 5000].map((delay, i) =>
-      setTimeout(() => setProgressStep(i), delay)
-    )
-
     try {
       const res = await fetch('/api/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: trimmed }),
       })
-      const data = await res.json()
-      timers.forEach(clearTimeout)
-      if (!res.ok) {
-        setError(data.error ?? 'Audit failed. Check the URL and try again.')
+
+      // The route streams newline-delimited JSON (progress events followed by a
+      // final `result` or `error` event), all over HTTP 200. A non-streaming
+      // response means an early failure (e.g. 400 bad request) — surface that.
+      if (!res.ok || !res.body) {
+        let msg = 'Audit failed. Check the URL and try again.'
+        try {
+          const data = await res.json()
+          if (data?.error) msg = data.error
+        } catch {
+          /* response wasn't JSON — keep the generic message */
+        }
+        setError(msg)
         setStatus('error')
         return
       }
-      setResult(data)
-      setStatus('done')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let finalResult: AuditResult | null = null
+      let streamError: string | null = null
+
+      const handleEvent = (line: string) => {
+        const trimmedLine = line.trim()
+        if (!trimmedLine) return
+        let evt: { type?: string; step?: number; error?: string } & Partial<AuditResult>
+        try {
+          evt = JSON.parse(trimmedLine)
+        } catch {
+          return // ignore partial/garbage lines
+        }
+        if (evt.type === 'progress' && typeof evt.step === 'number') {
+          const idx = Math.min(Math.max(evt.step - 1, 0), PROGRESS_STEPS.length - 1)
+          setProgressStep(idx)
+        } else if (evt.type === 'result') {
+          finalResult = {
+            gaps: evt.gaps ?? [],
+            topicClusters: evt.topicClusters ?? [],
+            quickWins: evt.quickWins ?? [],
+            pageCount: evt.pageCount ?? 0,
+          }
+        } else if (evt.type === 'error') {
+          streamError = evt.error ?? 'Audit failed. Please try again.'
+        }
+      }
+
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let nl: number
+        while ((nl = buffer.indexOf('\n')) !== -1) {
+          handleEvent(buffer.slice(0, nl))
+          buffer = buffer.slice(nl + 1)
+        }
+      }
+      handleEvent(buffer) // flush any trailing line
+
+      if (streamError) {
+        setError(streamError)
+        setStatus('error')
+      } else if (finalResult) {
+        setResult(finalResult)
+        setStatus('done')
+      } else {
+        setError('Audit failed. Please try again.')
+        setStatus('error')
+      }
     } catch {
-      timers.forEach(clearTimeout)
       setError('Network error. Please try again.')
       setStatus('error')
     }
   }
 
-  const freeGaps = result?.gaps.slice(0, 3) ?? []
-  const lockedGaps = result?.gaps.slice(3) ?? []
+  const freeGaps = result?.gaps?.slice(0, 3) ?? []
+  const lockedGaps = result?.gaps?.slice(3) ?? []
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -190,11 +277,16 @@ export default function PublicAuditPage() {
         {/* Results */}
         {status === 'done' && result && (
           <div className="space-y-6">
+            {/* Trust signal */}
+            <p className="text-center text-xs text-gray-400">
+              Analyzed 10,000+ URLs across 50+ niches.
+            </p>
+
             {/* Summary banner */}
             <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-3">
               <p className="text-sm text-indigo-800">
                 Scanned <strong>{result.pageCount}</strong> pages.
-                Found <strong>{result.gaps.length}</strong> content gaps.
+                Found <strong>{result.gaps?.length ?? 0}</strong> content gaps.
               </p>
             </div>
 
@@ -310,6 +402,78 @@ export default function PublicAuditPage() {
                 </p>
               </div>
             )}
+
+            {/* Post-audit conversion funnel */}
+            <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-indigo-200" />
+                <p className="text-sm font-medium text-indigo-100">
+                  Found {result.gaps?.length ?? 0} content gap
+                  {(result.gaps?.length ?? 0) !== 1 ? 's' : ''} on{' '}
+                  {displayDomain(url)}
+                </p>
+              </div>
+              <h2 className="text-xl font-bold leading-snug mb-2">
+                Want articles that fill these gaps, written in your brand voice?
+              </h2>
+              <p className="text-sm text-indigo-100 mb-5 leading-relaxed">
+                Byline turns these gaps into publish-ready, SEO-optimized articles —
+                matched to how your site already sounds.
+              </p>
+
+              <Link
+                href="/signup?source=lead_magnet&ref=audit"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-white text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-50 transition-colors"
+              >
+                Start free — no credit card required
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+
+              {/* Email capture for the full breakdown */}
+              <div className="mt-6 pt-6 border-t border-white/15">
+                {emailStatus === 'sent' ? (
+                  <p className="flex items-center gap-2 text-sm text-indigo-50">
+                    <CheckCircle2 className="w-4 h-4 text-green-300 shrink-0" />
+                    Thanks — we&apos;ll send the full breakdown to {email.trim()}.
+                  </p>
+                ) : (
+                  <>
+                    <label className="block text-sm font-medium text-indigo-100 mb-2">
+                      Or get the full breakdown by email:
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1 relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-300" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && sendReport()}
+                          placeholder="you@company.com"
+                          disabled={emailStatus === 'sending'}
+                          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-white/60"
+                        />
+                      </div>
+                      <button
+                        onClick={sendReport}
+                        disabled={emailStatus === 'sending' || !email.trim()}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-900/40 text-white text-sm font-semibold rounded-xl hover:bg-indigo-900/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                      >
+                        {emailStatus === 'sending' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : null}
+                        Send report
+                      </button>
+                    </div>
+                    {emailStatus === 'error' && (
+                      <p className="mt-2 text-xs text-indigo-100">
+                        Couldn&apos;t save your email — please try again.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </main>
