@@ -67,13 +67,15 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
     }
   }
 
-  // Not connected → CTA card.
+  // Not connected → subtle, optional add-on prompt. The audit above works fully
+  // without Search Console; GSC just layers real impressions/clicks/position on
+  // top, so this is framed as an enhancement, never a requirement.
   if (state === 'disconnected') {
     return (
       <div className="mt-8">
         <Link
           href="/settings"
-          className="flex items-center justify-between gap-4 rounded-xl p-5 transition-colors hover:bg-[var(--ink-card)] group"
+          className="flex items-center justify-between gap-4 rounded-xl px-5 py-4 transition-colors hover:bg-[var(--ink-card)] group"
           style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.18)' }}
         >
           <div className="flex items-center gap-3">
@@ -81,9 +83,16 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
               <Globe className="w-5 h-5" style={{ color: '#B87333' }} />
             </span>
             <div>
-              <h3 className="text-sm font-semibold text-[var(--cream)]">Connect Search Console</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[var(--cream)]">
+                  Add Search Console for performance data
+                </h3>
+                <span className="text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-full text-[var(--cream-faint)] border border-[rgba(184,115,51,0.25)]">
+                  Optional
+                </span>
+              </div>
               <p className="text-sm text-[var(--cream-dim)]">
-                Connect Search Console to see which pages are driving traffic.
+                Connect it to layer real impressions, clicks, and rankings onto this audit. Not required — your audit above is already complete.
               </p>
             </div>
           </div>
