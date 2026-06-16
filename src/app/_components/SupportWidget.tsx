@@ -156,7 +156,9 @@ export default function SupportWidget() {
 
   return (
     <>
-      {/* Launcher */}
+      {/* Launcher — icon-only on mobile (smaller footprint so it doesn't overlap
+          bottom chat inputs); full pill on md+. Hidden on /brand on mobile, where
+          the page has its own bottom-anchored send button. */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
@@ -340,4 +342,19 @@ export default function SupportWidget() {
 
                   <button
                     onClick={submitCancel}
-      
+                    disabled={cancelling}
+                    className="w-full py-2.5 text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                    style={{ background: '#B87333', color: '#F7F3EC' }}
+                  >
+                    {cancelling && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {wantRefund ? 'Cancel & request refund' : 'Confirm cancellation'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  )
+}

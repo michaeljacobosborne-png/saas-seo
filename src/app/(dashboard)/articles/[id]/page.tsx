@@ -10,7 +10,7 @@ import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
-  Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink, Trash2, Lightbulb,
+  Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink, Trash2,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -207,10 +207,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [agentStreaming, setAgentStreaming] = useState(false)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const initialSentRef = useRef(false)
-
-  // First-use hint shown the first time the agent panel is opened. Dismissed
-  // permanently via localStorage so it never nags returning users.
-  const [showAgentHint, setShowAgentHint] = useState(false)
 
   // Auto mode state
   const [autoInstruction, setAutoInstruction] = useState('')
@@ -557,19 +553,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   function openAgent(currentArticle: Article) {
     setAgentOpen(true)
-    if (typeof window !== 'undefined' && !localStorage.getItem('byline_agent_hint_seen')) {
-      setShowAgentHint(true)
-    }
     const hasScores = !!currentArticle.scores
     if (hasScores && !initialSentRef.current) {
       initialSentRef.current = true
       sendAgentMessage('Review this article and tell me the most important things to fix first.', [])
     }
-  }
-
-  function dismissAgentHint() {
-    setShowAgentHint(false)
-    try { localStorage.setItem('byline_agent_hint_seen', '1') } catch { /* ignore */ }
   }
 
   async function handleMetaDescBlur() {
@@ -1342,23 +1330,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </button>
           </div>
 
-          {/* First-use hint */}
-          {showAgentHint && (
-            <div className="shrink-0 flex items-start gap-2.5 px-4 py-3 border-b border-[rgba(184,115,51,0.15)] bg-[rgba(184,115,51,0.06)]">
-              <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[var(--copper-lt)]" />
-              <p className="text-xs leading-relaxed text-[var(--cream-dim)] flex-1">
-                Select text in the article, then use <span className="font-semibold text-[var(--cream)]">Assist</span> to rewrite it, or use <span className="font-semibold text-[var(--cream)]">Review</span> to get an SEO score.
-              </p>
-              <button
-                onClick={dismissAgentHint}
-                title="Dismiss"
-                className="shrink-0 text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
           {/* Upgrade prompt for free users (Assist + Auto) */}
           {showUpgradePrompt ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -1473,4 +1444,332 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               ) : (
                 /* Ready state — focus instructions + run */
-                <div className="flex-1 flex flex-col p-
+                <div className="flex-1 flex flex-col p-4 gap-4">
+                  <p className="text-xs leading-relaxed text-[var(--cream-faint)]">
+                    Reads your article, audit scores, and brand profile — then applies every failing criterion in one pass. The rewrite saves automatically; undo in the editor to revert.
+                  </p>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5 text-[var(--cream-dim)]">
+                      Focus instructions <span className="text-[#4A3E35]">(optional)</span>
+                    </label>
+                    <textarea
+                      value={autoInstruction}
+                      onChange={(e) => setAutoInstruction(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.metaKey && !agentStreaming) sendAutoMode(autoInstruction)
+                      }}
+                      placeholder={'e.g. "strengthen the intro" · "add more data points" · "don\'t change the conclusion"'}
+                      rows={3}
+                      className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent placeholder-gray-600 bg-[var(--ink)] text-[var(--cream)]"
+                    />
+                  </div>
+                  <button
+                    onClick={() => sendAutoMode(autoInstruction)}
+                    disabled={agentStreaming}
+                    className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 bg-[#B87333] text-white hover:bg-[#A0622A]"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    Rewrite Article
+                  </button>
+                  <p className="text-xs text-center text-[#3A342E]">⌘ + Enter to run</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Assist mode context bar */}
+              {agentMode === 'assist' && (
+                <div className="shrink-0 border-b border-[rgba(184,115,51,0.15)] px-4 py-3">
+                  {selectedText ? (
+                    <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                      <p className="text-xs font-semibold text-amber-700 mb-1">&#9999;&#65039; Selected</p>
+                      <p className="text-xs text-[var(--cream-dim)] line-clamp-2">
+                        &ldquo;{selectedText.slice(0, 80)}{selectedText.length > 80 ? '…' : ''}&rdquo;
+                      </p>
+                    </div>
+                  ) : scoreFailures.length > 0 ? (
+                    <div>
+                      <p className="text-xs font-semibold text-[var(--cream-dim)] mb-2">Top issues to fix</p>
+                      <div className="space-y-2">
+                        {scoreFailures.map((f, i) => (
+                          <div key={i} className="flex items-start justify-between gap-3">
+                            <span className="text-xs text-[var(--cream-dim)] flex-1 leading-snug">{f.label}</span>
+                            <button
+                              onClick={() => {
+                                if (!agentStreaming) {
+                                  sendAgentMessage('', [], { fixInstruction: f.instruction, selectionRange: null })
+                                }
+                              }}
+                              disabled={agentStreaming}
+                              className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-indigo-800 disabled:opacity-40 whitespace-nowrap"
+                            >
+                              Fix with Agent &rarr;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[var(--cream-faint)] text-center py-1">
+                      Select text in the editor to rewrite it, or pick a score issue to fix.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Messages */}
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                {agentMessages.length === 0 && !agentStreaming && agentMode === 'review' && (
+                  <div className="text-center text-xs text-[var(--cream-faint)] py-8">Starting review&hellip;</div>
+                )}
+                {agentMessages.length === 0 && !agentStreaming && agentMode === 'assist' && (
+                  <div className="text-center text-xs text-[var(--cream-faint)] py-8">
+                    {selectedText ? 'Edit the instruction below, then send.' : 'Use the controls above to pick a fix.'}
+                  </div>
+                )}
+                {agentMessages.map((msg, i) => {
+                  const isStreamingThis = agentStreaming && i === agentMessages.length - 1
+                  const applicable = !isStreamingThis && msg.role === 'assistant' && agentMode === 'review'
+                    ? extractApplicableContent(msg.content)
+                    : null
+                  return (
+                    <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                      {msg.role === 'user' ? (
+                        <div className="max-w-[85%] px-3.5 py-2.5 bg-[#B87333] text-white text-sm rounded-2xl rounded-tr-sm leading-relaxed">
+                          {msg.content}
+                        </div>
+                      ) : (
+                        <div className="max-w-[92%] px-3.5 py-2.5 bg-[var(--ink-card)] border border-[rgba(184,115,51,0.2)] text-[var(--cream)] text-sm rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap">
+                          {msg.content}
+                          {isStreamingThis && (
+                            <span className="inline-block w-0.5 h-3.5 bg-[rgba(184,115,51,0.08)]0 ml-0.5 animate-pulse align-middle" />
+                          )}
+                        </div>
+                      )}
+                      {applicable && (
+                        accountType === 'free' ? (
+                          <Link
+                            href="/pricing"
+                            title="Upgrade to apply agent suggestions"
+                            className="mt-1 flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.05)] text-[var(--cream-faint)] rounded-lg hover:text-[var(--copper)] hover:bg-[rgba(184,115,51,0.1)] transition-colors border border-[rgba(184,115,51,0.2)]"
+                          >
+                            <Lock className="w-2.5 h-2.5" />
+                            Apply to article
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              // Make sure the editor is the visible tab so the user sees
+                              // the suggestion land (suggestions are often applied from the
+                              // scores tab right after a review).
+                              setActiveTab('content')
+                              applyContentRef.current?.(applicable)
+                            }}
+                            className="mt-1 text-xs font-medium px-2.5 py-1 bg-[rgba(184,115,51,0.08)] text-[var(--copper)] rounded-lg hover:bg-[rgba(184,115,51,0.12)] transition-colors border border-[rgba(184,115,51,0.25)]"
+                          >
+                            Apply to article
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )
+                })}
+                {assistApplied && (
+                  <div className="flex justify-center">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                      <span className="text-xs font-medium text-green-700">Applied &#10003;</span>
+                    </div>
+                  </div>
+                )}
+                <div />
+              </div>
+
+              {/* Input — Review mode */}
+              {agentMode === 'review' && (
+                <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-3 py-3">
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      value={agentInput}
+                      onChange={(e) => setAgentInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          const trimmed = agentInput.trim()
+                          if (trimmed && !agentStreaming) {
+                            sendAgentMessage(trimmed, agentMessages)
+                          }
+                        }
+                      }}
+                      placeholder="Ask for specific fixes, examples, or ideas…"
+                      disabled={agentStreaming}
+                      rows={1}
+                      className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-gray-400"
+                      style={{ maxHeight: '120px', overflowY: 'auto' }}
+                    />
+                    <button
+                      onClick={() => {
+                        const trimmed = agentInput.trim()
+                        if (trimmed && !agentStreaming) {
+                          sendAgentMessage(trimmed, agentMessages)
+                        }
+                      }}
+                      disabled={!agentInput.trim() || agentStreaming}
+                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-white rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                    >
+                      {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-[var(--cream-faint)] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
+                </div>
+              )}
+
+              {/* Input — Assist mode with selected text */}
+              {agentMode === 'assist' && selectedText && (
+                <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-3 py-3">
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      value={assistInput}
+                      onChange={(e) => setAssistInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          const trimmed = assistInput.trim()
+                          if (trimmed && !agentStreaming) {
+                            sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
+                          }
+                        }
+                      }}
+                      placeholder="Rewrite this to be more specific and include the primary keyword"
+                      disabled={agentStreaming}
+                      rows={2}
+                      className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-gray-400"
+                    />
+                    <button
+                      onClick={() => {
+                        const trimmed = assistInput.trim()
+                        if (trimmed && !agentStreaming) {
+                          sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
+                        }
+                      }}
+                      disabled={!assistInput.trim() || agentStreaming}
+                      className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-white rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                    >
+                      {agentStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-[var(--cream-faint)] mt-1.5 px-1">Enter to send &middot; Shift+Enter for newline</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Publish to WordPress modal */}
+      {wpModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          onClick={() => !wpPublishing && setWpModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6"
+            style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.25)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Upload className="w-4 h-4" style={{ color: '#B87333' }} />
+                <h3 className="text-base font-semibold text-[var(--cream)]">Publish to WordPress</h3>
+              </div>
+              <button
+                onClick={() => !wpPublishing && setWpModalOpen(false)}
+                className="text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {wpPublishedUrl ? (
+              <div className="text-center py-2">
+                <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-[var(--cream)] mb-1">Published as a draft</p>
+                <p className="text-xs text-[var(--cream-dim)] mb-4">
+                  Review and publish it from your WordPress dashboard.
+                </p>
+                <a
+                  href={wpPublishedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[#B87333] text-white hover:bg-[#A0622A] transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Open draft in WordPress
+                </a>
+                <div>
+                  <button
+                    onClick={() => setWpModalOpen(false)}
+                    className="mt-4 text-xs text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-[var(--cream-dim)] mb-4 leading-relaxed">
+                  This sends the article to WordPress as a <span className="font-medium text-[var(--cream)]">draft</span>.
+                  Nothing goes live until you publish it there.
+                </p>
+
+                {wpConnections.length > 1 && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-[var(--cream-dim)] mb-1.5">Site</label>
+                    <select
+                      value={wpSelectedId ?? ''}
+                      onChange={(e) => setWpSelectedId(e.target.value)}
+                      className="w-full text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent appearance-none cursor-pointer bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] text-[var(--cream)]"
+                    >
+                      {wpConnections.map((c) => (
+                        <option key={c.id} value={c.id}>{c.display_name || c.site_url}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {wpConnections.length === 1 && (
+                  <p className="text-xs text-[var(--cream-faint)] mb-4">
+                    Publishing to <span className="font-medium text-[var(--cream-dim)]">{wpConnections[0].display_name || wpConnections[0].site_url}</span>
+                  </p>
+                )}
+
+                {wpPublishError && (
+                  <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-xs font-medium text-red-400 bg-red-900/30 border border-red-700/40">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {wpPublishError}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleWpPublish}
+                    disabled={wpPublishing}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-[#B87333] text-white hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                  >
+                    {wpPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {wpPublishing ? 'Publishing…' : 'Publish draft'}
+                  </button>
+                  <button
+                    onClick={() => setWpModalOpen(false)}
+                    disabled={wpPublishing}
+                    className="px-4 py-2.5 text-sm font-medium rounded-xl border border-[rgba(184,115,51,0.25)] text-[var(--cream-dim)] hover:bg-[var(--ink)] disabled:opacity-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
