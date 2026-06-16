@@ -181,7 +181,7 @@ export default function BrandPage() {
       const res = await fetch('/api/brand/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: msgs }),
+        body: JSON.stringify({ messages: msgs, isUpdate }),
       })
 
       if (!res.ok || !res.body) throw new Error('API error')
@@ -211,7 +211,7 @@ export default function BrandPage() {
     } finally {
       setIsStreaming(false)
     }
-  }, [])
+  }, [isUpdate])
 
   // Fire first message on mount for new users
   useEffect(() => {
@@ -570,6 +570,18 @@ export default function BrandPage() {
           </div>
         )}
 
+        {/* Update-mode notice — reassure the user their profile won't be wiped */}
+        {isUpdate && (
+          <div className="px-8 pt-5">
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-[rgba(184,115,51,0.08)] border border-[rgba(184,115,51,0.25)]">
+              <Shield className="w-4 h-4 text-[var(--copper-lt)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--cream)]">
+                This chat <span className="font-medium">updates</span> your existing profile — it won&apos;t replace it. Anything you don&apos;t mention stays exactly as it is.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
           {messages.map((msg, i) => (
@@ -738,6 +750,13 @@ export default function BrandPage() {
           <p className="mt-1 text-sm text-[var(--cream-dim)]">
             Your persistent brand memory — the AI uses this to write content that sounds like you.
           </p>
+          {p.updated_at && (
+            <p className="mt-1.5 text-xs text-[var(--cream-faint)]">
+              Last updated {new Date(p.updated_at).toLocaleString(undefined, {
+                month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+              })}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button

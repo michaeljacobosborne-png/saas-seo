@@ -101,9 +101,27 @@ async function extractAndSaveBrandFacts(
     return
   }
 
+  // Load the full existing profile first. This background extraction runs on every
+  // conversational turn, so it MUST be non-destructive: never blank out a field and
+  // never shrink an array. Arrays are unioned with what's already saved so a user
+  // adding "one more competitor" mid-conversation can't drop the rest.
+  const { data: existing } = await supabase
+    .from('brand_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prev: Record<string, any> = (existing as Record<string, unknown>) ?? {}
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload: Record<string, any> = { user_id: userId }
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+  const cleanArr = (v: unknown) =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : []
+  const unionArr = (incoming: unknown, column: string): string[] | null => {
+    const merged = [...new Set([...cleanArr(prev[column]), ...cleanArr(incoming)])]
+    return merged.length ? merged : null
+  }
 
   if (str(facts.brand_name)) payload.brand_name = str(facts.brand_name)
   if (str(facts.industry)) payload.industry = str(facts.industry)
@@ -111,24 +129,13 @@ async function extractAndSaveBrandFacts(
   // The descriptive brand voice maps to the tone_notes column (brand_voice is enum-style).
   const tone = str(facts.tone_notes) ?? str(facts.brand_voice)
   if (tone) payload.tone_notes = tone
-  if (Array.isArray(facts.competitors) && facts.competitors.length) {
-    payload.competitors = facts.competitors.filter((c: unknown) => typeof c === 'string' && c.trim())
-  }
-  if (Array.isArray(facts.primary_keywords) && facts.primary_keywords.length) {
-    payload.primary_keywords = facts.primary_keywords.filter((k: unknown) => typeof k === 'string' && k.trim())
-  }
+  const competitors = unionArr(facts.competitors, 'competitors')
+  if (competitors) payload.competitors = competitors
+  const primaryKeywords = unionArr(facts.primary_keywords, 'primary_keywords')
+  if (primaryKeywords) payload.primary_keywords = primaryKeywords
 
   // Nothing confident beyond user_id — skip the write.
   if (Object.keys(payload).length <= 1) return
-
-  // Detect first-ever profile creation so we ping Telegram once per free signup.
-  // Checking existence before the upsert is the only reliable signal — upsert
-  // reports success identically for an insert vs. an update.
-  const { data: existing } = await supabase
-    .from('brand_profiles')
-    .select('user_id')
-    .eq('user_id', userId)
-    .maybeSingle()
 
   await supabase.from('brand_profiles').upsert(payload, { onConflict: 'user_id' })
 
@@ -219,12 +226,61 @@ Rules:
 - Never say "Great!" or "Absolutely!" or other filler affirmations.
 - Start immediately with: "Let's get your brand set up. What does [company/product] do, and who are you trying to reach with your content?"`
 
+// When the user already has a profile, the agent must UPDATE it — change only what
+// they ask for and carry every other field forward — instead of running a fresh
+// setup that re-asks everything and produces a profile missing most fields.
+function buildUpdatePrompt(profile: Record<string, unknown>): string {
+  const current = {
+    company_name: profile.brand_name ?? '',
+    industry: profile.industry ?? '',
+    target_audience: profile.target_audience ?? '',
+    brand_voice: profile.tone_notes ?? '',
+    content_goals: profile.content_goals ?? '',
+    competitors: profile.competitors ?? [],
+    avoid_topics: profile.avoid_topics ?? '',
+    tone_examples: profile.tone_examples ?? '',
+    expertise_notes: profile.expertise_notes ?? '',
+    signature_angles: profile.signature_angles ?? '',
+    avoid_phrases: profile.avoid_phrases ?? '',
+    expertise_skipped: profile.expertise_skipped ?? false,
+  }
+  return `You are a brand strategist helping an EXISTING Byline user update their brand profile. They already have a saved profile — your job is to change or add only what they ask for, and preserve everything else exactly as it is.
+
+Here is their current profile:
+
+${JSON.stringify(current, null, 2)}
+
+Rules:
+- Do NOT run a fresh setup and do NOT re-ask the onboarding questions. Open by asking what they'd like to update or add.
+- Change ONLY the fields the user explicitly asks to change. Carry every other field forward exactly as shown above — never blank one out.
+- For list fields (competitors), add to the existing list unless the user clearly asks to remove something.
+- Ask ONE question at a time. Keep responses under 3 sentences. Sound like a smart colleague, not a chatbot. Never use filler like "Great!" or "Absolutely!".
+- When the user is done, output ONLY this JSON block — nothing before or after — containing the FULL updated profile (existing values for everything unchanged, plus their changes):
+
+<brand_profile>
+{
+  "company_name": "...",
+  "industry": "...",
+  "target_audience": "...",
+  "brand_voice": "...",
+  "content_goals": "...",
+  "competitors": ["...", "..."],
+  "avoid_topics": "...",
+  "tone_examples": "...",
+  "expertise_notes": "...",
+  "signature_angles": "...",
+  "avoid_phrases": "...",
+  "expertise_skipped": false
+}
+</brand_profile>`
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { messages } = await request.json() as { messages: Message[] }
+  const { messages, isUpdate } = await request.json() as { messages: Message[]; isUpdate?: boolean }
 
   // Anthropic requires the first message to have role 'user'
   let apiMessages: Message[]
@@ -234,9 +290,22 @@ export async function POST(request: Request) {
     apiMessages = messages
   }
 
+  // Update mode: if the user already has a profile, load it server-side (authoritative)
+  // and switch the agent into a non-destructive update flow that preserves existing fields.
+  let systemPrompt = SYSTEM_PROMPT
+  if (isUpdate) {
+    const { data: existingProfile } = await supabase
+      .from('brand_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (existingProfile) {
+      systemPrompt = buildUpdatePrompt(existingProfile as Record<string, unknown>)
+    }
+  }
+
   // Fix 2: if the latest user message references any URLs, fetch them server-side
   // and inject the page content so the agent can reason about the real site.
-  let systemPrompt = SYSTEM_PROMPT
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')
   if (lastUser) {
     const urls = extractUrls(lastUser.content)
