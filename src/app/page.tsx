@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Search, FileText, Sparkles, Check, X } from 'lucide-react'
 import type { Metadata } from 'next'
 import TestimonialsSection from './_components/TestimonialsSection'
+import NavLinks from './_components/NavLinks'
 
 export const metadata: Metadata = {
   title: 'Byline — Content that ranks. An agent that fixes it.',
@@ -52,20 +53,7 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 bg-[#1C1917]/95 backdrop-blur border-b border-[rgba(184,115,51,0.15)]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontSize: '22px', fontWeight: 900, color: '#F7F3EC', letterSpacing: '-0.01em' }}>Byline<span style={{ color: '#B87333' }}>.</span></span>
-          <div className="flex items-center gap-4">
-            <Link href="/pricing" className="text-sm text-[#A89070] hover:text-[#F7F3EC] transition-colors hidden sm:block">
-              Pricing
-            </Link>
-            <Link href="/login" className="text-sm text-[#A89070] hover:text-[#F7F3EC] transition-colors hidden sm:block">
-              Log in
-            </Link>
-            <Link
-              href="/pricing"
-              className="px-4 py-2 rounded-lg bg-[#B87333] text-[#F7F3EC] text-sm font-semibold hover:bg-[#A0622A] transition-colors"
-            >
-              Get started
-            </Link>
-          </div>
+          <NavLinks />
         </div>
       </nav>
 
