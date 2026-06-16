@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
   FileText, Globe, Search, Bookmark, Plus, ArrowRight, ArrowUpRight,
-  Sparkles, BarChart2, Clock,
+  Sparkles, BarChart2, Clock, CheckCircle2, Circle, Rocket,
 } from 'lucide-react'
 import SearchPerformance from './search-performance'
 import DomainAuthority from './domain-authority'
@@ -69,6 +69,32 @@ function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label
   )
 }
 
+function ChecklistItem({
+  href, label, hint, done,
+}: { href: string; label: string; hint: string; done: boolean }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-[var(--ink-deep)] group"
+    >
+      {done ? (
+        <CheckCircle2 className="w-5 h-5 shrink-0 text-green-500" />
+      ) : (
+        <Circle className="w-5 h-5 shrink-0 text-[var(--cream-faint)]" />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className={`text-sm font-medium ${done ? 'text-[var(--cream-faint)] line-through' : 'text-[var(--cream)]'}`}>
+          {label}
+        </div>
+        {!done && <div className="text-xs text-[var(--cream-faint)] mt-0.5">{hint}</div>}
+      </div>
+      {!done && (
+        <ArrowRight className="w-4 h-4 shrink-0 text-[var(--cream-faint)] group-hover:text-[var(--copper)] transition-colors" />
+      )}
+    </Link>
+  )
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -132,6 +158,14 @@ export default async function DashboardPage() {
   const publishedArticles = articles.filter((a) => a.status === 'published').length
   const inProgress = articles.filter((a) => IN_PROGRESS.has(a.status)).slice(0, 5)
 
+  // First-time onboarding checklist — surfaced until the user has completed all
+  // three core steps. Cheap DB-derived checks, no extra queries.
+  const hasBrand = !!brandProfileId
+  const hasKeywords = projects.length > 0 || savedCount > 0
+  const hasArticles = totalArticles > 0
+  const onboardingComplete = hasBrand && hasKeywords && hasArticles
+  const completedSteps = [hasBrand, hasKeywords, hasArticles].filter(Boolean).length
+
   const projectNameById = new Map(projects.map((p) => [p.id, p.name]))
   const topProjects = projects.slice(0, 6)
 
@@ -158,6 +192,49 @@ export default async function DashboardPage() {
         </h1>
         <p className="mt-1 text-sm text-[var(--cream-dim)]">Here&apos;s what&apos;s happening across your workspace.</p>
       </div>
+
+      {/* Get started checklist — only while onboarding is incomplete */}
+      {!onboardingComplete && (
+        <div
+          className="mb-8 rounded-xl overflow-hidden"
+          style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.25)' }}
+        >
+          <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid rgba(184,115,51,0.15)' }}>
+            <span className="inline-flex p-2 rounded-lg" style={{ background: 'rgba(184,115,51,0.12)' }}>
+              <Rocket className="w-4 h-4" style={{ color: '#B87333' }} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-semibold text-[var(--cream)]">Get started</h2>
+              <p className="text-xs text-[var(--cream-dim)] mt-0.5">
+                Three quick steps to your first SEO-optimized article.
+              </p>
+            </div>
+            <span className="text-xs font-medium tabular-nums text-[var(--cream-faint)] shrink-0">
+              {completedSteps}/3
+            </span>
+          </div>
+          <div className="p-2">
+            <ChecklistItem
+              href="/brand"
+              label="Set up your Brand Profile"
+              hint="Teach the AI your voice, audience, and niche."
+              done={hasBrand}
+            />
+            <ChecklistItem
+              href="/keywords"
+              label="Run your first keyword search"
+              hint="Discover high-value topics to target."
+              done={hasKeywords}
+            />
+            <ChecklistItem
+              href="/articles/new"
+              label="Generate your first article"
+              hint="Turn a keyword into a full draft in your brand voice."
+              done={hasArticles}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Quick Write — fast lane straight to article generation */}
       <div className="mb-8">
@@ -199,10 +276,19 @@ export default async function DashboardPage() {
                 <div className="inline-flex p-3 rounded-xl mb-3" style={{ background: 'rgba(184,115,51,0.08)' }}>
                   <FileText className="w-5 h-5 text-[var(--copper-lt)]" />
                 </div>
-                <p className="text-sm text-[var(--cream-dim)]">No articles in progress.</p>
-                <Link href="/articles/new" className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-[var(--copper)] hover:text-[#A0622A] transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Create an article
-                </Link>
+                {articles.length === 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--cream-dim)' }}>
+                    No articles yet.{' '}
+                    <Link href="/articles/new" style={{ color: '#B87333' }} className="hover:underline">Generate your first →</Link>
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm text-[var(--cream-dim)]">No articles in progress.</p>
+                    <Link href="/articles/new" className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-[var(--copper)] hover:text-[#A0622A] transition-colors">
+                      <Plus className="w-3.5 h-3.5" /> Create an article
+                    </Link>
+                  </>
+                )}
               </div>
             ) : (
               <div className="divide-y" style={{ borderColor: 'rgba(184,115,51,0.1)' }}>
@@ -263,78 +349,4 @@ export default async function DashboardPage() {
                   <Search className="w-5 h-5 text-[var(--copper-lt)]" />
                 </div>
                 <p className="text-sm text-[var(--cream-dim)]">No projects yet.</p>
-                <Link href="/keywords" className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-[var(--copper)] hover:text-[#A0622A] transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Start research
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="divide-y" style={{ borderColor: 'rgba(184,115,51,0.1)' }}>
-                  {topProjects.map((p) => {
-                    const count = countByProject.get(p.id) ?? 0
-                    return (
-                      <Link
-                        key={p.id}
-                        href={`/keywords/${p.id}`}
-                        className="flex items-center gap-3 px-5 py-3 hover:bg-[var(--ink-deep)] transition-colors group"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--copper)] transition-colors line-clamp-1">{p.name}</div>
-                          <div className="text-xs text-[var(--cream-faint)] mt-0.5">
-                            {count} {count === 1 ? 'keyword' : 'keywords'}
-                          </div>
-                        </div>
-                        <ArrowUpRight className="w-4 h-4 text-[var(--cream-faint)] group-hover:text-[var(--copper)] transition-colors shrink-0" />
-                      </Link>
-                    )
-                  })}
-                </div>
-                <div className="px-5 py-3" style={{ borderTop: '1px solid rgba(184,115,51,0.1)' }}>
-                  <Link href="/keywords" className="text-xs font-medium text-[var(--cream-dim)] hover:text-[var(--copper)] transition-colors flex items-center gap-1">
-                    View all projects <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3 — quick actions (only when nothing is in progress) */}
-      {inProgress.length === 0 && (
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)] mb-3">Quick actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { href: '/keywords', icon: Search, title: 'Start keyword research', desc: 'Discover high-value keywords to target.' },
-              { href: '/articles/new', icon: Sparkles, title: 'Create article', desc: 'Generate an SEO-optimized draft.' },
-              { href: '/content-audit', icon: BarChart2, title: 'Run content audit', desc: 'Score and improve existing content.' },
-            ].map(({ href, icon: Icon, title, desc }) => (
-              <Link
-                key={href}
-                href={href}
-                className="rounded-xl p-5 transition-all group"
-                style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}
-              >
-                <div className="inline-flex p-2 rounded-lg mb-4" style={{ background: 'rgba(184,115,51,0.12)' }}>
-                  <Icon className="w-5 h-5" style={{ color: '#B87333' }} />
-                </div>
-                <h3 className="font-semibold text-[var(--cream)] mb-1 text-sm">{title}</h3>
-                <p className="text-sm text-[var(--cream-dim)] leading-relaxed">{desc}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Search Performance (GSC) — renders data when connected, CTA otherwise */}
-      {brandProfileId && (
-        <SearchPerformance
-          brandProfileId={brandProfileId}
-          connected={gscConnected}
-          hasProperty={gscHasProperty}
-        />
-      )}
-    </div>
-  )
-}
+               

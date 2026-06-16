@@ -21,9 +21,9 @@ const QUICK_ACTIONS = [
 
 export default function SupportWidget() {
   const pathname = usePathname()
-  // The /brand page has its own bottom-anchored chat input. On mobile the floating
-  // launcher overlaps that page's send button, so hide it there on small screens.
-  const onBrandPage = pathname === '/brand'
+  const isChatPage = pathname === '/brand' || /^\/articles\//.test(pathname)
+  if (isChatPage) return null
+
 
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<View>('chat')
@@ -156,16 +156,12 @@ export default function SupportWidget() {
 
   return (
     <>
-      {/* Launcher — icon-only on mobile (smaller footprint so it doesn't overlap
-          bottom chat inputs); full pill on md+. Hidden on /brand on mobile, where
-          the page has its own bottom-anchored send button. */}
+      {/* Launcher */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
           aria-label="Open support"
-          className={`fixed bottom-5 right-5 z-50 items-center gap-2 p-3.5 md:px-4 md:py-3 rounded-full shadow-lg transition-transform hover:scale-105 ${
-            onBrandPage ? 'hidden md:flex' : 'flex'
-          }`}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 p-3.5 md:px-4 md:py-3 rounded-full shadow-lg transition-transform hover:scale-105"
           style={{ background: '#B87333', color: '#F7F3EC' }}
         >
           <Bot className="w-5 h-5" />
@@ -176,7 +172,7 @@ export default function SupportWidget() {
       {/* Panel */}
       {open && (
         <div
-          className="fixed bottom-5 right-5 z-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+          className="fixed bottom-5 right-5 z-40 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
           style={{
             width: 'min(384px, calc(100vw - 2.5rem))',
             height: 'min(560px, calc(100vh - 2.5rem))',
@@ -344,19 +340,4 @@ export default function SupportWidget() {
 
                   <button
                     onClick={submitCancel}
-                    disabled={cancelling}
-                    className="w-full py-2.5 text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-                    style={{ background: '#B87333', color: '#F7F3EC' }}
-                  >
-                    {cancelling && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {wantRefund ? 'Cancel & request refund' : 'Confirm cancellation'}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </>
-  )
-}
+      
