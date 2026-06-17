@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   Search, ChevronRight, Loader2, AlertCircle, Lock,
-  ArrowRight, CheckCircle2, Mail, Sparkles,
+  ArrowRight, CheckCircle2, Mail, Sparkles, Zap, Target, Telescope,
 } from 'lucide-react'
+import NavLinks from '../../_components/NavLinks'
 
 type Gap = {
   title: string
@@ -27,11 +28,14 @@ const PROGRESS_STEPS = [
   'Building your report...',
 ]
 
+// Playfair Display is loaded globally as a CSS variable in the root layout.
+const playfair = { fontFamily: 'var(--font-playfair, "Playfair Display", serif)' }
+
 function PriorityBadge({ priority }: { priority: Gap['priority'] }) {
   const map = {
-    high: 'bg-red-50 text-red-700',
-    medium: 'bg-amber-50 text-amber-700',
-    low: 'bg-gray-50 text-gray-600',
+    high: 'bg-[#B87333]/12 text-[#9A6228]',
+    medium: 'bg-amber-100 text-amber-700',
+    low: 'bg-[#F7F3EC] text-[#57534E]',
   }
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${map[priority]}`}>
@@ -48,6 +52,23 @@ export default function PublicAuditPage() {
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+
+  // Anchors for the in-page scroll behaviour: starting an audit scrolls the
+  // results into view; the bottom CTA scrolls back up to the hero input.
+  const resultsRef = useRef<HTMLDivElement>(null)
+  const heroFormRef = useRef<HTMLInputElement>(null)
+
+  function scrollToResults() {
+    // Wait a frame so the results/loading block has mounted before scrolling.
+    requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
+  function scrollToForm() {
+    heroFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    heroFormRef.current?.focus({ preventScroll: true })
+  }
 
   // Best-effort display domain for the funnel copy ("...on yourdomain.com").
   function displayDomain(raw: string): string {
@@ -86,6 +107,7 @@ export default function PublicAuditPage() {
     setProgressStep(0)
     setError(null)
     setResult(null)
+    scrollToResults()
 
     try {
       const res = await fetch('/api/audit', {
@@ -172,311 +194,453 @@ export default function PublicAuditPage() {
   const lockedGaps = result?.gaps?.slice(3) ?? []
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl text-gray-900 tracking-tight">
-            Byline
+    <div className="min-h-screen bg-[#FDFAF6] text-[#1C1917]">
+      {/* ── Nav ── */}
+      <nav className="sticky top-0 z-50 bg-[#FDFAF6]/95 backdrop-blur border-b border-[#E7E0D6]">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+          <Link href="/">
+            <span style={{ ...playfair, fontSize: '22px', fontWeight: 900, color: '#B87333', letterSpacing: '-0.01em' }}>
+              byline<span style={{ color: '#1C1917' }}>.</span>
+            </span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/pricing"
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors hidden sm:block"
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/login"
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors hidden sm:block"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/signup?plan=free&ref=audit"
-              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
-            >
-              Get started free
-            </Link>
-          </div>
+          <NavLinks />
         </div>
       </nav>
 
-      <main className="max-w-2xl mx-auto px-6 py-16">
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold tracking-tight mb-4 text-gray-900 leading-tight">
-            Find what&apos;s missing from your content strategy.{' '}
-            <span className="text-indigo-600">Free.</span>
-          </h1>
-          <p className="text-lg text-gray-500 leading-relaxed max-w-xl mx-auto">
-            Enter your website URL. We&apos;ll scan your existing content and surface the gaps
-            your competitors are filling.
+      {/* ── Section 2: Hero ── */}
+      <section className="bg-[#FDFAF6] px-6 pt-20 pb-20 text-center">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B87333] mb-5">
+            Free Content Gap Audit
           </p>
-        </div>
-
-        {/* Input row */}
-        <div className="flex gap-2 mb-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && runAudit()}
-              placeholder="https://yoursite.com"
-              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              disabled={status === 'loading'}
-            />
-          </div>
-          <button
-            onClick={runAudit}
-            disabled={status === 'loading' || !url.trim()}
-            className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          <h1
+            style={playfair}
+            className="text-[40px] sm:text-[52px] font-bold leading-[1.08] tracking-tight text-[#1C1917] mb-6"
           >
-            {status === 'loading' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-            Run Audit
-          </button>
-        </div>
-        <p className="text-xs text-center text-gray-400 mb-10">
-          No email required. Results in ~10 seconds.
-        </p>
+            See Exactly Where Your Content Strategy Is Losing
+          </h1>
+          <p className="text-lg text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-10">
+            Byline maps your published content against real search demand and shows you the gaps your
+            competitors are filling — in under 60 seconds.
+          </p>
 
-        {/* Loading state */}
-        {status === 'loading' && (
-          <div className="bg-gray-50 rounded-2xl p-12 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mx-auto mb-4" />
-            <p className="text-sm font-medium text-gray-700 mb-4">
-              {PROGRESS_STEPS[progressStep]}
-            </p>
-            <div className="flex items-center justify-center gap-1.5">
-              {PROGRESS_STEPS.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all duration-500 ${
-                    i <= progressStep ? 'w-8 bg-indigo-500' : 'w-4 bg-gray-200'
-                  }`}
+          {/* URL input form — the above-the-fold CTA */}
+          <div className="max-w-xl mx-auto">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#998876]" />
+                <input
+                  ref={heroFormRef}
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && runAudit()}
+                  placeholder="https://yoursite.com"
+                  className="w-full pl-11 pr-4 py-3.5 bg-white border border-[#E7E0D6] rounded-xl text-sm text-[#1C1917] placeholder:text-[#998876] focus:outline-none focus:ring-2 focus:ring-[#B87333]/40 focus:border-[#B87333] transition-colors"
+                  disabled={status === 'loading'}
                 />
-              ))}
+              </div>
+              <button
+                onClick={runAudit}
+                disabled={status === 'loading' || !url.trim()}
+                className="flex items-center justify-center gap-2 px-6 py-3.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+              >
+                {status === 'loading' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4" />
+                )}
+                Run Audit
+              </button>
             </div>
-          </div>
-        )}
-
-        {/* Error state */}
-        {status === 'error' && error && (
-          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-            <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
-
-        {/* Results */}
-        {status === 'done' && result && (
-          <div className="space-y-6">
-            {/* Trust signal */}
-            <p className="text-center text-xs text-gray-400">
-              Analyzed 10,000+ URLs across 50+ niches.
+            <p className="text-xs text-[#998876] mt-3">
+              No login required. Results in ~10 seconds.
             </p>
+          </div>
+        </div>
+      </section>
 
-            {/* Summary banner */}
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-3">
-              <p className="text-sm text-indigo-800">
-                Scanned <strong>{result.pageCount}</strong> pages.
-                Found <strong>{result.gaps?.length ?? 0}</strong> content gaps.
+      {/* ── Section 3: How It Works ── */}
+      <section className="bg-[#F7F3EC] px-6 py-20">
+        <div className="max-w-5xl mx-auto">
+          <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-center text-[#1C1917] mb-14">
+            How the Audit Works
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {[
+              {
+                num: '01',
+                heading: 'We crawl your sitemap',
+                body: "Enter your domain and we pull every page you've published. No login needed — we use your sitemap to see exactly what content you've built.",
+              },
+              {
+                num: '02',
+                heading: 'We map content against search intent',
+                body: "Every page gets matched against real keyword clusters. We're not just counting words — we're analyzing whether your content covers the queries that actually drive traffic in your niche.",
+              },
+              {
+                num: '03',
+                heading: 'You get a prioritized gap report',
+                body: "The audit surfaces content topics with real search demand that your site doesn't cover. Each gap is scored by opportunity — so you know exactly what to build next.",
+              },
+            ].map((step) => (
+              <div key={step.num}>
+                <div style={playfair} className="text-3xl font-bold text-[#B87333] mb-3">
+                  {step.num}
+                </div>
+                <h3 className="text-lg font-semibold text-[#1C1917] mb-2">{step.heading}</h3>
+                <p className="text-[15px] text-[#57534E] leading-relaxed">{step.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 4: Why This Matters ── */}
+      <section className="bg-[#FDFAF6] px-6 py-20">
+        <div className="max-w-2xl mx-auto">
+          <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-[#1C1917] mb-8 leading-tight">
+            Most content strategies are based on guesses
+          </h2>
+          <div className="space-y-5 text-[#57534E] text-[17px] leading-relaxed">
+            <p>
+              Your team picks topics based on what feels right — what the CEO mentioned in a meeting,
+              what a customer asked about last week, what a competitor wrote about last month.
+            </p>
+            <p>
+              Meanwhile, your competitors are methodically filling every intent cluster in your niche.
+              And Google is rewarding them for it.
+            </p>
+            <p>
+              The content that drives compounding organic traffic isn&apos;t the content you think you
+              need. It&apos;s the 40–60 topics that sit one step outside your current coverage — the
+              adjacent questions your audience is already searching for that you&apos;ve never answered.
+            </p>
+            <p>
+              A content gap audit is the difference between a content calendar built on instinct and one
+              built on data. Most teams skip it because it&apos;s tedious to do manually. Byline does it
+              in under a minute.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 5: The Audit Tool (results) ── */}
+      <section ref={resultsRef} className="bg-[#FDFAF6] px-6 scroll-mt-20">
+        <div className="max-w-2xl mx-auto">
+          {/* Loading state */}
+          {status === 'loading' && (
+            <div className="bg-white border border-[#E7E0D6] rounded-2xl p-12 text-center mb-8">
+              <Loader2 className="w-8 h-8 animate-spin text-[#B87333] mx-auto mb-4" />
+              <p className="text-sm font-medium text-[#1C1917] mb-4">
+                {PROGRESS_STEPS[progressStep]}
               </p>
+              <div className="flex items-center justify-center gap-1.5">
+                {PROGRESS_STEPS.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      i <= progressStep ? 'w-8 bg-[#B87333]' : 'w-4 bg-[#E7E0D6]'
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
+          )}
 
-            {/* Quick wins */}
-            {result.quickWins?.length > 0 && (
-              <div>
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                  Quick Wins
-                </h2>
-                <ul className="space-y-1.5">
-                  {result.quickWins.slice(0, 3).map((w, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                      {w}
-                    </li>
-                  ))}
-                </ul>
+          {/* Error state */}
+          {status === 'error' && error && (
+            <div className="flex items-start gap-3 bg-[#B87333]/8 border border-[#E7E0D6] rounded-xl px-4 py-3 mb-8">
+              <AlertCircle className="w-4 h-4 text-[#9A6228] mt-0.5 shrink-0" />
+              <p className="text-sm text-[#1C1917]">{error}</p>
+            </div>
+          )}
+
+          {/* Results */}
+          {status === 'done' && result && (
+            <div className="space-y-6 mb-8">
+              {/* Trust signal */}
+              <p className="text-center text-xs text-[#998876]">
+                Analyzed 10,000+ URLs across 50+ niches.
+              </p>
+
+              {/* Summary banner */}
+              <div className="bg-[#B87333]/8 border border-[#E7E0D6] rounded-xl px-5 py-3">
+                <p className="text-sm text-[#1C1917]">
+                  Scanned <strong>{result.pageCount}</strong> pages.
+                  Found <strong>{result.gaps?.length ?? 0}</strong> content gaps.
+                </p>
               </div>
-            )}
 
-            {/* Free gaps */}
-            {freeGaps.length > 0 && (
-              <div>
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                  Top Content Gaps
-                </h2>
-                <div className="space-y-3">
-                  {freeGaps.map((gap, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4">
-                      <div className="flex items-start justify-between gap-3 mb-1.5">
-                        <h3 className="text-sm font-semibold text-gray-900">{gap.title}</h3>
-                        <PriorityBadge priority={gap.priority} />
-                      </div>
-                      <p className="text-sm text-gray-500">{gap.description}</p>
-                      {gap.suggestedKeyword && (
-                        <p className="text-xs text-indigo-600 mt-2 font-medium">
-                          → {gap.suggestedKeyword}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+              {/* Quick wins */}
+              {result.quickWins?.length > 0 && (
+                <div>
+                  <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-3">
+                    Quick Wins
+                  </h2>
+                  <ul className="space-y-1.5">
+                    {result.quickWins.slice(0, 3).map((w, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-[#57534E]">
+                        <CheckCircle2 className="w-4 h-4 text-[#B87333] mt-0.5 shrink-0" />
+                        {w}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Locked section */}
-            {lockedGaps.length > 0 ? (
-              <div className="relative">
-                {/* Blurred preview */}
-                <div
-                  className="space-y-3 blur-sm select-none pointer-events-none"
-                  aria-hidden="true"
-                >
-                  {lockedGaps.slice(0, 3).map((gap, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4">
-                      <div className="flex items-start justify-between gap-3 mb-1.5">
-                        <h3 className="text-sm font-semibold text-gray-900">{gap.title}</h3>
-                        <PriorityBadge priority={gap.priority} />
+              {/* Free gaps */}
+              {freeGaps.length > 0 && (
+                <div>
+                  <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-3">
+                    Top Content Gaps
+                  </h2>
+                  <div className="space-y-3">
+                    {freeGaps.map((gap, i) => (
+                      <div key={i} className="bg-white border border-[#E7E0D6] rounded-xl p-4">
+                        <div className="flex items-start justify-between gap-3 mb-1.5">
+                          <h3 className="text-sm font-semibold text-[#1C1917]">{gap.title}</h3>
+                          <PriorityBadge priority={gap.priority} />
+                        </div>
+                        <p className="text-sm text-[#57534E]">{gap.description}</p>
+                        {gap.suggestedKeyword && (
+                          <p className="text-xs text-[#B87333] mt-2 font-medium">
+                            → {gap.suggestedKeyword}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-500">{gap.description}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Overlay CTA */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-white via-white/90 to-white/30 rounded-2xl px-6 pt-10 pb-4">
-                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mb-3">
-                    <Lock className="w-5 h-5 text-indigo-500" />
+                    ))}
                   </div>
-                  <p className="text-base font-semibold text-gray-900 text-center mb-1">
-                    {lockedGaps.length} more gap{lockedGaps.length !== 1 ? 's' : ''} found
-                  </p>
-                  <p className="text-sm text-gray-500 text-center mb-5">
-                    Including{' '}
-                    <span className="font-medium text-gray-700">
-                      {lockedGaps
-                        .slice(0, 2)
-                        .map((g) => g.suggestedKeyword || g.title)
-                        .join(', ')}
-                    </span>
-                    {lockedGaps.length > 2 && ` and ${lockedGaps.length - 2} more`}
-                  </p>
+                </div>
+              )}
+
+              {/* Locked section */}
+              {lockedGaps.length > 0 ? (
+                <div className="relative">
+                  {/* Blurred preview */}
+                  <div
+                    className="space-y-3 blur-sm select-none pointer-events-none"
+                    aria-hidden="true"
+                  >
+                    {lockedGaps.slice(0, 3).map((gap, i) => (
+                      <div key={i} className="bg-white border border-[#E7E0D6] rounded-xl p-4">
+                        <div className="flex items-start justify-between gap-3 mb-1.5">
+                          <h3 className="text-sm font-semibold text-[#1C1917]">{gap.title}</h3>
+                          <PriorityBadge priority={gap.priority} />
+                        </div>
+                        <p className="text-sm text-[#57534E]">{gap.description}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Overlay CTA */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-[#FDFAF6] via-[#FDFAF6]/90 to-[#FDFAF6]/30 rounded-2xl px-6 pt-10 pb-4">
+                    <div className="w-10 h-10 bg-[#B87333]/12 rounded-xl flex items-center justify-center mb-3">
+                      <Lock className="w-5 h-5 text-[#B87333]" />
+                    </div>
+                    <p className="text-base font-semibold text-[#1C1917] text-center mb-1">
+                      {lockedGaps.length} more gap{lockedGaps.length !== 1 ? 's' : ''} found
+                    </p>
+                    <p className="text-sm text-[#57534E] text-center mb-5">
+                      Including{' '}
+                      <span className="font-medium text-[#1C1917]">
+                        {lockedGaps
+                          .slice(0, 2)
+                          .map((g) => g.suggestedKeyword || g.title)
+                          .join(', ')}
+                      </span>
+                      {lockedGaps.length > 2 && ` and ${lockedGaps.length - 2} more`}
+                    </p>
+                    <Link
+                      href="/signup?plan=free&ref=audit"
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
+                    >
+                      Write your first article free — no credit card needed
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href="/login"
+                      className="mt-3 text-xs text-[#57534E] hover:text-[#1C1917] transition-colors"
+                    >
+                      Already have an account? Sign in →
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                /* CTA when fewer than 4 gaps total */
+                <div className="text-center pt-2 pb-4">
                   <Link
                     href="/signup?plan=free&ref=audit"
-                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
                   >
                     Write your first article free — no credit card needed
                     <ArrowRight className="w-4 h-4" />
                   </Link>
-                  <Link
-                    href="/login"
-                    className="mt-3 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                  >
-                    Already have an account? Sign in →
-                  </Link>
+                  <p className="mt-3 text-xs text-[#57534E]">
+                    Already have an account?{' '}
+                    <Link href="/login" className="text-[#B87333] hover:text-[#9A6228]">
+                      Sign in →
+                    </Link>
+                  </p>
                 </div>
-              </div>
-            ) : (
-              /* CTA when fewer than 4 gaps total */
-              <div className="text-center pt-2 pb-4">
+              )}
+
+              {/* Post-audit conversion funnel */}
+              <div className="bg-[#1C1917] rounded-2xl p-6 sm:p-8 text-[#F7F3EC]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-[#D4954A]" />
+                  <p className="text-sm font-medium text-[#A89070]">
+                    Found {result.gaps?.length ?? 0} content gap
+                    {(result.gaps?.length ?? 0) !== 1 ? 's' : ''} on{' '}
+                    {displayDomain(url)}
+                  </p>
+                </div>
+                <h2 style={playfair} className="text-xl font-bold leading-snug mb-2 text-[#F7F3EC]">
+                  Want articles that fill these gaps, written in your brand voice?
+                </h2>
+                <p className="text-sm text-[#A89070] mb-5 leading-relaxed">
+                  Byline turns these gaps into publish-ready, SEO-optimized articles —
+                  matched to how your site already sounds.
+                </p>
+
                 <Link
-                  href="/signup?plan=free&ref=audit"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+                  href="/signup?source=lead_magnet&ref=audit"
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
                 >
-                  Write your first article free — no credit card needed
+                  Start free — no credit card required
                   <ArrowRight className="w-4 h-4" />
                 </Link>
-                <p className="mt-3 text-xs text-gray-500">
-                  Already have an account?{' '}
-                  <Link href="/login" className="text-indigo-600 hover:text-indigo-700">
-                    Sign in →
-                  </Link>
-                </p>
-              </div>
-            )}
 
-            {/* Post-audit conversion funnel */}
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-5 h-5 text-indigo-200" />
-                <p className="text-sm font-medium text-indigo-100">
-                  Found {result.gaps?.length ?? 0} content gap
-                  {(result.gaps?.length ?? 0) !== 1 ? 's' : ''} on{' '}
-                  {displayDomain(url)}
-                </p>
-              </div>
-              <h2 className="text-xl font-bold leading-snug mb-2">
-                Want articles that fill these gaps, written in your brand voice?
-              </h2>
-              <p className="text-sm text-indigo-100 mb-5 leading-relaxed">
-                Byline turns these gaps into publish-ready, SEO-optimized articles —
-                matched to how your site already sounds.
-              </p>
-
-              <Link
-                href="/signup?source=lead_magnet&ref=audit"
-                className="inline-flex items-center gap-2 px-5 py-3 bg-white text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-50 transition-colors"
-              >
-                Start free — no credit card required
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-
-              {/* Email capture for the full breakdown */}
-              <div className="mt-6 pt-6 border-t border-white/15">
-                {emailStatus === 'sent' ? (
-                  <p className="flex items-center gap-2 text-sm text-indigo-50">
-                    <CheckCircle2 className="w-4 h-4 text-green-300 shrink-0" />
-                    Thanks — we&apos;ll send the full breakdown to {email.trim()}.
-                  </p>
-                ) : (
-                  <>
-                    <label className="block text-sm font-medium text-indigo-100 mb-2">
-                      Or get the full breakdown by email:
-                    </label>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="flex-1 relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-300" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && sendReport()}
-                          placeholder="you@company.com"
-                          disabled={emailStatus === 'sending'}
-                          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-white/60"
-                        />
+                {/* Email capture for the full breakdown */}
+                <div className="mt-6 pt-6 border-t border-white/15">
+                  {emailStatus === 'sent' ? (
+                    <p className="flex items-center gap-2 text-sm text-[#F7F3EC]">
+                      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                      Thanks — we&apos;ll send the full breakdown to {email.trim()}.
+                    </p>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-medium text-[#A89070] mb-2">
+                        Or get the full breakdown by email:
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex-1 relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#998876]" />
+                          <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && sendReport()}
+                            placeholder="you@company.com"
+                            disabled={emailStatus === 'sending'}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-[#1C1917] bg-white placeholder:text-[#998876] focus:outline-none focus:ring-2 focus:ring-[#B87333]/60"
+                          />
+                        </div>
+                        <button
+                          onClick={sendReport}
+                          disabled={emailStatus === 'sending' || !email.trim()}
+                          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                        >
+                          {emailStatus === 'sending' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : null}
+                          Send report
+                        </button>
                       </div>
-                      <button
-                        onClick={sendReport}
-                        disabled={emailStatus === 'sending' || !email.trim()}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-900/40 text-white text-sm font-semibold rounded-xl hover:bg-indigo-900/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-                      >
-                        {emailStatus === 'sending' ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : null}
-                        Send report
-                      </button>
-                    </div>
-                    {emailStatus === 'error' && (
-                      <p className="mt-2 text-xs text-indigo-100">
-                        Couldn&apos;t save your email — please try again.
-                      </p>
-                    )}
-                  </>
-                )}
+                      {emailStatus === 'error' && (
+                        <p className="mt-2 text-xs text-[#A89070]">
+                          Couldn&apos;t save your email — please try again.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Section 6: What You Get ── */}
+      <section className="bg-[#F7F3EC] px-6 py-20">
+        <div className="max-w-5xl mx-auto">
+          <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-center text-[#1C1917] mb-14">
+            What the Audit Tells You
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Zap,
+                heading: 'Quick Wins',
+                body: 'Low-competition content gaps you can start filling this week. Topics with real search demand and manageable competition scores.',
+              },
+              {
+                icon: Target,
+                heading: 'Strategic Opportunities',
+                body: 'High-value topics worth a full content build-out. These are the pieces that compound — articles that earn links and rank for dozens of long-tail variants.',
+              },
+              {
+                icon: Telescope,
+                heading: 'Competitive Intelligence',
+                body: 'See what your rivals rank for that you don’t. The audit cross-references your content map against common competitor signals to surface the clearest gaps.',
+              },
+            ].map((card) => {
+              const Icon = card.icon
+              return (
+                <div
+                  key={card.heading}
+                  className="bg-white rounded-2xl border border-[#E7E0D6] p-7 shadow-sm"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-[#B87333]/10 flex items-center justify-center mb-5">
+                    <Icon className="w-5 h-5 text-[#B87333]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#1C1917] mb-2">{card.heading}</h3>
+                  <p className="text-[15px] text-[#57534E] leading-relaxed">{card.body}</p>
+                </div>
+              )
+            })}
           </div>
-        )}
-      </main>
+        </div>
+      </section>
+
+      {/* ── Section 7: CTA (dark bookend) ── */}
+      <section className="bg-[#1C1917] px-6 py-24 text-center">
+        <div className="max-w-2xl mx-auto">
+          <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-[#F7F3EC] mb-4 leading-tight">
+            Ready to turn gaps into traffic?
+          </h2>
+          <p className="text-lg text-[#A89070] mb-9 leading-relaxed">
+            Run a free audit above — or sign up to generate your first article in under 60 seconds.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={scrollToForm}
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors w-full sm:w-auto"
+            >
+              Run Free Audit
+            </button>
+            <Link
+              href="/signup?plan=free&ref=audit"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-transparent border border-[#B87333] text-[#D4954A] text-sm font-semibold rounded-xl hover:bg-[#B87333]/10 transition-colors w-full sm:w-auto"
+            >
+              Start Free <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="bg-[#1C1917] border-t border-white/10 px-6 py-10">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#A89070]">
+          <span>© 2025 Byline</span>
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <Link href="/privacy" className="hover:text-[#F7F3EC] transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-[#F7F3EC] transition-colors">Terms</Link>
+            <Link href="/pricing" className="hover:text-[#F7F3EC] transition-colors">Pricing</Link>
+            <Link href="/login" className="hover:text-[#F7F3EC] transition-colors">Login</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
