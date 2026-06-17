@@ -19,7 +19,6 @@ export async function POST(request: Request) {
 
   const body = await request.json() as { articleId: string; target_word_count?: number }
   const { articleId } = body
-  const targetWordCount = body.target_word_count ?? 1200
   if (!articleId) return NextResponse.json({ error: 'articleId is required' }, { status: 400 })
 
   // Fetch article, profile, and subscription in parallel
@@ -53,11 +52,14 @@ export async function POST(request: Request) {
   const brief = article.brief as Record<string, any>
   if (!brief) return NextResponse.json({ error: 'No brief found — generate a brief first' }, { status: 400 })
 
+  // Word count: explicit UI override > brief's target > sensible default (2100).
+  const targetWordCount = body.target_word_count ?? (brief.word_count_target as number | undefined) ?? 2100
+
   // Fetch brand profile (graceful fallback if missing)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: brand } = article.brand_profile_id ? await (supabase as any)
     .from('brand_profiles')
-    .select('brand_name, brand_voice, tone_notes, target_audience, industry, expertise_notes, signature_angles')
+    .select('brand_name, brand_voice, tone_notes, target_audience, industry, expertise_notes, signature_angles, avoid_topics, avoid_phrases, competitors')
     .eq('id', article.brand_profile_id)
     .eq('user_id', user.id)
     .single() : { data: null }
@@ -98,13 +100,24 @@ export async function POST(request: Request) {
     brand?.signature_angles ? `SIGNATURE ANGLES: ${brand.signature_angles}` : '',
   ].filter(Boolean).join('\n\n')
 
+  // Brand avoidance constraints. avoid_topics/competitors are text[], avoid_phrases
+  // is text — normalize all three so a string OR array column joins safely.
+  const asConstraintList = (v: unknown): string =>
+    Array.isArray(v) ? v.filter(Boolean).join(', ') : typeof v === 'string' ? v.trim() : ''
+  const avoidBlock = [
+    asConstraintList(brand?.avoid_topics) ? `NEVER write about or reference: ${asConstraintList(brand?.avoid_topics)}` : '',
+    asConstraintList(brand?.avoid_phrases) ? `NEVER use these phrases or terms: ${asConstraintList(brand?.avoid_phrases)}` : '',
+    asConstraintList(brand?.competitors) ? `COMPETITOR NAMES — do not mention these brands by name in the article: ${asConstraintList(brand?.competitors)}` : '',
+  ].filter(Boolean).join('\n')
+  const brandConstraintsBlock = avoidBlock ? `\n═══ BRAND CONSTRAINTS (non-negotiable) ═══\n${avoidBlock}\n` : ''
+
   const systemPrompt = `You are an expert SEO content writer for ${brandName}.
 
 BRAND VOICE: ${brandVoice}
 TONE: ${toneNotes}
 AUDIENCE: ${audience}
 ${expertiseBlock ? `\n${expertiseBlock}\n` : ''}
-
+${brandConstraintsBlock}
 ═══ HUMANIZATION RULES (non-negotiable) ═══
 • Vary sentence length deliberately — a 6-word sentence after a 30-word one creates rhythm. Never three sentences of matching length in a row.
 • Use contractions (it's, you'll, that's, don't, you're, there's) — their absence is an AI tell.
@@ -124,6 +137,10 @@ ${expertiseBlock ? `\n${expertiseBlock}\n` : ''}
 • No inanimate subjects doing human verbs: "This approach enables..." → "You can now..."
 • No false urgency or hype: game-changer, revolutionary, transformative, unprecedented, powerful — cut them all.
 • Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, dive into, it's worth noting, in today's landscape, moreover, furthermore, utilize (use "use"), facilitate (use "help"), implement (use "build" or "run").
+• RULE OF THREE BAN: Never list exactly three items in a row when the number is arbitrary. "Fast, reliable, and affordable" — this is an AI tell. Use two or four items, or write a sentence instead of a list. If a list genuinely has three items (e.g., three steps), that's fine — but do not manufacture triads for rhetorical effect.
+• Every H2 section must argue, not describe. The first sentence of every H2 section must state the section's conclusion or verdict, not introduce the topic. BAD: "There are several factors to consider when choosing X." GOOD: "Most buyers focus on the wrong factor — here's the one that actually matters."
+• Openings must be claims or facts. The article's first sentence must be either (a) a specific, surprising claim or (b) a concrete statistic. NEVER start with: "When it comes to", "If you're looking for", "Choosing the right", "In today's", "Whether you're", "X is one of the most", "Are you looking for". The first sentence must be unpredictable.
+• No section-closing summaries. Do not end a section with a sentence that restates what was just said. The last sentence of every section should either (a) land the point harder or (b) create tension for the next section. Never: "As you can see, X is an important factor to consider."
 • No em dashes used dramatically. If you need an em dash for a parenthetical, use parentheses or a comma.
 • Every paragraph must earn its place. If removing it loses nothing, cut it.
 
@@ -133,14 +150,16 @@ ${expertiseBlock ? `\n${expertiseBlock}\n` : ''}
 • Include a FAQ section with 3-5 questions (each as H3, answer immediately follows as a paragraph)
 • Include a "Key Takeaways" section
 
+═══ GEO RULES (Generative Engine Optimization) ═══
+• Include at least one definitional statement per major H2 section (AI engines pull these) — format: "[Topic] is [precise definition]."
+• Include one stat or data sentence per H2 section. Real stats preferred; if unavailable, use framing like "Industry benchmarks show..." or cite a named data source category.
+• Clear H2 hierarchy — each H2 section is self-contained and scannable
+• GENERATION CONSTRAINT: Before writing each H2 section, internally ask: "What is the one claim this section proves?" Lead with that claim.
+
 ═══ AEO RULES (Answer Engine Optimization) ═══
 • At least one paragraph (40-60 words) that directly answers "What is [topic]?" — natural prose, not a heading
 • Every FAQ H3 question gets an immediate paragraph answer (40-80 words) before any next heading
-
-═══ GEO RULES (Generative Engine Optimization) ═══
-• Include at least one definitional statement per major H2 section (AI engines pull these)
-• Include one stat/data sentence per H2 section — citing a general category is fine: "According to DataForSEO research..." or "Industry benchmarks show..."
-• Clear H2 hierarchy — each H2 section is self-contained and scannable
+• GENERATION CONSTRAINT: Place a 40-80 word direct-answer paragraph within the first 200 words of the article. This is the paragraph that will be pulled as a featured snippet.
 
 Write in Markdown. Use # for H1, ## for H2, ### for H3. Do not include the meta description in the body. Start directly with the # H1.`
 
@@ -322,7 +341,15 @@ Write the full article now.`
         messages: [
           {
             role: 'system',
-            content: 'You are a senior SEO editor. Your job is to expand the provided article to reach the target word count. Use ONLY the research data provided — add real examples, statistics, explanations, and answers to the questions listed. Never add filler, vague transitions, or repetitive content. Add new sections or expand existing ones. Return the complete expanded article in markdown.',
+            content: `You are a senior SEO editor. Your job is to expand the provided article to reach the target word count. Use ONLY the research data provided — add real examples, statistics, explanations, and answers to the questions listed. Never add filler, vague transitions, or repetitive content. Add new sections or expand existing ones. Return the complete expanded article in markdown.
+
+ANTI-SLOP REMINDER (apply to all expanded content):
+• Rule of three ban: never manufacture triads. Vary list length.
+• Every new section must argue, not describe. Lead each new H2 with its conclusion.
+• No throat-clearing openers on new sections. Cut "Now let's look at...", "Another important consideration is..."
+• No section-closing restatements. End on a sharper note or a tension-builder.
+• No banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, utilize, facilitate.
+• Vary sentence length. Short sentences punch. Then a longer sentence that qualifies or expands.`,
           },
           {
             role: 'user',

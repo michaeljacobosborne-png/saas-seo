@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: brand } = await (supabase as any)
     .from('brand_profiles')
-    .select('brand_name, industry, target_audience, brand_voice, tone_notes, competitors, primary_keywords, content_goals, expertise_notes, signature_angles')
+    .select('brand_name, industry, target_audience, brand_voice, tone_notes, competitors, primary_keywords, content_goals, expertise_notes, signature_angles, avoid_topics, avoid_phrases')
     .eq('id', brandProfileId)
     .eq('user_id', user.id)
     .single()
@@ -126,6 +126,15 @@ export async function POST(request: Request) {
     ).join('\n')
   }
 
+  // Brand avoidance constraints. avoid_topics/competitors are text[], avoid_phrases
+  // is text — normalize all three to a comma-joined string so a string OR array
+  // column produces the same prompt output (and never throws on .join).
+  const asConstraintList = (v: unknown): string =>
+    Array.isArray(v) ? v.filter(Boolean).join(', ') : typeof v === 'string' ? v.trim() : ''
+  const avoidTopicsStr = asConstraintList(brand.avoid_topics)
+  const avoidPhrasesStr = asConstraintList(brand.avoid_phrases)
+  const competitorsStr = asConstraintList(brand.competitors)
+
   const prompt = `You are an SEO content strategist for ${brand.brand_name}${brand.industry ? `, a ${brand.industry} company` : ''}, targeting ${brand.target_audience ?? 'their ideal audience'}.
 
 Brand voice: ${brand.brand_voice ?? 'professional'}
@@ -134,6 +143,9 @@ Competitors: ${(brand.competitors as string[])?.join(', ') || 'none'}
 Brand keywords: ${(brand.primary_keywords as string[])?.join(', ') || 'none'}
 ${brand.expertise_notes ? `\nExpertise: ${brand.expertise_notes}` : ''}
 ${brand.signature_angles ? `Content angles: ${brand.signature_angles}` : ''}
+${avoidTopicsStr ? `NEVER write about or reference: ${avoidTopicsStr}` : ''}
+${avoidPhrasesStr ? `NEVER use these phrases or terms: ${avoidPhrasesStr}` : ''}
+${competitorsStr ? `COMPETITOR NAMES — do not name these brands in the article unless the brand explicitly permits comparisons: ${competitorsStr}` : ''}
 
 ${isDirectMode ? `Article topic: "${directTopic}"\n` : ''}Keywords for this article:
 ${kwLines}
@@ -146,7 +158,12 @@ Generate a comprehensive SEO content brief. Return JSON only, no markdown:
   "meta_description": "155 chars max, includes target keyword, strong hook",
   "url_slug": "clean-keyword-rich-slug",
   "outline": [
-    {"heading": "Section heading", "heading_level": "H2", "notes": "what to cover, specific angle, data to include", "word_count_target": 250}
+    {
+      "heading": "H2 heading — must make a claim or imply a verdict, NOT just label a topic. BAD: 'Factors to Consider'. GOOD: 'The Factor That Actually Determines Which One to Buy'. BAD: 'Types of X'. GOOD: 'Only Two Types of X Are Worth Your Time'.",
+      "heading_level": "H2",
+      "notes": "State the argument this section will make. One sentence: what does this section conclude? Then: what evidence or examples support it? What does the reader believe at the end of this section that they didn't believe at the start?",
+      "word_count_target": 250
+    }
   ],
   "word_count_target": 2100,
   "tone_notes": "specific writing guidance combining brand voice and keyword intent",
@@ -154,7 +171,11 @@ Generate a comprehensive SEO content brief. Return JSON only, no markdown:
   "serp_intent": "informational"
 }
 
-Rules: outline must include an FAQ section (H2) with 3-5 H3 questions and a Key Takeaways H2. Total outline word_count_targets should sum to word_count_target.`
+Rules: outline must include an FAQ section (H2) with 3-5 H3 questions and a Key Takeaways H2. Total outline word_count_targets should sum to word_count_target.
+
+If serp_intent is "commercial" or "comparison", the outline MUST include a section titled something like "What We Found After Testing" or "Our Evaluation: How We Ranked These" — framed as original research or testing, even if based on secondary sources. This framing transforms perceived authority.
+
+OUTLINE RULE: Every H2 heading must pass this test — could this heading appear on a Wikipedia article or a generic AI article? If yes, rewrite it as a specific claim, verdict, or surprising finding. Generic topic headings are forbidden.`
 
   let brief: Record<string, unknown>
   try {
