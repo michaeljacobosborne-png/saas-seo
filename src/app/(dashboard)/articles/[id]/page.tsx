@@ -230,6 +230,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   // Free tier state
   const [accountType, setAccountType] = useState<string | null>(null)
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
+  // Review-mode agent turns already spent on THIS article (free tier caps at 3).
+  const [agentTurnsUsed, setAgentTurnsUsed] = useState(0)
+  // Full-screen modal shown when a free user hits the 3-turn cap (API 403).
+  const [showLimitModal, setShowLimitModal] = useState(false)
+  // Mirror of accountType for use inside the memoized agent callbacks (deps: [id]).
+  const accountTypeRef = useRef<string | null>(null)
 
   // Brand switcher state (Multi-Brand plan)
   const [brandProfiles, setBrandProfiles] = useState<Array<{ id: string; brand_name: string }>>([])
@@ -237,6 +243,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [brandSwitchError, setBrandSwitchError] = useState<string | null>(null)
 
   useEffect(() => { agentModeRef.current = agentMode }, [agentMode])
+  useEffect(() => { accountTypeRef.current = accountType }, [accountType])
 
   useEffect(() => {
     let active = true
@@ -266,10 +273,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('profiles')
-        .select('account_type')
+        .select('account_type, agent_turns_used')
         .eq('user_id', user.id)
         .maybeSingle()
       setAccountType(data?.account_type ?? null)
+      const used = ((data?.agent_turns_used as Record<string, number> | null) ?? {})[id] ?? 0
+      setAgentTurnsUsed(used)
     }
     loadProfile()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -389,6 +398,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
+        // Free user hit the 3-turn cap — show the upgrade modal instead of an
+        // error bubble, and roll back the un-answered user message.
+        if (res.status === 403 && (errorData as { code?: string }).code === 'FREE_TIER_LIMIT') {
+          setAgentMessages(history)
+          setShowLimitModal(true)
+          return
+        }
         const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
         setAgentMessages((prev) => [...prev, { role: 'assistant', content: errorMsg }])
         return
@@ -431,6 +447,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         setSelectionRange(null)
         setSelectedText('')
         setAssistInput('')
+      }
+
+      // Free tier: the server counts this review turn once it streams content.
+      // Mirror that locally so the "X remaining" badge updates without a refetch.
+      if (!isAssist && accountTypeRef.current === 'free' && lastResponseRef.current.trim()) {
+        setAgentTurnsUsed((n) => n + 1)
       }
     } catch (err) {
       // A mode switch aborts the stream on purpose — stay silent, the new mode owns the UI.
@@ -869,7 +891,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 {scores ? 'Re-score' : 'Score Article'}
               </button>
             )}
-            {article.content && (
+            {article.content && accountType !== 'free' && (
               <button
                 onClick={handlePublish}
                 disabled={publishing}
@@ -884,7 +906,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 {article.status === 'published' ? 'Published' : 'Publish'}
               </button>
             )}
-            {(article.status === 'complete' || article.status === 'published') && wpConnections.length > 0 && (
+            {(article.status === 'complete' || article.status === 'published') && wpConnections.length > 0 && accountType !== 'free' && (
               <button
                 onClick={openWpModal}
                 title="Publish to WordPress as a draft"
@@ -895,17 +917,32 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               </button>
             )}
             {article.content && (
-              <button
-                onClick={() => agentOpen ? setAgentOpen(false) : openAgent(article)}
-                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
-                  agentOpen
-                    ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.25)] text-[#A0622A]'
-                    : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
-                }`}
-              >
-                <Bot className="w-4 h-4" />
-                Agent
-              </button>
+              <div className="flex items-center gap-2">
+                {accountType === 'free' && (
+                  <span
+                    title="Free plan includes 3 agent improvements per article"
+                    className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-[rgba(184,115,51,0.1)] text-[var(--copper)] border border-[rgba(184,115,51,0.25)]"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {agentTurnsUsed >= 3
+                      ? '0 improvements left'
+                      : agentTurnsUsed === 0
+                        ? '3 free improvements'
+                        : `${3 - agentTurnsUsed} remaining`}
+                  </span>
+                )}
+                <button
+                  onClick={() => agentOpen ? setAgentOpen(false) : openAgent(article)}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                    agentOpen
+                      ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.25)] text-[#A0622A]'
+                      : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
+                  }`}
+                >
+                  <Bot className="w-4 h-4" />
+                  Agent
+                </button>
+              </div>
             )}
             <button
               onClick={handleDelete}
@@ -1767,6 +1804,43 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Free-tier agent limit modal — shown when the API 403s with FREE_TIER_LIMIT */}
+      {showLimitModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          onClick={() => setShowLimitModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6 text-center"
+            style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.25)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-full bg-[rgba(184,115,51,0.12)] flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-5 h-5" style={{ color: '#B87333' }} />
+            </div>
+            <h3 className="text-lg font-bold text-[var(--cream)] mb-2">You&apos;ve used your 3 free improvements</h3>
+            <p className="text-sm text-[var(--cream-dim)] mb-6 leading-relaxed">
+              Upgrade to unlock unlimited agent access, keyword research, and direct publishing.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/pricing"
+                className="inline-flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-[#B87333] text-white hover:bg-[#A0622A] transition-colors"
+              >
+                See Plans
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+              <button
+                onClick={() => setShowLimitModal(false)}
+                className="py-2 text-sm font-medium text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors"
+              >
+                Maybe later
+              </button>
+            </div>
           </div>
         </div>
       )}

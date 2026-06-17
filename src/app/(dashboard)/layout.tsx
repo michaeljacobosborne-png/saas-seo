@@ -18,19 +18,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .limit(1)
     .maybeSingle()
 
-  if (!sub) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profile } = await (supabase as any)
-      .from('profiles')
-      .select('account_type')
-      .eq('user_id', user.id)
-      .maybeSingle()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
+    .from('profiles')
+    .select('account_type')
+    .eq('user_id', user.id)
+    .maybeSingle()
 
-    // No active/trialing subscription: allow through only if the profile grants
-    // paid access (e.g. comped accounts, or before the subscription row lands).
-    // Genuinely free or unprovisioned users get sent to pricing.
-    if (!profile || profile.account_type === 'free') redirect('/pricing')
+  if (!sub) {
+    // No active/trialing subscription: free-tier users now get the stripped-down
+    // in-app experience, and comped/paid profiles pass through (their sub row may
+    // not have landed yet). Only genuinely unprovisioned users (no profile row at
+    // all) are sent to pricing.
+    if (!profile) redirect('/pricing')
   }
+
+  // Drives the free-tier sidebar (locked nav + Upgrade CTA). A user with an active
+  // subscription is always treated as paid regardless of the stored account_type.
+  const accountType: 'free' | 'paid' = sub ? 'paid' : (profile?.account_type === 'free' ? 'free' : 'paid')
 
   // Brand-new users must set up their brand profile before doing anything else.
   // Skip /brand itself (where they set it up) and /settings (account utilities)
@@ -50,7 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex h-screen" style={{ background: 'var(--ink)' }}>
       {/* Sidebar: desktop rail + mobile hamburger/drawer (client component) */}
-      <DashboardSidebar userEmail={user.email ?? ''} />
+      <DashboardSidebar userEmail={user.email ?? ''} accountType={accountType} />
 
       {/* Main content — pt-14 on mobile clears the fixed hamburger top bar */}
       <main className="flex-1 overflow-y-auto pt-14 md:pt-0" style={{ background: 'var(--ink)' }}>

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, Building2, Search, Bookmark, FileText, BarChart2,
-  Settings, X, Menu,
+  Settings, X, Menu, Lock, Sparkles,
 } from 'lucide-react'
 import SignOutButton from './SignOutButton'
 import ThemeToggle from '@/app/_components/ThemeToggle'
@@ -27,17 +27,20 @@ function XTwitterIcon({ className }: { className?: string }) {
   )
 }
 
+// `freeAccess` marks the routes a free-tier user can actually open. The rest are
+// shown greyed out with a lock icon and route to /pricing on click.
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/brand', label: 'Brand', icon: Building2 },
-  { href: '/keywords', label: 'Keywords', icon: Search },
-  { href: '/keywords/saved', label: 'Saved Keywords', icon: Bookmark },
-  { href: '/articles', label: 'Articles', icon: FileText },
-  { href: '/content-audit', label: 'Content Audit', icon: BarChart2 },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, freeAccess: true },
+  { href: '/brand', label: 'Brand', icon: Building2, freeAccess: false },
+  { href: '/keywords', label: 'Keywords', icon: Search, freeAccess: false },
+  { href: '/keywords/saved', label: 'Saved Keywords', icon: Bookmark, freeAccess: false },
+  { href: '/articles', label: 'Articles', icon: FileText, freeAccess: true },
+  { href: '/content-audit', label: 'Content Audit', icon: BarChart2, freeAccess: false },
+  { href: '/settings', label: 'Settings', icon: Settings, freeAccess: true },
 ]
 
-export default function DashboardSidebar({ userEmail }: { userEmail: string }) {
+export default function DashboardSidebar({ userEmail, accountType }: { userEmail: string; accountType: 'free' | 'paid' }) {
+  const isFree = accountType === 'free'
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
 
@@ -61,8 +64,26 @@ export default function DashboardSidebar({ userEmail }: { userEmail: string }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon, freeAccess }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+          const locked = isFree && !freeAccess
+          if (locked) {
+            // Greyed, lock-iconed entry that nudges free users to upgrade.
+            return (
+              <Link
+                key={href}
+                href="/pricing"
+                onClick={() => setMobileOpen(false)}
+                title="Upgrade to unlock"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors group"
+                style={{ color: 'var(--cream-faint)' }}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--cream-faint)' }} />
+                <span className="flex-1">{label}</span>
+                <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            )
+          }
           return (
             <Link
               key={href}
@@ -80,6 +101,17 @@ export default function DashboardSidebar({ userEmail }: { userEmail: string }) {
 
       {/* Footer */}
       <div className="px-3 py-4 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+        {isFree && (
+          <Link
+            href="/pricing"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center justify-center gap-2 px-3 py-2.5 mb-3 text-sm font-semibold rounded-lg transition-colors"
+            style={{ background: 'var(--copper)', color: '#fff' }}
+          >
+            <Sparkles className="w-4 h-4" />
+            Upgrade
+          </Link>
+        )}
         <ThemeToggle />
         <div className="flex items-center gap-3 px-3 mt-3 mb-3">
           <a href="https://x.com/bylineseo" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cream-faint)' }} className="hover:text-[var(--cream-dim)] transition-colors">

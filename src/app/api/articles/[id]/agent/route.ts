@@ -70,6 +70,7 @@ export async function POST(
     if (turnsUsed >= 3) {
       return NextResponse.json({
         error: "You've used your 3 free agent turns on this article. Upgrade to get unlimited agent access.",
+        code: 'FREE_TIER_LIMIT',
       }, { status: 403 })
     }
   }

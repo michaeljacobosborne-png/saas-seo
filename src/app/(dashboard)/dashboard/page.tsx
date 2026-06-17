@@ -74,8 +74,8 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const userId = user!.id
 
-  // Fetch the three independent datasets in parallel.
-  const [articlesRes, projectsRes, savedRes, brandRes] = await Promise.all([
+  // Fetch the independent datasets in parallel.
+  const [articlesRes, projectsRes, savedRes, brandRes, profileRes] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from('articles')
@@ -101,9 +101,16 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', userId)
+      .maybeSingle(),
   ])
 
   const articles: ArticleRow[] = articlesRes.data ?? []
+  const isFree: boolean = profileRes.data?.account_type === 'free'
   const projects: ProjectRow[] = projectsRes.data ?? []
   const savedCount: number = savedRes.count ?? 0
   const brandName: string | undefined = brandRes.data?.brand_name
@@ -147,6 +154,86 @@ export default async function DashboardPage() {
     for (const row of (kwRows ?? []) as { project_id: string }[]) {
       countByProject.set(row.project_id, (countByProject.get(row.project_id) ?? 0) + 1)
     }
+  }
+
+  // Free tier: a stripped-down dashboard. No stats grid, keyword projects, or
+  // search-performance widgets — just the path to their first (and only) article.
+  if (isFree) {
+    return (
+      <div className="p-8 max-w-3xl" style={{ background: 'var(--ink)', minHeight: '100%' }}>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-[var(--cream)]">
+            {brandName ? `Welcome back, ${brandName}` : 'Welcome to Byline'}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--cream-dim)]">
+            {totalArticles === 0
+              ? 'Let’s get your first SEO article live.'
+              : 'Your article is ready to edit and improve.'}
+          </p>
+        </div>
+
+        {totalArticles === 0 ? (
+          /* Onboarding card — no article yet */
+          <div className="rounded-2xl p-8" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.3)' }}>
+            <div className="inline-flex p-2.5 rounded-xl mb-4" style={{ background: 'rgba(184,115,51,0.12)' }}>
+              <Sparkles className="w-6 h-6" style={{ color: '#B87333' }} />
+            </div>
+            <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--cream)' }}>Generate your first SEO article</h2>
+            <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--cream-dim)' }}>
+              Run a free content audit on your site, pick your top gap, and generate a full article in minutes.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/audit"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg border transition-colors"
+                style={{ borderColor: 'rgba(184,115,51,0.3)', color: 'var(--cream-dim)' }}
+              >
+                <BarChart2 className="w-4 h-4" /> Run Content Audit
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/articles/new"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors"
+                style={{ background: '#B87333', color: '#fff' }}
+              >
+                <Sparkles className="w-4 h-4" /> Generate Article
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        ) : (
+          /* The article is the free user's main asset — surface it front and center. */
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Your article</h2>
+            {articles.map((article) => {
+              const cfg = ARTICLE_STATUS[article.status] ?? ARTICLE_STATUS.draft
+              return (
+                <Link
+                  key={article.id}
+                  href={`/articles/${article.id}`}
+                  className="flex items-center gap-4 px-5 py-4 rounded-xl transition-colors group"
+                  style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}
+                >
+                  <div className="inline-flex p-2.5 rounded-lg shrink-0" style={{ background: 'rgba(184,115,51,0.12)' }}>
+                    <FileText className="w-5 h-5" style={{ color: '#B87333' }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm text-[var(--cream)] group-hover:text-[var(--copper)] transition-colors line-clamp-1">
+                      {article.title || article.target_keyword || 'Untitled draft'}
+                    </div>
+                    <div className="text-xs text-[var(--cream-faint)] mt-1">Updated {timeAgo(article.updated_at)}</div>
+                  </div>
+                  <span className={`inline-flex items-center shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.className}`}>
+                    {cfg.pulse && <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 animate-pulse" />}
+                    {cfg.label}
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (

@@ -19,9 +19,39 @@ export async function GET(request: Request) {
 
   if (token_hash && type) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type })
-    if (!error) {
-      return NextResponse.redirect(checkoutRedirect ?? `${origin}/pricing`)
+    const { data, error } = await supabase.auth.verifyOtp({ token_hash, type })
+    if (!error && data.user) {
+      // Paid signup: carry the chosen plan straight into Stripe checkout.
+      if (checkoutRedirect) {
+        return NextResponse.redirect(checkoutRedirect)
+      }
+
+      // Otherwise route by account type, mirroring the OAuth (code) branch below:
+      // free-tier users land in the app; paid users with no sub yet go to pricing.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: sub } = await (supabase as any)
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .in('status', ['active', 'trialing'])
+        .limit(1)
+        .maybeSingle()
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('account_type')
+        .eq('user_id', data.user.id)
+        .maybeSingle()
+
+      const isFree = profile?.account_type === 'free'
+      const hasSub = !!sub
+
+      if (!hasSub && !isFree) {
+        return NextResponse.redirect(`${origin}/pricing`)
+      }
+
+      return NextResponse.redirect(`${origin}/dashboard`)
     }
     return NextResponse.redirect(`${origin}/login?error=confirmation_failed`)
   }
