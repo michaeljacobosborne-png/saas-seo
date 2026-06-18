@@ -1,9 +1,10 @@
 export const maxDuration = 300
 
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getKeywordIdeas, KeywordIdea } from '@/lib/dataforseo'
+import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -534,6 +535,28 @@ ANTI-SLOP REMINDER (apply to all expanded content):
       .eq('id', articleId)
       .eq('user_id', user.id)
     return NextResponse.json({ error: updateError.message }, { status: 500 })
+  }
+
+  // First-article activation event → GoHighLevel. After the response, count this
+  // user's 'ready' articles; if exactly 1, this was their first. Best-effort,
+  // never blocks/throws.
+  if (user.email) {
+    const email = user.email
+    after(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count, error: countError } = await (supabase as any)
+        .from('articles')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'ready')
+      if (countError || count !== 1) return
+      const contactId = await ghlUpsertContact({
+        email,
+        customFields: { articles_generated: 1 },
+      })
+      if (!contactId) return
+      await ghlAddTags(contactId, ['first_article_generated'])
+    })
   }
 
   return NextResponse.json({ content, word_count: wordCount, pass_count: passCount })

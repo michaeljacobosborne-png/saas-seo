@@ -1,6 +1,45 @@
-import { type EmailOtpType } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { type EmailOtpType, type User } from '@supabase/supabase-js'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { ghlUpsertContact, ghlAddToWorkflow } from '@/lib/ghl'
+
+// This callback fires on every email confirmation AND every OAuth login, so we
+// must only push to GHL on a genuinely new signup — otherwise returning users
+// get re-enrolled in the welcome sequence on each login. A first sign-in has
+// last_sign_in_at ≈ created_at (or no prior sign-in at all).
+function isFirstSignIn(user: User): boolean {
+  const created = user.created_at ? Date.parse(user.created_at) : NaN
+  if (Number.isNaN(created)) return false
+  const lastSignIn = user.last_sign_in_at ? Date.parse(user.last_sign_in_at) : NaN
+  if (Number.isNaN(lastSignIn)) return true // never signed in before → new
+  return Math.abs(lastSignIn - created) < 5 * 60 * 1000 // within 5 min of account creation
+}
+
+function firstNameFromUser(user: User): string | undefined {
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>
+  const full = (meta.full_name ?? meta.name ?? meta.first_name) as string | undefined
+  if (!full || typeof full !== 'string') return undefined
+  return full.trim().split(/\s+/)[0] || undefined
+}
+
+// Push a brand-new user into GoHighLevel and the welcome/onboarding workflow.
+// Best-effort and non-blocking via after(); the GHL helpers never throw. `isPaid`
+// tags paid subscribers distinctly from free-tier signups so the workflow can
+// branch. Idempotent on GHL's side (upsert by email).
+function pushNewUserToGhl(user: User, isPaid: boolean) {
+  if (!user.email) return
+  if (!isFirstSignIn(user)) return
+  after(async () => {
+    const contactId = await ghlUpsertContact({
+      email: user.email!,
+      firstName: firstNameFromUser(user),
+      tags: isPaid ? ['byline_user', 'paid_subscriber'] : ['byline_user', 'free_tier'],
+    })
+    if (!contactId) return
+    const workflowId = process.env.GHL_WORKFLOW_WELCOME_ONBOARDING_ID
+    if (workflowId) await ghlAddToWorkflow(contactId, workflowId)
+  })
+}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -47,6 +86,9 @@ export async function GET(request: Request) {
       const isFree = profile?.account_type === 'free'
       const hasSub = !!sub
 
+      // New signup → GoHighLevel welcome/onboarding (no-op for returning logins).
+      pushNewUserToGhl(data.user, hasSub || !isFree)
+
       if (!hasSub && !isFree) {
         return NextResponse.redirect(`${origin}/pricing`)
       }
@@ -87,6 +129,9 @@ export async function GET(request: Request) {
 
       const isFree = profile?.account_type === 'free'
       const hasSub = !!sub
+
+      // New signup → GoHighLevel welcome/onboarding (no-op for returning logins).
+      pushNewUserToGhl(data.user, hasSub || !isFree)
 
       // New users (no sub, not free) go to pricing; existing users go to next
       if (!hasSub && !isFree) {

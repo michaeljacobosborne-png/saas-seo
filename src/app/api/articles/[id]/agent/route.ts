@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ArticleScores } from '@/lib/supabase/types'
+import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
 import Anthropic from '@anthropic-ai/sdk'
+
+// Sentinel stored in agent_memory (account-level) to mark that the
+// first-agent-session GHL event already fired for this user — mirrors the
+// existing `expertise_nudge_shown` marker pattern, so no schema change needed.
+const GHL_AGENT_USED_MARKER = 'ghl_agent_used_fired'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -73,6 +79,42 @@ export async function POST(
         code: 'FREE_TIER_LIMIT',
       }, { status: 403 })
     }
+  }
+
+  // First agent session activation event → GoHighLevel. Runs after the response
+  // (the response is a stream, so after() fires once it closes) and is gated by a
+  // one-time account-level sentinel so it fires exactly once per user across all
+  // modes. Best-effort, never blocks/throws.
+  if (user.email) {
+    const email = user.email
+    after(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any
+      const { data: marker } = await sb
+        .from('agent_memory')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('memory_type', 'account')
+        .eq('content', GHL_AGENT_USED_MARKER)
+        .limit(1)
+        .maybeSingle()
+      if (marker) return // already fired
+
+      // Claim the marker first so concurrent first sessions don't double-fire.
+      await sb.from('agent_memory').insert({
+        user_id: user.id,
+        article_id: id,
+        memory_type: 'account',
+        content: GHL_AGENT_USED_MARKER,
+      })
+
+      const contactId = await ghlUpsertContact({
+        email,
+        customFields: { agent_sessions: 1 },
+      })
+      if (!contactId) return
+      await ghlAddTags(contactId, ['agent_used'])
+    })
   }
 
   // Fetch article first (required for everything else)

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -74,5 +75,20 @@ export async function POST(request: Request) {
     .upsert(payload, { onConflict: 'user_id' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Mark the brand profile complete in GoHighLevel so the onboarding workflow can
+  // skip/branch Email 2. Best-effort, after the response, never throws/blocks.
+  if (user.email) {
+    const email = user.email
+    after(async () => {
+      const contactId = await ghlUpsertContact({
+        email,
+        customFields: { brand_profile_complete: true },
+      })
+      if (!contactId) return
+      await ghlAddTags(contactId, ['brand_profile_complete'])
+    })
+  }
+
   return NextResponse.json({ success: true })
 }
