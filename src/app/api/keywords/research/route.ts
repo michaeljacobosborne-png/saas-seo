@@ -1,10 +1,10 @@
 export const maxDuration = 60
 
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getKeywordIdeas, KeywordIdea } from '@/lib/dataforseo'
-import { checkKeywordSessionLimit, incrementKeywordSession } from '@/lib/usage'
+import { checkKeywordSessionLimit, incrementKeywordSession, logUsageEvent } from '@/lib/usage'
 import { interpretSeedQuery } from '@/lib/keyword-intent'
 import OpenAI from 'openai'
 
@@ -15,8 +15,10 @@ interface ClusterResult {
   keywords: string[]
 }
 
-async function clusterKeywords(keywords: string[]): Promise<ClusterResult[]> {
-  if (keywords.length === 0) return []
+async function clusterKeywords(
+  keywords: string[]
+): Promise<{ clusters: ClusterResult[]; usage: OpenAI.CompletionUsage | null }> {
+  if (keywords.length === 0) return { clusters: [], usage: null }
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -35,11 +37,12 @@ Return JSON only in this exact format:
     temperature: 0.2,
   })
 
+  const usage = response.usage ?? null
   try {
     const parsed = JSON.parse(response.choices[0].message.content ?? '{}')
-    return parsed.clusters ?? []
+    return { clusters: parsed.clusters ?? [], usage }
   } catch {
-    return []
+    return { clusters: [], usage }
   }
 }
 
@@ -222,7 +225,20 @@ export async function POST(request: Request) {
     }
 
     // Cluster the AI-suggested keywords (the forced exact phrase is its own cluster).
-    const clusters = await clusterKeywords(otherIdeas.map((k) => k.keyword))
+    const { clusters, usage: clusterUsage } = await clusterKeywords(otherIdeas.map((k) => k.keyword))
+
+    // Cost tracking — log the gpt-4o-mini clustering call (the measurable AI cost
+    // in this route). The Claude intent layer (interpretSeedQuery) runs on the raw
+    // seed path but does not surface token usage, so it isn't instrumented here.
+    if (clusterUsage) {
+      after(() => logUsageEvent({
+        userId: user.id,
+        feature: 'keyword_research',
+        model: 'gpt-4o-mini',
+        inputTokens: clusterUsage.prompt_tokens,
+        outputTokens: clusterUsage.completion_tokens,
+      }))
+    }
 
     const clusterMap = new Map<string, string>()
     clusters.forEach((c) => {

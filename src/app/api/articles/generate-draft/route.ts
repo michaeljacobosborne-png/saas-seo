@@ -5,12 +5,29 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getKeywordIdeas, KeywordIdea } from '@/lib/dataforseo'
 import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
-import OpenAI from 'openai'
+import { logUsageEvent } from '@/lib/usage'
+import type OpenAI from 'openai'
+import OpenAIDefault from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const openai = new OpenAIDefault({ apiKey: process.env.OPENAI_API_KEY })
 
 function countWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).length
+}
+
+// Accumulates token usage across the draft pipeline's many model calls so we can
+// log one usage_event per model (gpt-4o for the heavy passes, gpt-4o-mini for the
+// cheap selection/clustering passes).
+type UsageTally = { gpt4oIn: number; gpt4oOut: number; miniIn: number; miniOut: number }
+function addUsage(tally: UsageTally, model: 'gpt-4o' | 'gpt-4o-mini', usage?: OpenAI.CompletionUsage | null) {
+  if (!usage) return
+  if (model === 'gpt-4o') {
+    tally.gpt4oIn += usage.prompt_tokens
+    tally.gpt4oOut += usage.completion_tokens
+  } else {
+    tally.miniIn += usage.prompt_tokens
+    tally.miniOut += usage.completion_tokens
+  }
 }
 
 export async function POST(request: Request) {
@@ -196,6 +213,9 @@ Write the full article now.`
     return NextResponse.json({ error: generatingErr.message }, { status: 500 })
   }
 
+  // Token usage accumulator — logged once per model after the final save.
+  const tally: UsageTally = { gpt4oIn: 0, gpt4oOut: 0, miniIn: 0, miniOut: 0 }
+
   // ─── Pass 1 ───
   let content: string
   try {
@@ -208,6 +228,7 @@ Write the full article now.`
       temperature: 0.7,
       max_tokens: 3800,
     })
+    addUsage(tally, 'gpt-4o', completion.usage)
     content = completion.choices[0].message.content ?? ''
   } catch (err) {
     // Reset status so user can retry
@@ -262,6 +283,7 @@ Write the full article now.`
         temperature: 0.3,
         max_tokens: 300,
       })
+      addUsage(tally, 'gpt-4o-mini', anglesCompletion.usage)
       const parsed = JSON.parse(anglesCompletion.choices[0].message.content ?? '{}')
       expansionAngles = Array.isArray(parsed.angles) ? parsed.angles : []
     } catch {
@@ -360,6 +382,7 @@ ANTI-SLOP REMINDER (apply to all expanded content):
         temperature: 0.7,
         max_tokens: 5000,
       })
+      addUsage(tally, 'gpt-4o', expansionCompletion.usage)
       content = expansionCompletion.choices[0].message.content ?? content
     } catch {
       // Expansion failed — save Pass 1 content
@@ -440,6 +463,7 @@ ANTI-SLOP REMINDER (apply to all expanded content):
       let conclusionOptions: string[] = []
 
       if (introsResult.status === 'fulfilled') {
+        addUsage(tally, 'gpt-4o', introsResult.value.usage)
         try {
           const parsed = JSON.parse(introsResult.value.choices[0].message.content ?? '{}')
           if (Array.isArray(parsed.options) && parsed.options.length > 0) introOptions = parsed.options
@@ -447,6 +471,7 @@ ANTI-SLOP REMINDER (apply to all expanded content):
       }
 
       if (conclusionsResult.status === 'fulfilled') {
+        addUsage(tally, 'gpt-4o', conclusionsResult.value.usage)
         try {
           const parsed = JSON.parse(conclusionsResult.value.choices[0].message.content ?? '{}')
           if (Array.isArray(parsed.options) && parsed.options.length > 0) conclusionOptions = parsed.options
@@ -483,6 +508,9 @@ ANTI-SLOP REMINDER (apply to all expanded content):
 
       let bestIntroBody = introBody
       let bestConclusion = currentConclusion
+
+      if (bestIntroRes.status === 'fulfilled') addUsage(tally, 'gpt-4o-mini', bestIntroRes.value.usage)
+      if (bestConclusionRes.status === 'fulfilled') addUsage(tally, 'gpt-4o-mini', bestConclusionRes.value.usage)
 
       if (bestIntroRes.status === 'fulfilled' && introOptions.length > 0) {
         try {
@@ -558,6 +586,17 @@ ANTI-SLOP REMINDER (apply to all expanded content):
       await ghlAddTags(contactId, ['first_article_generated'])
     })
   }
+
+  // Cost tracking — log accumulated token usage across the whole draft pipeline,
+  // one event per model. Runs after the response is sent; never blocks/throws.
+  after(() => {
+    if (tally.gpt4oIn || tally.gpt4oOut) {
+      void logUsageEvent({ userId: user.id, feature: 'draft_gen', model: 'gpt-4o', inputTokens: tally.gpt4oIn, outputTokens: tally.gpt4oOut })
+    }
+    if (tally.miniIn || tally.miniOut) {
+      void logUsageEvent({ userId: user.id, feature: 'draft_gen', model: 'gpt-4o-mini', inputTokens: tally.miniIn, outputTokens: tally.miniOut })
+    }
+  })
 
   return NextResponse.json({ content, word_count: wordCount, pass_count: passCount })
 }

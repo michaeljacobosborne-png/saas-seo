@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { checkArticleLimit } from '@/lib/usage'
+import { checkArticleLimit, logUsageEvent } from '@/lib/usage'
 import { interpretSeedQuery, BrandContext } from '@/lib/keyword-intent'
 import { getKeywordIdeas } from '@/lib/dataforseo'
 import OpenAI from 'openai'
@@ -178,6 +178,7 @@ If serp_intent is "commercial" or "comparison", the outline MUST include a secti
 OUTLINE RULE: Every H2 heading must pass this test — could this heading appear on a Wikipedia article or a generic AI article? If yes, rewrite it as a specific claim, verdict, or surprising finding. Generic topic headings are forbidden.`
 
   let brief: Record<string, unknown>
+  let briefUsage: { input: number; output: number } | null = null
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -186,6 +187,9 @@ OUTLINE RULE: Every H2 heading must pass this test — could this heading appear
       temperature: 0.3,
       max_tokens: 1400,
     })
+    briefUsage = completion.usage
+      ? { input: completion.usage.prompt_tokens, output: completion.usage.completion_tokens }
+      : null
     brief = JSON.parse(completion.choices[0].message.content ?? '{}')
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -210,6 +214,18 @@ OUTLINE RULE: Every H2 heading must pass this test — could this heading appear
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
+  }
+
+  // Cost tracking — log the GPT-4o brief generation after the response is sent.
+  if (briefUsage) {
+    const usage = briefUsage
+    after(() => logUsageEvent({
+      userId: user.id,
+      feature: 'brief_gen',
+      model: 'gpt-4o',
+      inputTokens: usage.input,
+      outputTokens: usage.output,
+    }))
   }
 
   return NextResponse.json({ brief })

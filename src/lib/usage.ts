@@ -1,3 +1,55 @@
+import { createServiceClient } from '@/lib/supabase/service'
+
+// ─── AI cost tracking ────────────────────────────────────────────────────────
+// Token pricing in USD per token (rates as of mid-2025 — update as needed).
+// Keyed by the exact model id passed to logUsageEvent. Unknown models cost 0.
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'gpt-4o':            { input: 2.50 / 1_000_000, output: 10.00 / 1_000_000 },
+  'gpt-4o-mini':       { input: 0.15 / 1_000_000, output:  0.60 / 1_000_000 },
+  'claude-sonnet-4-6': { input: 3.00 / 1_000_000, output: 15.00 / 1_000_000 },
+  'claude-haiku-4-5-20251001': { input: 0.80 / 1_000_000, output: 4.00 / 1_000_000 },
+}
+
+/** Cost in USD for a single model call. Returns 0 for unpriced models. */
+export function calcCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const p = MODEL_PRICING[model]
+  if (!p) return 0
+  return inputTokens * p.input + outputTokens * p.output
+}
+
+/**
+ * Record one AI model invocation in usage_events. Fire-and-forget: never throws,
+ * never blocks the caller's response. Uses the service-role client so the write
+ * succeeds regardless of RLS (the table is closed to authenticated callers).
+ * Callers should `void logUsageEvent(...)` (or wrap in Next's `after()`).
+ */
+export async function logUsageEvent(params: {
+  userId: string
+  feature: string
+  model: string
+  inputTokens: number
+  outputTokens: number
+}): Promise<void> {
+  try {
+    const inputTokens = params.inputTokens || 0
+    const outputTokens = params.outputTokens || 0
+    const cost = calcCostUsd(params.model, inputTokens, outputTokens)
+    const svc = createServiceClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (svc as any).from('usage_events').insert({
+      user_id: params.userId,
+      feature: params.feature,
+      model: params.model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cost_usd: cost,
+    })
+    if (error) console.error('logUsageEvent insert failed:', error.message)
+  } catch (err) {
+    console.error('logUsageEvent failed:', err instanceof Error ? err.message : String(err))
+  }
+}
+
 export const PLAN_LIMITS = {
   starter: { articles: 8, keywordSessions: 10, brandProfiles: 1 },
   pro: { articles: 30, keywordSessions: 60, brandProfiles: 1 },

@@ -2,7 +2,10 @@ import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ArticleScores } from '@/lib/supabase/types'
 import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
+import { logUsageEvent } from '@/lib/usage'
 import Anthropic from '@anthropic-ai/sdk'
+
+const AGENT_MODEL = 'claude-sonnet-4-6'
 
 // Sentinel stored in agent_memory (account-level) to mark that the
 // first-agent-session GHL event already fired for this user — mirrors the
@@ -219,7 +222,7 @@ ANTI-SLOP EDITORIAL STANDARDS:
         const encoder = new TextEncoder()
         try {
           const anthropicStream = anthropic.messages.stream({
-            model: 'claude-sonnet-4-6',
+            model: AGENT_MODEL,
             max_tokens: 2048,
             system: assistSystem,
             messages: [{ role: 'user', content: userMessage }],
@@ -229,6 +232,11 @@ ANTI-SLOP EDITORIAL STANDARDS:
               controller.enqueue(encoder.encode(event.delta.text))
             }
           }
+          // Cost tracking — usage is on the final assembled message.
+          try {
+            const fm = await anthropicStream.finalMessage()
+            await logUsageEvent({ userId: user.id, feature: 'agent_assist', model: AGENT_MODEL, inputTokens: fm.usage.input_tokens, outputTokens: fm.usage.output_tokens })
+          } catch { /* never block the stream on cost logging */ }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Stream error'
           controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`))
@@ -289,7 +297,7 @@ ANTI-SLOP STANDARDS (apply throughout the rewrite):
         const encoder = new TextEncoder()
         try {
           const anthropicStream = anthropic.messages.stream({
-            model: 'claude-sonnet-4-6',
+            model: AGENT_MODEL,
             max_tokens: 8192,
             system: autoSystem,
             messages: [{ role: 'user', content: autoUserMessage }],
@@ -299,6 +307,11 @@ ANTI-SLOP STANDARDS (apply throughout the rewrite):
               controller.enqueue(encoder.encode(event.delta.text))
             }
           }
+          // Cost tracking — usage is on the final assembled message.
+          try {
+            const fm = await anthropicStream.finalMessage()
+            await logUsageEvent({ userId: user.id, feature: 'agent_auto', model: AGENT_MODEL, inputTokens: fm.usage.input_tokens, outputTokens: fm.usage.output_tokens })
+          } catch { /* never block the stream on cost logging */ }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Stream error'
           controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`))
@@ -367,7 +380,7 @@ ANTI-SLOP EDITORIAL STANDARDS:
       const encoder = new TextEncoder()
       try {
         const anthropicStream = anthropic.messages.stream({
-          model: 'claude-sonnet-4-6',
+          model: AGENT_MODEL,
           max_tokens: 2048,
           system: systemPrompt,
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -381,6 +394,11 @@ ANTI-SLOP EDITORIAL STANDARDS:
             controller.enqueue(encoder.encode(event.delta.text))
           }
         }
+        // Cost tracking — usage is on the final assembled message.
+        try {
+          const fm = await anthropicStream.finalMessage()
+          await logUsageEvent({ userId: user.id, feature: 'agent_review', model: AGENT_MODEL, inputTokens: fm.usage.input_tokens, outputTokens: fm.usage.output_tokens })
+        } catch { /* never block the stream on cost logging */ }
         // Expertise nudge — append once if brand has no expertise notes and nudge not yet shown
         if (shouldNudge && fullResponse) {
           const nudgeText = '\n\n---\n*One thing that would improve every article I write for you: add your personal expertise and signature angles to your brand profile. Even rough notes work — it\'s the difference between content that ranks and content that actually sounds like you.*'
