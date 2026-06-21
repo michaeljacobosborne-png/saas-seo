@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { TopAccount } from '../_lib/admin-data'
 
 function fmtDate(iso: string | null): string {
@@ -39,7 +40,11 @@ export default function TopAccountsTable({ accounts }: { accounts: TopAccount[] 
               const isPaid = a.accountType !== 'free'
               return (
                 <tr key={a.userId} className="transition-colors hover:bg-[var(--ink-deep)]" style={{ borderTop: i === 0 ? 'none' : '1px solid rgba(184,115,51,0.08)' }}>
-                  <td className="px-4 py-3 text-[var(--cream)] max-w-[18rem] truncate" title={a.email}>{a.email}</td>
+                  <td className="px-4 py-3 max-w-[18rem] truncate" title={a.email}>
+                    <Link href={`/admin/accounts/${a.userId}`} className="text-[var(--cream)] hover:text-[var(--copper)] hover:underline">
+                      {a.email}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isPaid ? 'bg-green-500/15 text-green-400' : 'bg-[var(--ink-deep)] text-[var(--cream-dim)]'}`}

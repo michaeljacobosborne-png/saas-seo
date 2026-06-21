@@ -33,24 +33,48 @@ export async function getAuthUsers(): Promise<Map<string, { email: string; creat
 // ─── Stripe business metrics ──────────────────────────────────────────────────
 export interface StripeMetrics {
   configured: boolean
-  /** Monthly-normalized recurring revenue, in cents (annual plans ÷ 12). */
+  /** Collected recurring revenue, in cents — list price after Stripe coupons (annual plans ÷ 12). */
   mrrCents: number
+  /** Gross recurring revenue at list price, in cents, before any coupons. */
+  listMrrCents: number
   activePaid: number
   newThisMonth: number
   churnedThisMonth: number
+  /** Per-plan collected MRR — coupons distributed across a subscription's items pro-rata. */
   planBreakdown: { label: string; count: number; monthlyCents: number }[]
-  /** stripe customer id → monthly-normalized contribution in cents. */
+  /** stripe customer id → collected monthly contribution in cents (after coupons). */
   customerMrr: Map<string, number>
 }
 
 const ZERO_STRIPE: StripeMetrics = {
   configured: false,
   mrrCents: 0,
+  listMrrCents: 0,
   activePaid: 0,
   newThisMonth: 0,
   churnedThisMonth: 0,
   planBreakdown: [],
   customerMrr: new Map(),
+}
+
+/**
+ * Apply a subscription's coupon to a gross monthly amount (in cents).
+ * percent_off scales; amount_off is a per-period discount normalized to monthly.
+ */
+function applyCoupon(
+  grossMonthlyCents: number,
+  coupon: Stripe.Coupon | null | undefined,
+  interval: Stripe.Price.Recurring.Interval | undefined
+): number {
+  if (!coupon) return grossMonthlyCents
+  if (coupon.percent_off) {
+    return grossMonthlyCents * (1 - coupon.percent_off / 100)
+  }
+  if (coupon.amount_off) {
+    const monthlyDiscount = coupon.amount_off / (interval === 'year' ? 12 : 1)
+    return Math.max(0, grossMonthlyCents - monthlyDiscount)
+  }
+  return grossMonthlyCents
 }
 
 /** Map a Stripe price id back to a human plan label using the STRIPE_PRICE_* env vars. */
@@ -81,34 +105,49 @@ export async function getStripeMetrics(): Promise<StripeMetrics> {
   const monthStartSec = Math.floor(monthStart().getTime() / 1000)
 
   let mrrCents = 0
+  let listMrrCents = 0
   let activePaid = 0
   const customerMrr = new Map<string, number>()
   const planMap = new Map<string, { count: number; monthlyCents: number }>()
 
   try {
     // Active subscriptions → MRR, plan breakdown, per-customer contribution.
+    // `discount` is included on the subscription object by default — no expand needed.
     for await (const sub of stripe.subscriptions.list({ status: 'active', limit: 100 })) {
       activePaid++
-      let subMonthly = 0
-      for (const item of sub.items.data) {
+
+      // Gross monthly per item, plus the subscription's gross total.
+      const items = sub.items.data.map((item) => {
         const price = item.price
         const qty = item.quantity ?? 1
         const amount = (price.unit_amount ?? 0) * qty
-        const monthly = price.recurring?.interval === 'year' ? Math.round(amount / 12) : amount
-        subMonthly += monthly
-
+        const gross = price.recurring?.interval === 'year' ? amount / 12 : amount
         const label =
           priceLabel(price.id) ??
           price.nickname ??
           `$${((price.unit_amount ?? 0) / 100).toFixed(0)}/${price.recurring?.interval ?? 'one-time'}`
-        const cur = planMap.get(label) ?? { count: 0, monthlyCents: 0 }
+        return { gross, label }
+      })
+      const subListMonthly = items.reduce((s, i) => s + i.gross, 0)
+
+      // The coupon discounts the whole subscription; normalize using its primary interval.
+      const interval = sub.items.data[0]?.price.recurring?.interval
+      const subCollectedMonthly = applyCoupon(subListMonthly, sub.discount?.coupon, interval)
+      const ratio = subListMonthly > 0 ? subCollectedMonthly / subListMonthly : 0
+
+      listMrrCents += subListMonthly
+      mrrCents += subCollectedMonthly
+
+      // Plan breakdown reflects collected revenue — distribute the discount pro-rata.
+      for (const i of items) {
+        const cur = planMap.get(i.label) ?? { count: 0, monthlyCents: 0 }
         cur.count += 1
-        cur.monthlyCents += monthly
-        planMap.set(label, cur)
+        cur.monthlyCents += i.gross * ratio
+        planMap.set(i.label, cur)
       }
-      mrrCents += subMonthly
+
       if (typeof sub.customer === 'string') {
-        customerMrr.set(sub.customer, (customerMrr.get(sub.customer) ?? 0) + subMonthly)
+        customerMrr.set(sub.customer, (customerMrr.get(sub.customer) ?? 0) + subCollectedMonthly)
       }
     }
 
@@ -126,10 +165,22 @@ export async function getStripeMetrics(): Promise<StripeMetrics> {
     }
 
     const planBreakdown = Array.from(planMap.entries())
-      .map(([label, v]) => ({ label, count: v.count, monthlyCents: v.monthlyCents }))
+      .map(([label, v]) => ({ label, count: v.count, monthlyCents: Math.round(v.monthlyCents) }))
       .sort((a, b) => b.monthlyCents - a.monthlyCents)
 
-    return { configured: true, mrrCents, activePaid, newThisMonth, churnedThisMonth, planBreakdown, customerMrr }
+    // Round fractional cents accumulated from pro-rata discount math.
+    for (const [cust, cents] of customerMrr) customerMrr.set(cust, Math.round(cents))
+
+    return {
+      configured: true,
+      mrrCents: Math.round(mrrCents),
+      listMrrCents: Math.round(listMrrCents),
+      activePaid,
+      newThisMonth,
+      churnedThisMonth,
+      planBreakdown,
+      customerMrr,
+    }
   } catch (err) {
     console.error('getStripeMetrics failed:', err instanceof Error ? err.message : String(err))
     return { ...ZERO_STRIPE, configured: true }

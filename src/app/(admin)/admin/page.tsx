@@ -73,10 +73,12 @@ function Note({ children }: { children: React.ReactNode }) {
 // ─── Section 1 — business metrics ────────────────────────────────────────────
 async function BusinessMetrics() {
   const [stripe, users] = await Promise.all([stripeMetricsCached(), getUserMetrics()])
+  const dragCents = stripe.listMrrCents - stripe.mrrCents
+  const dragPct = stripe.listMrrCents > 0 ? (dragCents / stripe.listMrrCents) * 100 : 0
   return (
     <>
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <MetricCard label="MRR" value={money(stripe.mrrCents)} sub={stripe.configured ? 'monthly-normalized' : 'Stripe not configured'} icon={DollarSign} />
+        <MetricCard label="MRR" value={money(stripe.mrrCents)} sub={stripe.configured ? 'collected · after coupons' : 'Stripe not configured'} icon={DollarSign} />
         <MetricCard label="Active Paid" value={stripe.activePaid} sub="active subscriptions" icon={CreditCard} />
         <MetricCard label="Free Users" value={users.freeUsers} icon={UserCheck} />
         <MetricCard label="Total Users" value={users.totalUsers} icon={Users} />
@@ -85,6 +87,16 @@ async function BusinessMetrics() {
       </div>
 
       {!stripe.configured && <Note>Stripe is not configured (no <code>STRIPE_SECRET_KEY</code>), so revenue metrics show 0.</Note>}
+
+      {stripe.configured && (
+        <Note>
+          <span className="font-semibold text-[var(--cream-faint)]">List MRR</span> {money(stripe.listMrrCents)}
+          {' · '}
+          <span className="font-semibold text-[var(--cream-faint)]">Collected MRR</span> {money(stripe.mrrCents)}
+          {' · '}
+          <span className="font-semibold text-[var(--cream-faint)]">Discount drag</span> {money(dragCents)} ({dragPct.toFixed(1)}%)
+        </Note>
+      )}
 
       {stripe.planBreakdown.length > 0 && (
         <div className="mt-6">
