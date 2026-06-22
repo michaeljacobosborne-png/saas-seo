@@ -1,17 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
 import { analytics } from '@/lib/analytics'
 import TestimonialsSection from '@/app/_components/TestimonialsSection'
-
-interface FounderSpots {
-  available: boolean
-  used: number
-  total: number
-  remaining: number
-}
 
 type Plan = 'starter' | 'pro' | 'agency'
 type Interval = 'monthly' | 'annual'
@@ -103,20 +96,10 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
-  const [founderSpots, setFounderSpots] = useState<FounderSpots | null>(null)
 
-  useEffect(() => {
-    fetch('/api/billing/founder-spots')
-      .then((r) => r.ok ? r.json() : null)
-      .then((data: FounderSpots | null) => {
-        if (data?.available) setFounderSpots(data)
-      })
-      .catch(() => {/* ignore — founder banner is non-critical */})
-  }, [])
-
-  async function handleCheckout(plan: Plan, founderPlanId?: string) {
+  async function handleCheckout(plan: Plan) {
     setError(null)
-    setLoading(founderPlanId ?? plan)
+    setLoading(plan)
 
     const planConfig = PLANS.find((p) => p.id === plan)
     const value = planConfig
@@ -124,17 +107,13 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         ? planConfig.monthlyPrice
         : planConfig.annualPrice
       : 0
-    analytics.beginCheckout(founderPlanId ?? plan, value)
-
-    const checkoutPlan = founderPlanId ?? plan
-    // Founder plans are monthly-only
-    const checkoutInterval = founderPlanId ? 'monthly' : interval
+    analytics.beginCheckout(plan, value)
 
     try {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: checkoutPlan, interval: checkoutInterval }),
+        body: JSON.stringify({ plan, interval }),
       })
       const data = await res.json()
       if (!res.ok || !data.url) {
@@ -201,72 +180,6 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           </span>
         </div>
       </div>
-
-      {/* Founder pricing banner */}
-      {founderSpots && (
-        <div className="px-6 pb-10">
-          <div className="max-w-3xl mx-auto rounded-2xl border border-[rgba(184,115,51,0.4)] bg-[#231F1B] p-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 bg-[rgba(184,115,51,0.12)] border border-[rgba(184,115,51,0.3)] rounded-full px-4 py-1.5 text-xs font-semibold text-[#D4954A] tracking-wide uppercase mb-3">
-                Founder Pricing — Limited Spots
-              </div>
-              <h2 className="text-2xl font-bold text-[#F7F3EC] mb-2">
-                Lock in your rate. Forever.
-              </h2>
-              <p className="text-[#A89070] text-sm max-w-md mx-auto">
-                The first 100 subscribers get permanently reduced pricing — your rate never increases.
-              </p>
-              <div className="mt-4 flex items-center justify-center gap-3">
-                <div className="h-2 w-40 rounded-full bg-[#2A2420] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#B87333] transition-all"
-                    style={{ width: `${(founderSpots.used / founderSpots.total) * 100}%` }}
-                  />
-                </div>
-                <span className="text-sm font-semibold text-[#D4954A]">
-                  {founderSpots.remaining} of {founderSpots.total} spots left
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Starter founder */}
-              <div className="rounded-xl border border-[rgba(184,115,51,0.25)] bg-[#1C1917] p-5 flex flex-col">
-                <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Starter — Founder</div>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-bold text-[#F7F3EC]">$39</span>
-                  <span className="text-sm text-[#7A6555]">/mo</span>
-                  <span className="text-sm line-through text-[#7A6555]">$49</span>
-                </div>
-                <p className="text-xs text-[#D4954A] font-semibold mb-4">Monthly, locked forever</p>
-                <button
-                  onClick={() => handleCheckout('starter', 'starter_founder')}
-                  disabled={loading === 'starter_founder'}
-                  className="mt-auto w-full py-2 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[rgba(184,115,51,0.08)] transition-colors disabled:opacity-60"
-                >
-                  {loading === 'starter_founder' ? 'Loading…' : 'Claim Starter Founder'}
-                </button>
-              </div>
-              {/* Growth founder */}
-              <div className="rounded-xl border-2 border-[#B87333] bg-[#1C1917] p-5 flex flex-col">
-                <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Growth — Founder</div>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-bold text-[#F7F3EC]">$79</span>
-                  <span className="text-sm text-[#7A6555]">/mo</span>
-                  <span className="text-sm line-through text-[#7A6555]">$99</span>
-                </div>
-                <p className="text-xs text-[#D4954A] font-semibold mb-4">Monthly, locked forever</p>
-                <button
-                  onClick={() => handleCheckout('pro', 'pro_founder')}
-                  disabled={loading === 'pro_founder'}
-                  className="mt-auto w-full py-2 rounded-lg bg-[#B87333] text-[#F7F3EC] text-sm font-semibold hover:bg-[#A0622A] transition-colors disabled:opacity-60"
-                >
-                  {loading === 'pro_founder' ? 'Loading…' : 'Claim Growth Founder'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Social proof — trust signals right before the price */}
       <TestimonialsSection />
