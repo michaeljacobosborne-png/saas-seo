@@ -17,7 +17,7 @@ type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'trialing'
 // NO metadata — so without this the stored `subscriptions.plan` is stuck at the
 // originally-purchased tier and the Settings page shows the wrong plan. Built
 // from the same env vars the checkout route uses to create sessions.
-const PRICE_TO_PLAN: Record<string, { plan: string; interval: string }> = {}
+const PRICE_TO_PLAN: Record<string, { plan: string; interval: string; isFounder?: boolean }> = {}
 for (const [plan, intervals] of Object.entries({
   starter: { monthly: process.env.STRIPE_PRICE_STARTER_MONTHLY, annual: process.env.STRIPE_PRICE_STARTER_ANNUAL },
   pro: { monthly: process.env.STRIPE_PRICE_PRO_MONTHLY, annual: process.env.STRIPE_PRICE_PRO_ANNUAL },
@@ -25,6 +25,16 @@ for (const [plan, intervals] of Object.entries({
 })) {
   for (const [interval, priceId] of Object.entries(intervals)) {
     if (priceId) PRICE_TO_PLAN[priceId] = { plan, interval }
+  }
+}
+// Founder prices — map back to the base plan name so plan limits are unchanged
+for (const [founderKey, intervals] of Object.entries({
+  starter_founder: { monthly: process.env.STRIPE_PRICE_STARTER_FOUNDER },
+  pro_founder: { monthly: process.env.STRIPE_PRICE_PRO_FOUNDER },
+})) {
+  const basePlan = founderKey.replace('_founder', '')
+  for (const [interval, priceId] of Object.entries(intervals)) {
+    if (priceId) PRICE_TO_PLAN[priceId] = { plan: basePlan, interval, isFounder: true }
   }
 }
 
@@ -158,17 +168,20 @@ export async function POST(request: Request) {
       // has access via account_type='paid' above, which the dashboard gate
       // accepts on its own.
       if (plan && interval) {
+        const isFounderCheckout = plan.endsWith('_founder') || subscription.metadata?.founder === 'true'
+        const basePlan = plan.endsWith('_founder') ? plan.replace('_founder', '') : plan
         const { error: upsertError } = await supabase.from('subscriptions').upsert({
           user_id: userId,
           stripe_customer_id: session.customer as string,
           stripe_subscription_id: subscription.id,
-          plan,
+          plan: basePlan,
           billing_interval: interval,
           // Use the real status — a trial checkout lands as 'trialing', not 'active'.
           status: mapStripeStatus(subscription.status) ?? 'active',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           current_period_end: getSubscriptionPeriodEnd(subscription) ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end,
+          ...(isFounderCheckout ? { is_founder: true } : {}),
         }, { onConflict: 'stripe_subscription_id' })
 
         if (upsertError) {
@@ -301,7 +314,7 @@ export async function POST(request: Request) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           current_period_end: getSubscriptionPeriodEnd(subscription) ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end,
-          ...(planInfo ? { plan: planInfo.plan, billing_interval: planInfo.interval } : {}),
+          ...(planInfo ? { plan: planInfo.plan, billing_interval: planInfo.interval, ...(planInfo.isFounder ? { is_founder: true } : {}) } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('stripe_subscription_id', subscription.id)

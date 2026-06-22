@@ -132,7 +132,12 @@ export async function getStripeMetrics(): Promise<StripeMetrics> {
 
       // The coupon discounts the whole subscription; normalize using its primary interval.
       const interval = sub.items.data[0]?.price.recurring?.interval
-      const subCollectedMonthly = applyCoupon(subListMonthly, sub.discount?.coupon, interval)
+      // `discount` (singular) was removed in newer Stripe SDK versions in favour of `discounts[]`.
+      // Cast to any to handle both SDK shapes without a version-specific type import.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sub_ = sub as any
+      const coupon = sub_.discount?.coupon ?? sub_.discounts?.[0]?.coupon
+      const subCollectedMonthly = applyCoupon(subListMonthly, coupon, interval)
       const ratio = subListMonthly > 0 ? subCollectedMonthly / subListMonthly : 0
 
       listMrrCents += subListMonthly

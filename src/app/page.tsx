@@ -3,6 +3,7 @@ import { Search, FileText, Sparkles, Check, X } from 'lucide-react'
 import type { Metadata } from 'next'
 import TestimonialsSection from './_components/TestimonialsSection'
 import NavLinks from './_components/NavLinks'
+import FounderBanner from './_components/FounderBanner'
 
 export const metadata: Metadata = {
   title: 'Byline — Content that ranks. An agent that fixes it.',
@@ -70,71 +71,16 @@ export default function HomePage() {
           <PrimaryCta />
         </div>
 
-        {/* Hero visual placeholder */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <div className="rounded-2xl border border-[rgba(184,115,51,0.2)] shadow-2xl overflow-hidden bg-[#1C1917]">
-            {/* Browser chrome */}
+        {/* Hero visual */}
+        <div className="mt-16 max-w-5xl mx-auto">
+          <div className="rounded-2xl border border-[rgba(184,115,51,0.2)] shadow-2xl overflow-hidden">
             <div className="bg-[#2A2420] px-4 py-3 flex items-center gap-2 border-b border-[rgba(184,115,51,0.2)]">
-              <div className="flex gap-1.5 flex-shrink-0">
-                <div className="w-3 h-3 rounded-full bg-red-400" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                <div className="w-3 h-3 rounded-full bg-green-400" />
-              </div>
-              <div className="flex-1 mx-4 bg-[#1C1917] rounded-md px-3 py-1 text-xs text-[#7A6555] border border-[rgba(184,115,51,0.2)] truncate text-center">
-                app.byline.so/articles/ranking-for-commercial-keywords
-              </div>
+              <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-red-400" /><div className="w-3 h-3 rounded-full bg-yellow-400" /><div className="w-3 h-3 rounded-full bg-green-400" /></div>
+              <div className="flex-1 mx-4 bg-[#1C1917] rounded-md px-3 py-1 text-xs text-[#7A6555] border border-[rgba(184,115,51,0.2)] truncate text-center">app.bylineseo.com/articles</div>
             </div>
-            {/* Two-panel app mockup */}
-            <div className="grid grid-cols-2 divide-x divide-[rgba(184,115,51,0.2)]">
-              {/* Left: Editor */}
-              <div className="p-5 bg-[#1C1917] min-h-52">
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[rgba(184,115,51,0.15)]">
-                  <div className="h-2.5 w-2.5 rounded bg-[rgba(184,115,51,0.08)]0" />
-                  <span className="text-xs font-medium text-[#A89070]">Article Editor</span>
-                  <div className="ml-auto flex gap-2">
-                    <div className="h-2 w-8 rounded bg-[#2A2420]" />
-                    <div className="h-2 w-8 rounded bg-[#2A2420]" />
-                  </div>
-                </div>
-                <div className="space-y-2.5">
-                  <div className="h-5 w-3/4 rounded bg-[#2A2420]" />
-                  <div className="h-3 w-full rounded bg-[#2A2420]" />
-                  <div className="h-3 w-5/6 rounded bg-[#2A2420]" />
-                  <div className="h-3 w-4/5 rounded bg-[#2A2420]" />
-                  <div className="h-4 w-2/3 rounded bg-[#3A2F25] mt-4" />
-                  {/* Highlighted lines (agent flagged these) */}
-                  <div className="h-3 w-full rounded bg-[rgba(184,115,51,0.18)] border border-[rgba(184,115,51,0.4)]" />
-                  <div className="h-3 w-5/6 rounded bg-[rgba(184,115,51,0.18)] border border-[rgba(184,115,51,0.4)]" />
-                  <div className="h-3 w-4/5 rounded bg-[#2A2420]" />
-                  <div className="h-3 w-full rounded bg-[#2A2420]" />
-                  <div className="h-3 w-3/4 rounded bg-[#2A2420]" />
-                </div>
-              </div>
-              {/* Right: Agent chat */}
-              <div className="p-5 bg-[#231F1B] min-h-52">
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[rgba(184,115,51,0.15)]">
-                  <div className="h-2.5 w-2.5 rounded-full bg-[rgba(184,115,51,0.08)]0" />
-                  <span className="text-xs font-medium text-[#A89070]">Editorial Agent</span>
-                </div>
-                <div className="space-y-3 text-xs">
-                  <div className="bg-[#B87333] text-[#F7F3EC] rounded-xl rounded-tl-sm px-3 py-2.5 max-w-xs leading-relaxed">
-                    Your H2 on line 4 is too generic — try{' '}
-                    <span className="font-semibold">&ldquo;How to Rank for Commercial Keywords in 5 Steps&rdquo;</span>
-                    {' '}instead.
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="bg-[#1C1917] border border-[rgba(184,115,51,0.2)] rounded-xl rounded-tr-sm px-3 py-2.5 max-w-[160px] text-[#A89070]">
-                      Rewrite it
-                    </div>
-                  </div>
-                  <div className="bg-[#B87333] text-[#F7F3EC] rounded-xl rounded-tl-sm px-3 py-2.5 max-w-xs leading-relaxed">
-                    <span className="opacity-90">Done. Changed H2 to &ldquo;How to Rank for Commercial Keywords in 5 Steps&rdquo; and updated the opening sentence to match.</span>
-                    <span className="flex items-center gap-1 mt-2 bg-[#1C1917]/20 w-fit px-2 py-0.5 rounded text-[10px] font-medium">
-                      ✓ Applied
-                    </span>
-                  </div>
-                </div>
-              </div>
+            <div className="grid grid-cols-2">
+              <img src="/dashboard-screenshot-1.png" alt="Byline article editor" className="w-full" />
+              <img src="/dashboard-screenshot-2.png" alt="Byline editorial agent" className="w-full border-l border-[rgba(184,115,51,0.2)]" />
             </div>
           </div>
           <p className="text-sm text-[#7A6555] mt-3">The editorial agent — live inside your editor</p>
@@ -344,6 +290,8 @@ export default function HomePage() {
 
       {/* ── Social proof ── */}
       <TestimonialsSection />
+
+      <FounderBanner />
 
       {/* ── Section 5: Pricing preview ── */}
       <section className="px-6 py-20">
