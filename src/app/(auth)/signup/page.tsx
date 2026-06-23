@@ -9,8 +9,9 @@ export default async function SignupPage({
     ref?: string
     audit_keyword?: string
     audit_topic?: string
+    email?: string
   }>
 }) {
-  const { plan, interval, ref, audit_keyword, audit_topic } = await searchParams
-  return <SignupForm plan={plan} interval={interval} referrer={ref} auditKeyword={audit_keyword} auditTopic={audit_topic} />
+  const { plan, interval, ref, audit_keyword, audit_topic, email } = await searchParams
+  return <SignupForm plan={plan} interval={interval} referrer={ref} auditKeyword={audit_keyword} auditTopic={audit_topic} emailPrefill={email} />
 }

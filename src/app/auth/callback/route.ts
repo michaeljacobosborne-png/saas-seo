@@ -45,6 +45,8 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
+  const next = searchParams.get('next') ?? '/dashboard'
+  const safeNext = next.startsWith('/') ? next : '/dashboard'
 
   // A paid signup carries the chosen plan/interval through confirmation. When
   // present, drop the user straight into Stripe checkout instead of /pricing or
@@ -93,7 +95,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/pricing`)
       }
 
-      return NextResponse.redirect(`${origin}/dashboard`)
+      return NextResponse.redirect(`${origin}${safeNext}`)
     }
     return NextResponse.redirect(`${origin}/login?error=confirmation_failed`)
   }

@@ -51,7 +51,9 @@ export default function PublicAuditPage() {
   const [result, setResult] = useState<AuditResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
-  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [emailUnlocked, setEmailUnlocked] = useState(false)
+  const [capturedEmail, setCapturedEmail] = useState('')
+  const [unlockStatus, setUnlockStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   // Anchors for the in-page scroll behaviour: starting an audit scrolls the
   // results into view; the bottom CTA scrolls back up to the hero input.
@@ -80,10 +82,10 @@ export default function PublicAuditPage() {
     }
   }
 
-  async function sendReport() {
+  async function handleEmailUnlock() {
     const trimmed = email.trim()
-    if (!trimmed || emailStatus === 'sending') return
-    setEmailStatus('sending')
+    if (!trimmed || unlockStatus === 'sending') return
+    setUnlockStatus('sending')
     try {
       const res = await fetch('/api/audit/lead', {
         method: 'POST',
@@ -94,9 +96,24 @@ export default function PublicAuditPage() {
           gapCount: result?.gaps?.length ?? 0,
         }),
       })
-      setEmailStatus(res.ok ? 'sent' : 'error')
+      if (res.ok) {
+        setEmailUnlocked(true)
+        setCapturedEmail(trimmed)
+        try {
+          localStorage.setItem(
+            'byline_audit_result',
+            JSON.stringify({ result, url: url.trim(), runAt: new Date().toISOString() })
+          )
+          localStorage.setItem('byline_audit_email', trimmed)
+        } catch {
+          /* localStorage unavailable — non-fatal */
+        }
+        setUnlockStatus('sent')
+      } else {
+        setUnlockStatus('error')
+      }
     } catch {
-      setEmailStatus('error')
+      setUnlockStatus('error')
     }
   }
 
@@ -408,6 +425,14 @@ export default function PublicAuditPage() {
                             → {gap.suggestedKeyword}
                           </p>
                         )}
+                        {emailUnlocked && (
+                          <Link
+                            href={`/signup?plan=free&ref=audit&email=${encodeURIComponent(capturedEmail)}&audit_keyword=${encodeURIComponent(gap.suggestedKeyword || gap.title)}&audit_topic=${encodeURIComponent(gap.title)}`}
+                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#B87333] hover:text-[#9A6228] transition-colors"
+                          >
+                            Write this article <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -416,56 +441,112 @@ export default function PublicAuditPage() {
 
               {/* Locked section */}
               {lockedGaps.length > 0 ? (
-                <div className="relative">
-                  {/* Blurred preview */}
-                  <div
-                    className="space-y-3 blur-sm select-none pointer-events-none"
-                    aria-hidden="true"
-                  >
-                    {lockedGaps.slice(0, 3).map((gap, i) => (
-                      <div key={i} className="bg-white border border-[#E7E0D6] rounded-xl p-4">
-                        <div className="flex items-start justify-between gap-3 mb-1.5">
-                          <h3 className="text-sm font-semibold text-[#1C1917]">{gap.title}</h3>
-                          <PriorityBadge priority={gap.priority} />
+                emailUnlocked ? (
+                  /* All gaps unlocked — render them as normal gap cards */
+                  <div>
+                    <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-3">
+                      More Content Gaps
+                    </h2>
+                    <div className="space-y-3">
+                      {lockedGaps.map((gap, i) => (
+                        <div key={i} className="bg-white border border-[#E7E0D6] rounded-xl p-4">
+                          <div className="flex items-start justify-between gap-3 mb-1.5">
+                            <h3 className="text-sm font-semibold text-[#1C1917]">{gap.title}</h3>
+                            <PriorityBadge priority={gap.priority} />
+                          </div>
+                          <p className="text-sm text-[#57534E]">{gap.description}</p>
+                          {gap.suggestedKeyword && (
+                            <p className="text-xs text-[#B87333] mt-2 font-medium">
+                              → {gap.suggestedKeyword}
+                            </p>
+                          )}
+                          <Link
+                            href={`/signup?plan=free&ref=audit&email=${encodeURIComponent(capturedEmail)}&audit_keyword=${encodeURIComponent(gap.suggestedKeyword || gap.title)}&audit_topic=${encodeURIComponent(gap.title)}`}
+                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#B87333] hover:text-[#9A6228] transition-colors"
+                          >
+                            Write this article <ArrowRight className="w-3 h-3" />
+                          </Link>
                         </div>
-                        <p className="text-sm text-[#57534E]">{gap.description}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Overlay CTA */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-[#FDFAF6] via-[#FDFAF6]/90 to-[#FDFAF6]/30 rounded-2xl px-6 pt-10 pb-4">
-                    <div className="w-10 h-10 bg-[#B87333]/12 rounded-xl flex items-center justify-center mb-3">
-                      <Lock className="w-5 h-5 text-[#B87333]" />
+                      ))}
                     </div>
-                    <p className="text-base font-semibold text-[#1C1917] text-center mb-1">
-                      {lockedGaps.length} more gap{lockedGaps.length !== 1 ? 's' : ''} found
-                    </p>
-                    <p className="text-sm text-[#57534E] text-center mb-5">
-                      Including{' '}
-                      <span className="font-medium text-[#1C1917]">
-                        {lockedGaps
-                          .slice(0, 2)
-                          .map((g) => g.suggestedKeyword || g.title)
-                          .join(', ')}
-                      </span>
-                      {lockedGaps.length > 2 && ` and ${lockedGaps.length - 2} more`}
-                    </p>
-                    <Link
-                      href="/signup?plan=free&ref=audit"
-                      className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
-                    >
-                      Write your first article free — no credit card needed
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                    <Link
-                      href="/login"
-                      className="mt-3 text-xs text-[#57534E] hover:text-[#1C1917] transition-colors"
-                    >
-                      Already have an account? Sign in →
-                    </Link>
                   </div>
-                </div>
+                ) : (
+                  /* Email wall */
+                  <div className="relative">
+                    {/* Blurred preview */}
+                    <div
+                      className="space-y-3 blur-sm select-none pointer-events-none"
+                      aria-hidden="true"
+                    >
+                      {lockedGaps.slice(0, 3).map((gap, i) => (
+                        <div key={i} className="bg-white border border-[#E7E0D6] rounded-xl p-4">
+                          <div className="flex items-start justify-between gap-3 mb-1.5">
+                            <h3 className="text-sm font-semibold text-[#1C1917]">{gap.title}</h3>
+                            <PriorityBadge priority={gap.priority} />
+                          </div>
+                          <p className="text-sm text-[#57534E]">{gap.description}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Overlay email wall */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-[#FDFAF6] via-[#FDFAF6]/90 to-[#FDFAF6]/30 rounded-2xl px-6 pt-10 pb-4">
+                      <div className="w-10 h-10 bg-[#B87333]/12 rounded-xl flex items-center justify-center mb-3">
+                        <Lock className="w-5 h-5 text-[#B87333]" />
+                      </div>
+                      <p className="text-base font-semibold text-[#1C1917] text-center mb-1">
+                        {lockedGaps.length} more gap{lockedGaps.length !== 1 ? 's' : ''} found
+                      </p>
+                      <p className="text-sm text-[#57534E] text-center mb-5">
+                        Including{' '}
+                        <span className="font-medium text-[#1C1917]">
+                          {lockedGaps
+                            .slice(0, 2)
+                            .map((g) => g.suggestedKeyword || g.title)
+                            .join(', ')}
+                        </span>
+                        {lockedGaps.length > 2 && ` and ${lockedGaps.length - 2} more`}
+                      </p>
+                      <div className="w-full max-w-sm">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <div className="flex-1 relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#998876]" />
+                            <input
+                              type="email"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleEmailUnlock()}
+                              placeholder="you@company.com"
+                              disabled={unlockStatus === 'sending'}
+                              className="w-full pl-9 pr-4 py-2.5 bg-white border border-[#E7E0D6] rounded-xl text-sm text-[#1C1917] placeholder:text-[#998876] focus:outline-none focus:ring-2 focus:ring-[#B87333]/40 focus:border-[#B87333] transition-colors"
+                            />
+                          </div>
+                          <button
+                            onClick={handleEmailUnlock}
+                            disabled={unlockStatus === 'sending' || !email.trim()}
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                          >
+                            {unlockStatus === 'sending' ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : null}
+                            See all {lockedGaps.length + freeGaps.length} gaps →
+                          </button>
+                        </div>
+                        {unlockStatus === 'error' && (
+                          <p className="mt-2 text-xs text-[#9A6228] text-center">
+                            Couldn&apos;t save your email — please try again.
+                          </p>
+                        )}
+                      </div>
+                      <Link
+                        href="/login"
+                        className="mt-3 text-xs text-[#57534E] hover:text-[#1C1917] transition-colors"
+                      >
+                        Already have an account? Sign in →
+                      </Link>
+                    </div>
+                  </div>
+                )
               ) : (
                 /* CTA when fewer than 4 gaps total */
                 <div className="text-center pt-2 pb-4">
@@ -504,57 +585,12 @@ export default function PublicAuditPage() {
                 </p>
 
                 <Link
-                  href="/signup?source=lead_magnet&ref=audit"
+                  href={`/signup?plan=free&ref=audit&email=${encodeURIComponent(capturedEmail)}&source=lead_magnet`}
                   className="inline-flex items-center gap-2 px-5 py-3 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
                 >
                   Start free — no credit card required
                   <ArrowRight className="w-4 h-4" />
                 </Link>
-
-                {/* Email capture for the full breakdown */}
-                <div className="mt-6 pt-6 border-t border-white/15">
-                  {emailStatus === 'sent' ? (
-                    <p className="flex items-center gap-2 text-sm text-[#F7F3EC]">
-                      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-                      Thanks — we&apos;ll send the full breakdown to {email.trim()}.
-                    </p>
-                  ) : (
-                    <>
-                      <label className="block text-sm font-medium text-[#A89070] mb-2">
-                        Or get the full breakdown by email:
-                      </label>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <div className="flex-1 relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#998876]" />
-                          <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && sendReport()}
-                            placeholder="you@company.com"
-                            disabled={emailStatus === 'sending'}
-                            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-[#1C1917] bg-white placeholder:text-[#998876] focus:outline-none focus:ring-2 focus:ring-[#B87333]/60"
-                          />
-                        </div>
-                        <button
-                          onClick={sendReport}
-                          disabled={emailStatus === 'sending' || !email.trim()}
-                          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-                        >
-                          {emailStatus === 'sending' ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : null}
-                          Send report
-                        </button>
-                      </div>
-                      {emailStatus === 'error' && (
-                        <p className="mt-2 text-xs text-[#A89070]">
-                          Couldn&apos;t save your email — please try again.
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
               </div>
             </div>
           )}

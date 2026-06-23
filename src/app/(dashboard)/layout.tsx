@@ -41,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Skip /brand itself (where they set it up) and /settings (account utilities)
   // so they're never trapped in a redirect loop.
   const pathname = (await headers()).get('x-pathname') ?? ''
-  if (!pathname.startsWith('/brand') && !pathname.startsWith('/settings')) {
+  if (!pathname.startsWith('/brand') && !pathname.startsWith('/settings') && !pathname.startsWith('/content-audit')) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: brandProfile } = await (supabase as any)
       .from('brand_profiles')

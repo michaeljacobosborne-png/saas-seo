@@ -30,12 +30,14 @@ export default function SignupForm({
   referrer,
   auditKeyword,
   auditTopic,
+  emailPrefill,
 }: {
   plan?: string
   interval?: string
   referrer?: string
   auditKeyword?: string
   auditTopic?: string
+  emailPrefill?: string
 }) {
   const isFree = plan === 'free'
 
@@ -51,7 +53,12 @@ export default function SignupForm({
   // signups (or plain signups) just hit the bare callback.
   function callbackUrl(): string {
     const base = `${window.location.origin}/auth/callback`
-    if (!plan || isFree) return base
+    if (!plan || isFree) {
+      if (isFree && referrer === 'audit') {
+        return `${base}?next=${encodeURIComponent('/content-audit')}`
+      }
+      return base
+    }
     const params = new URLSearchParams({ plan })
     if (interval) params.set('interval', interval)
     return `${base}?${params.toString()}`
@@ -73,7 +80,7 @@ export default function SignupForm({
     }
   }, [auditKeyword, auditTopic])
 
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(emailPrefill ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
