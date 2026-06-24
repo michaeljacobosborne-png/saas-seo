@@ -55,6 +55,15 @@ fbq('init', '${FB_PIXEL_ID}');`}
           </noscript>
         </>
       ) : null}
+
+      {/* Leadsy.ai visitor identification pixel */}
+      <Script
+        id="vtag-ai-js"
+        src="https://r2.leadsy.ai/tag.js"
+        strategy="afterInteractive"
+        data-pid="bQq413m7bf7t4c5e"
+        data-version="062024"
+      />
     </>
   )
 }
