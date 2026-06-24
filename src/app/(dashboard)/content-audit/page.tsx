@@ -7,7 +7,7 @@ import Link from 'next/link'
 import SearchConsolePages from './search-console-pages'
 import {
   BarChart2, RefreshCw, Loader2, AlertCircle, ArrowRight,
-  Search, FileText, CheckCircle2, Clock, ChevronDown, ChevronUp, Shield,
+  Search, CheckCircle2, Clock, ChevronDown, ChevronUp, Shield,
 } from 'lucide-react'
 
 type DomainRating = { dr: number; ahrefsRank: number }
@@ -333,7 +333,7 @@ export default function DashboardAuditPage() {
             {status === 'loading' ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--copper-lt)]" />
-                Scanning {auditUrl}…
+                Recovering your audit…
               </>
             ) : auditUrl ? (
               `Audit for ${auditUrl}`
@@ -370,7 +370,7 @@ export default function DashboardAuditPage() {
       {status === 'idle' && !result && (
         <div className="mb-8 rounded-xl px-5 py-4 border border-[rgba(184,115,51,0.18)]" style={{ background: 'var(--ink-card)' }}>
           <p className="text-sm text-[var(--cream-dim)] leading-relaxed">
-            Byline scans your site, cross-references your published content against search demand in your niche, and surfaces the topics your competitors are ranking for that you haven&apos;t touched yet. You&apos;ll see your coverage broken down by topic cluster, a prioritized list of gaps worth writing, and the keywords already sitting in your research library that still need articles. Most audits take under 15 seconds.
+            Import your audit to see exactly where your content strategy has gaps. Byline scans your site, cross-references your published content against search demand in your niche, and surfaces the topics your competitors rank for that you haven&apos;t covered. You&apos;ll get a prioritized list of gaps with keyword suggestions — one click takes you straight into research, then into your article.
           </p>
         </div>
       )}
@@ -384,7 +384,7 @@ export default function DashboardAuditPage() {
             value={auditUrl}
             onChange={(e) => setAuditUrl(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && runAudit(auditUrl)}
-            placeholder="https://yoursite.com"
+            placeholder="Enter your website to import your audit"
             className="flex-1 px-3 py-2 border border-[rgba(184,115,51,0.2)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333]"
           />
           <button
@@ -392,7 +392,7 @@ export default function DashboardAuditPage() {
             disabled={status === 'loading' || !auditUrl}
             className="px-4 py-2 bg-[#B87333] text-white text-sm font-medium rounded-xl hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
           >
-            Run
+            Import
           </button>
         </div>
       )}
@@ -412,10 +412,10 @@ export default function DashboardAuditPage() {
           <style>{`@keyframes audit-progress {0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}`}</style>
           <Loader2 className="w-10 h-10 animate-spin text-[var(--copper-lt)] mx-auto mb-4" />
           <p className="text-base font-semibold text-[var(--cream)]">
-            Scanning {auditUrl}…
+            Recovering your audit…
           </p>
           <p className="text-sm text-[var(--cream-dim)] mt-1">
-            {progress?.message ?? 'Crawling your site and cross-referencing search demand…'}
+            {progress?.message ?? `Retrieving results for ${auditUrl}…`}
           </p>
 
           {/* Progress bar — determinate when we have step/total, else an animated indeterminate bar */}
@@ -584,17 +584,10 @@ export default function DashboardAuditPage() {
                     <div className="flex items-center gap-2 pt-3 border-t border-[rgba(184,115,51,0.15)]">
                       <Link
                         href={`/keywords?seed=${encodeURIComponent(gap.suggestedKeyword || gap.title)}`}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] rounded-lg hover:border-[#B87333] hover:text-[var(--copper)] transition-colors"
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#B87333] text-white rounded-lg hover:bg-[#A0622A] transition-colors"
                       >
                         <Search className="w-3 h-3" />
                         Research this keyword →
-                      </Link>
-                      <Link
-                        href="/articles/new"
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#B87333] text-white rounded-lg hover:bg-[#A0622A] transition-colors"
-                      >
-                        <FileText className="w-3 h-3" />
-                        Write this article →
                       </Link>
                     </div>
                   </div>

@@ -101,7 +101,7 @@ export default function PublicAuditPage() {
         setCapturedEmail(trimmed)
         try {
           localStorage.setItem(
-            'byline_audit_result',
+            'byline_audit_result_v2',
             JSON.stringify({ result, url: url.trim(), runAt: new Date().toISOString() })
           )
           localStorage.setItem('byline_audit_email', trimmed)
