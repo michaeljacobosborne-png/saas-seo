@@ -49,10 +49,8 @@ export default async function ArticlesPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/articles/import"
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors border"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors border hover:bg-[rgba(184,115,51,0.08)]"
             style={{ borderColor: 'rgba(184,115,51,0.25)', color: 'var(--copper)' }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = 'rgba(184,115,51,0.08)')}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = '')}
           >
             <Upload className="w-4 h-4" />
             Import Article
