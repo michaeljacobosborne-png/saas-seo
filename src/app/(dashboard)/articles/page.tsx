@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe } from 'lucide-react'
+import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe, Sparkles, Upload } from 'lucide-react'
 import type { Article } from '@/lib/supabase/types'
 import DuplicateArticleButton from './DuplicateArticleButton'
 import DeleteArticleButton from './DeleteArticleButton'
@@ -46,14 +46,26 @@ export default async function ArticlesPage() {
             AI-generated SEO articles grounded in your brand profile and keyword research.
           </p>
         </div>
-        <Link
-          href="/articles/new"
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-          style={{ background: 'var(--copper)', color: '#F7F3EC' }}
-        >
-          <Plus className="w-4 h-4" />
-          New Article
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/articles/import"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors border"
+            style={{ borderColor: 'rgba(184,115,51,0.25)', color: 'var(--copper)' }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = 'rgba(184,115,51,0.08)')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = '')}
+          >
+            <Upload className="w-4 h-4" />
+            Import Article
+          </Link>
+          <Link
+            href="/articles/new"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            style={{ background: 'var(--copper)', color: '#F7F3EC' }}
+          >
+            <Plus className="w-4 h-4" />
+            New Article
+          </Link>
+        </div>
       </div>
 
       <div className="mb-8">
@@ -74,8 +86,8 @@ export default async function ArticlesPage() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
             style={{ background: 'var(--copper)', color: '#F7F3EC' }}
           >
-            <Plus className="w-4 h-4" />
-            Create your first article
+            <Sparkles className="w-4 h-4" />
+            Generate your first article →
           </Link>
         </div>
       ) : (
