@@ -1,19 +1,20 @@
 'use client'
 
-import { use, useCallback, useEffect, useRef, useState } from 'react'
+import React, { use, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { marked } from 'marked'
 import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
+import type ArticleEditorType from './ArticleEditor'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
   Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink, Trash2, Pencil, Link2,
 } from 'lucide-react'
 
-const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
+const ArticleEditor = dynamic<React.ComponentProps<typeof ArticleEditorType>>(() => import('./ArticleEditor'), { ssr: false })
 
 const COPPER = '#B87333'
 
