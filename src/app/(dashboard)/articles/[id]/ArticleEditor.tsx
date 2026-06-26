@@ -12,12 +12,26 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Bold, Italic, Heading1, Heading2, Heading3,
-  List, ListOrdered, Quote,
+  List, ListOrdered, Quote, Table2,
 } from 'lucide-react'
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
 
 function prepareContent(content: string): string {
   if (content.trim().startsWith('<')) return content
-  return marked.parse(content) as string
+  const md = content
+    // Convert markdown tables to HTML before passing to marked
+    .replace(/^\|(.+)\|\s*\n\|[-| :]+\|\s*\n((?:\|.+\|\s*\n?)*)/gm, (match, header, rows) => {
+      const ths = header.split('|').filter(Boolean).map((h: string) => `<th>${h.trim()}</th>`).join('')
+      const trs = rows.trim().split('\n').map((row: string) => {
+        const tds = row.split('|').filter(Boolean).map((c: string) => `<td>${c.trim()}</td>`).join('')
+        return `<tr>${tds}</tr>`
+      }).join('')
+      return `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`
+    })
+  return marked.parse(md) as string
 }
 
 // Pressing Enter at the end of a heading exits to a new paragraph instead of
@@ -89,7 +103,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
   }, [])
 
   const editor = useEditor({
-    extensions: [StarterKit, Typography, CharacterCount, HeadingEnterExit, MarkdownPaste],
+    extensions: [StarterKit, Typography, CharacterCount, HeadingEnterExit, MarkdownPaste, Table.configure({ resizable: false }), TableRow, TableCell, TableHeader],
     content: prepareContent(initialContent),
     onUpdate: ({ editor }) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
@@ -169,6 +183,12 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
   const wordCount: number = (editor.storage.characterCount as { words: () => number })?.words() ?? 0
 
   return (
+    <>
+    <style>{`
+      .ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+      .ProseMirror th, .ProseMirror td { border: 1px solid rgba(184,115,51,0.3); padding: 6px 10px; text-align: left; }
+      .ProseMirror th { background: rgba(184,115,51,0.1); font-weight: 600; }
+    `}</style>
     <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 px-3 py-2 border-b border-[rgba(184,115,51,0.15)] flex-wrap">
@@ -198,6 +218,10 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
         <ToolbarBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote">
           <Quote className="w-4 h-4" />
         </ToolbarBtn>
+        <Divider />
+        <ToolbarBtn onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor.isActive('table')} title="Insert table">
+          <Table2 className="w-4 h-4" />
+        </ToolbarBtn>
         <div className="flex-1" />
         {saveStatus === 'saving' && <span className="text-xs text-[var(--cream-faint)]">Saving…</span>}
         {saveStatus === 'saved' && <span className="text-xs text-green-600">Saved</span>}
@@ -212,6 +236,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
         {wordCount.toLocaleString()} words · ~{Math.ceil(wordCount / 200)} min read
       </div>
     </div>
+    </>
   )
 }
 

@@ -3,6 +3,45 @@
 import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { FileText, Loader2, AlertCircle, ArrowLeft, Upload } from 'lucide-react'
+import * as mammoth from 'mammoth'
+
+function htmlToMarkdown(html: string): string {
+  return html
+    // Headings
+    .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
+    .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
+    .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
+    .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n')
+    .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n')
+    .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n')
+    // Bold and italic
+    .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+    .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+    .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+    .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
+    // Lists
+    .replace(/<ul[^>]*>/gi, '')
+    .replace(/<\/ul>/gi, '\n')
+    .replace(/<ol[^>]*>/gi, '')
+    .replace(/<\/ol>/gi, '\n')
+    .replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n')
+    // Line breaks
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Paragraphs
+    .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+    // Strip remaining tags
+    .replace(/<[^>]+>/g, '')
+    // Decode common HTML entities
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    // Collapse 3+ consecutive newlines into 2
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
 
 interface Suggestion {
   category: 'seo' | 'readability' | 'structure' | 'content'
@@ -63,6 +102,11 @@ export default function ImportArticlePage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [converting, setConverting] = useState(false)
+  const [convertError, setConvertError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
 
   const wordCount = content.trim() ? content.trim().split(/\s+/).filter(Boolean).length : 0
   const isAnalyzing = status === 'loading'
@@ -184,6 +228,42 @@ export default function ImportArticlePage() {
     }
   }
 
+  async function handleFileUpload(file: File) {
+    if (!file.name.endsWith('.docx')) {
+      setConvertError('Only .docx files are supported.')
+      return
+    }
+    setUploadedFile(file)
+    setConverting(true)
+    setConvertError(null)
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const result = await mammoth.convertToHtml({ arrayBuffer })
+      const markdown = htmlToMarkdown(result.value)
+      setContent(markdown)
+    } catch {
+      setConvertError('Failed to convert file. Please try a different .docx file.')
+    } finally {
+      setConverting(false)
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  function handleDragLeave() {
+    setIsDragOver(false)
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFileUpload(file)
+  }
+
   function reset() {
     setStatus('idle')
     setError(null)
@@ -223,6 +303,70 @@ export default function ImportArticlePage() {
       {/* Phase 1 — idle input */}
       {status === 'idle' && (
         <div className="space-y-4">
+          {/* .docx upload drop zone */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--cream-dim)] mb-2">
+              Upload .docx File <span className="text-[var(--cream-faint)] font-normal">(optional — or paste below)</span>
+            </label>
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click() }}
+              className="flex flex-col items-center justify-center gap-2 rounded-xl py-7 px-4 cursor-pointer transition-colors select-none"
+              style={{
+                border: `2px dashed ${isDragOver ? 'rgba(184,115,51,0.6)' : 'rgba(184,115,51,0.2)'}`,
+                background: isDragOver ? 'rgba(184,115,51,0.06)' : 'var(--ink-card)',
+              }}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".docx"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleFileUpload(file)
+                  e.target.value = ''
+                }}
+              />
+              {converting ? (
+                <>
+                  <Loader2 className="w-6 h-6 text-[var(--copper-lt)] animate-spin" />
+                  <p className="text-sm text-[var(--cream-dim)]">Converting…</p>
+                </>
+              ) : uploadedFile && !convertError ? (
+                <>
+                  <FileText className="w-6 h-6 text-[var(--copper-lt)]" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-[var(--cream)]">{uploadedFile.name}</span>
+                    <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium border border-green-500/30 text-green-400" style={{ background: 'rgba(34,197,94,0.08)' }}>
+                      Converted
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--cream-faint)]">Click to replace file</p>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-6 h-6 text-[var(--copper-lt)]" />
+                  <p className="text-sm text-[var(--cream-dim)]">
+                    Drag & drop a <span className="text-[var(--cream)]">.docx</span> file, or <span className="text-[var(--copper-lt)] underline">click to browse</span>
+                  </p>
+                  <p className="text-xs text-[var(--cream-faint)]">Word documents only</p>
+                </>
+              )}
+            </div>
+            {convertError && (
+              <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(220,60,60,0.08)', border: '1px solid rgba(220,60,60,0.25)' }}>
+                <AlertCircle className="w-3.5 h-3.5 text-[#f87171] shrink-0" />
+                <p className="text-xs text-[#f87171]">{convertError}</p>
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-[var(--cream-dim)] mb-2">
               Article Content
