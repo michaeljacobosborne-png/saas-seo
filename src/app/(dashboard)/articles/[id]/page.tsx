@@ -1796,6 +1796,43 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   >
                     Run again
                   </button>
+                  <div className="w-full mt-4 pt-4 border-t border-[rgba(184,115,51,0.15)]">
+                    <p className="text-xs text-[var(--cream-faint)] mb-2">Continue with the agent</p>
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        value={agentInput}
+                        onChange={(e) => setAgentInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            const trimmed = agentInput.trim()
+                            if (trimmed && !agentStreaming) {
+                              setAutoApplied(false)
+                              setAgentMode('review')
+                              sendAgentMessage(trimmed, [])
+                            }
+                          }
+                        }}
+                        placeholder={`e.g. "make the intro punchier" or "add more stats to section 2"…`}
+                        rows={2}
+                        className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B87333] bg-[var(--ink)] text-[var(--cream)] placeholder-gray-600"
+                      />
+                      <button
+                        onClick={() => {
+                          const trimmed = agentInput.trim()
+                          if (trimmed && !agentStreaming) {
+                            setAutoApplied(false)
+                            setAgentMode('review')
+                            sendAgentMessage(trimmed, [])
+                          }
+                        }}
+                        disabled={!agentInput.trim() || agentStreaming}
+                        className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#B87333] text-white rounded-xl hover:bg-[#A0622A] disabled:opacity-40 transition-colors"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : agentMessages.length > 0 ? (
                 /* Error state */
@@ -1864,7 +1901,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                             <button
                               onClick={() => {
                                 if (!agentStreaming) {
-                                  sendAgentMessage('', [], { fixInstruction: f.instruction, selectionRange: null })
+                                  setAgentMode('auto')
+                                  sendAutoMode(f.instruction)
                                 }
                               }}
                               disabled={agentStreaming}
@@ -1991,8 +2029,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
 
-              {/* Input — Assist mode with selected text */}
-              {agentMode === 'assist' && selectedText && (
+              {/* Input — Assist mode (always visible when in assist mode) */}
+              {agentMode === 'assist' && (
                 <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-3 py-3">
                   <div className="flex items-end gap-2">
                     <textarea
@@ -2003,11 +2041,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                           e.preventDefault()
                           const trimmed = assistInput.trim()
                           if (trimmed && !agentStreaming) {
-                            sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
+                            sendAgentMessage('', [], { selectedText: selectedText || undefined, fixInstruction: trimmed, selectionRange: selectedText ? selectionRange : null })
                           }
                         }
                       }}
-                      placeholder="Rewrite this to be more specific and include the primary keyword"
+                      placeholder={selectedText ? "Describe how to rewrite the selected text…" : "Ask the agent to make a specific change… or select text in the editor first"}
                       disabled={agentStreaming}
                       rows={2}
                       className="flex-1 resize-none text-sm border border-[rgba(184,115,51,0.2)] rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent disabled:opacity-50 placeholder-gray-400"
@@ -2016,7 +2054,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       onClick={() => {
                         const trimmed = assistInput.trim()
                         if (trimmed && !agentStreaming) {
-                          sendAgentMessage('', [], { selectedText, fixInstruction: trimmed, selectionRange })
+                          sendAgentMessage('', [], { selectedText: selectedText || undefined, fixInstruction: trimmed, selectionRange: selectedText ? selectionRange : null })
                         }
                       }}
                       disabled={!assistInput.trim() || agentStreaming}

@@ -2,11 +2,54 @@ import type { ArticleScores } from '@/lib/supabase/types'
 
 export type { ArticleScores }
 
+/**
+ * Normalise content for scoring regardless of whether it was saved as HTML
+ * (Tiptap editor autosaves HTML) or raw markdown (imported articles).
+ */
+function normalizeForScoring(content: string): string {
+  const trimmed = content.trim()
+  if (!trimmed.startsWith('<')) return content // already markdown
+
+  return content
+    // Headings — must come before generic tag strip
+    .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, t) => `# ${t.replace(/<[^>]+>/g, '').trim()}\n`)
+    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, t) => `## ${t.replace(/<[^>]+>/g, '').trim()}\n`)
+    .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, t) => `### ${t.replace(/<[^>]+>/g, '').trim()}\n`)
+    .replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, t) => `#### ${t.replace(/<[^>]+>/g, '').trim()}\n`)
+    .replace(/<h5[^>]*>([\s\S]*?)<\/h5>/gi, (_, t) => `##### ${t.replace(/<[^>]+>/g, '').trim()}\n`)
+    .replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, (_, t) => `###### ${t.replace(/<[^>]+>/g, '').trim()}\n`)
+    // Formatting
+    .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**')
+    .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, '**$1**')
+    .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*')
+    .replace(/<i[^>]*>([\s\S]*?)<\/i>/gi, '*$1*')
+    // Lists
+    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, t) => `- ${t.replace(/<[^>]+>/g, '').trim()}\n`)
+    // Links
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)')
+    // Paragraphs and line breaks
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Strip remaining tags
+    .replace(/<[^>]+>/g, '')
+    // HTML entities
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    // Normalize whitespace but keep paragraph breaks
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 export function countWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).length
 }
 
 export function stripMarkdown(md: string): string {
+  if (md.trim().startsWith('<')) md = normalizeForScoring(md)
   return md
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/\*\*|__|\*|_|`{1,3}/g, '')
@@ -22,6 +65,7 @@ export function computeSEO(
   brief: Record<string, any>,
   targetKeyword: string,
 ) {
+  content = normalizeForScoring(content)
   const kw = targetKeyword.toLowerCase()
   let score = 0
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,6 +139,7 @@ export function computeSEO(
 }
 
 export function computeReadability(content: string) {
+  content = normalizeForScoring(content)
   let score = 100
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const breakdown: Record<string, any> = {}
@@ -127,6 +172,7 @@ export function computeReadability(content: string) {
 }
 
 export function computeGEO(content: string) {
+  content = normalizeForScoring(content)
   let score = 0
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const breakdown: Record<string, any> = {}
@@ -164,6 +210,7 @@ export function computeGEO(content: string) {
 }
 
 export function computeAEO(content: string) {
+  content = normalizeForScoring(content)
   let score = 0
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const breakdown: Record<string, any> = {}
