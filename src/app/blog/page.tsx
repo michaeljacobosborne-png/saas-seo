@@ -51,10 +51,10 @@ export default async function BlogIndexPage() {
         <p className="text-xs uppercase tracking-[0.2em] text-[#B87333] font-medium mb-3">
           The Byline Blog
         </p>
-        <h1 className="font-[family-name:var(--font-playfair)] text-4xl sm:text-5xl font-black tracking-tight">
+        <h1 className="font-[family-name:var(--font-playfair)] text-4xl sm:text-5xl font-black tracking-tight text-white">
           Know what ranks. Say what matters.
         </h1>
-        <p className="mt-4 text-lg text-[#A89070] leading-relaxed">
+        <p className="mt-4 text-lg text-[#C4AA8A] leading-relaxed">
           Practical guides on SEO, content operations, and answer-engine
           optimization from the team building Byline.
         </p>
@@ -105,7 +105,7 @@ export default async function BlogIndexPage() {
                     </div>
                   )}
 
-                  <h2 className="font-[family-name:var(--font-playfair)] text-xl font-bold leading-snug text-[var(--cream)] group-hover:text-[#D4954A] transition-colors">
+                  <h2 className="font-[family-name:var(--font-playfair)] text-xl font-bold leading-snug text-white group-hover:text-[#D4954A] transition-colors">
                     {post.title}
                   </h2>
 

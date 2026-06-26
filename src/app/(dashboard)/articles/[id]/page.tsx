@@ -10,7 +10,7 @@ import type { Article, ArticleScores } from '@/lib/supabase/types'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
-  Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink, Trash2,
+  Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink, Trash2, Pencil, Link2,
 } from 'lucide-react'
 
 const ArticleEditor = dynamic(() => import('./ArticleEditor'), { ssr: false })
@@ -169,7 +169,32 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [duplicateError, setDuplicateError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'content' | 'scores'>('content')
+  const [activeTab, setActiveTab] = useState<'content' | 'scores' | 'links'>('content')
+
+  // Link recommendations state
+  type InternalLinkRec = {
+    anchorText: string
+    targetArticleId: string
+    targetArticleTitle: string
+    reason: string
+    context: string
+  }
+  type ExternalLinkRec = {
+    anchorText: string
+    suggestedQuery: string
+    reason: string
+    suggestedDomain: string
+    context: string
+  }
+  const [linkRecs, setLinkRecs] = useState<{ internal: InternalLinkRec[]; external: ExternalLinkRec[] } | null>(null)
+  const [linkLoading, setLinkLoading] = useState(false)
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [applyingLink, setApplyingLink] = useState<string | null>(null) // tracks anchorText being applied
+  const [appliedLinks, setAppliedLinks] = useState<Set<string>>(new Set())
+  // URL inputs for each external recommendation (keyed by anchorText)
+  const [externalUrls, setExternalUrls] = useState<Record<string, string>>({})
+  // URL inputs for each internal recommendation (keyed by anchorText — user provides published URL)
+  const [internalUrls, setInternalUrls] = useState<Record<string, string>>({})
   const getEditorTextRef = useRef<(() => string) | null>(null)
   const replaceContentRef = useRef<((markdown: string) => void) | null>(null)
   const getWordCountRef = useRef<(() => number) | null>(null)
@@ -190,6 +215,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [generatingMeta, setGeneratingMeta] = useState(false)
   const [metaError, setMetaError] = useState<string | null>(null)
   const metaInitialized = useRef(false)
+
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleValue, setTitleValue] = useState('')
 
   // Featured image prompt state (kept in component state across the session)
   const [imageConcepts, setImageConcepts] = useState<ImageConcept[] | null>(null)
@@ -265,6 +293,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       metaInitialized.current = true
     }
   }, [article])
+
+  useEffect(() => {
+    if (article?.title != null) {
+      setTitleValue(article.title)
+    }
+  }, [article?.title])
 
   useEffect(() => {
     async function loadProfile() {
@@ -582,6 +616,15 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  async function handleSaveTitle() {
+    const trimmed = titleValue.trim()
+    if (!trimmed || trimmed === (article?.title ?? '')) { setEditingTitle(false); return }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from('articles').update({ title: trimmed }).eq('id', id)
+    if (!error) setArticle({ ...article!, title: trimmed })
+    setEditingTitle(false)
+  }
+
   async function handleMetaDescBlur() {
     if (!article) return
     if (metaDesc === (article.meta_description ?? '')) return
@@ -800,6 +843,73 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     setActiveTab('scores')
   }
 
+  async function handleFindLinks() {
+    setLinkLoading(true)
+    setLinkError(null)
+    setLinkRecs(null)
+    setAppliedLinks(new Set())
+    try {
+      const res = await fetch(`/api/articles/${id}/links`, { method: 'POST' })
+      if (!res.ok || !res.body) {
+        const json = await res.json().catch(() => ({}))
+        setLinkError((json as { error?: string }).error ?? 'Failed to find link opportunities')
+        return
+      }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let nl
+        while ((nl = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, nl).trim()
+          buffer = buffer.slice(nl + 1)
+          if (!line) continue
+          try {
+            const evt = JSON.parse(line) as { type: string; internal?: InternalLinkRec[]; external?: ExternalLinkRec[]; error?: string }
+            if (evt.type === 'result') {
+              setLinkRecs({ internal: evt.internal ?? [], external: evt.external ?? [] })
+            } else if (evt.type === 'error') {
+              setLinkError(evt.error ?? 'Analysis failed')
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch {
+      setLinkError('Network error. Please try again.')
+    } finally {
+      setLinkLoading(false)
+    }
+  }
+
+  async function handleApplyLink(anchorText: string, url: string) {
+    if (!url.trim() || applyingLink) return
+    setApplyingLink(anchorText)
+    try {
+      const res = await fetch(`/api/articles/${id}/links/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anchorText, url: url.trim() }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        // surface error briefly
+        console.error('[apply-link]', (json as { error?: string }).error)
+        return
+      }
+      // Update editor content with the linked version
+      const updated = (json as { content?: string }).content
+      if (updated) replaceContentRef.current?.(updated)
+      setAppliedLinks((prev) => new Set([...prev, anchorText]))
+    } catch {
+      console.error('[apply-link] network error')
+    } finally {
+      setApplyingLink(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -833,9 +943,27 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <ArrowLeft className="w-4 h-4" />
               Articles
             </Link>
-            <h1 className="text-xl font-bold text-[var(--cream)] leading-snug">
-              {article.title ?? article.target_keyword ?? 'Untitled'}
-            </h1>
+            {editingTitle ? (
+              <input
+                value={titleValue}
+                onChange={(e) => setTitleValue(e.target.value)}
+                onBlur={handleSaveTitle}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveTitle() } if (e.key === 'Escape') setEditingTitle(false) }}
+                autoFocus
+                className="text-xl font-bold bg-transparent border-b border-[rgba(184,115,51,0.4)] focus:outline-none focus:border-[var(--copper)] text-[var(--cream)] leading-snug w-full"
+              />
+            ) : (
+              <button
+                onClick={() => setEditingTitle(true)}
+                className="group flex items-center gap-2 text-left"
+                title="Click to rename"
+              >
+                <h1 className="text-xl font-bold text-[var(--cream)] leading-snug">
+                  {article.title ?? article.target_keyword ?? 'Untitled'}
+                </h1>
+                <Pencil className="w-3.5 h-3.5 text-[var(--cream-faint)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              </button>
+            )}
             {article.target_keyword && article.title && (
               <p className="text-sm text-[var(--cream-faint)] mt-0.5">Target: <span className="font-medium text-[var(--cream-dim)]">{article.target_keyword}</span></p>
             )}
@@ -1142,7 +1270,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         {/* Tabs */}
         {article.content && (
           <div className="flex gap-1 mb-5 border-b border-[rgba(184,115,51,0.2)]">
-            {(['content', 'scores'] as const).map((tab) => (
+            {(['content', 'scores', 'links'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1289,8 +1417,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <TrendingUp className="w-4 h-4 text-[var(--copper-lt)]" />
                       <h3 className="font-semibold text-[var(--cream)] text-sm">Ranking Prediction</h3>
                     </div>
-                    <p className="text-sm text-[var(--cream-dim)] mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
-                    <ConfidenceChip confidence={scores.ranking_prediction.confidence} />
+                    {scores.ranking_prediction ? (
+                      <>
+                        <p className="text-sm text-[var(--cream-dim)] mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
+                        <ConfidenceChip confidence={scores.ranking_prediction.confidence} />
+                      </>
+                    ) : (
+                      <p className="text-sm text-[var(--cream-faint)]">Re-score to generate prediction.</p>
+                    )}
                   </div>
 
                   <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
@@ -1298,25 +1432,221 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <BarChart2 className="w-4 h-4 text-[var(--copper-lt)]" />
                       <h3 className="font-semibold text-[var(--cream)] text-sm">Traffic Prediction (monthly)</h3>
                     </div>
-                    <table className="w-full text-xs">
-                      <tbody className="divide-y divide-gray-50">
-                        {([
-                          { rank: 1, visits: scores.traffic_prediction.at_rank_1, ctr: '28%' },
-                          { rank: 3, visits: scores.traffic_prediction.at_rank_3, ctr: '11%' },
-                          { rank: 5, visits: scores.traffic_prediction.at_rank_5, ctr: '6%' },
-                          { rank: 10, visits: scores.traffic_prediction.at_rank_10, ctr: '2%' },
-                        ]).map(({ rank, visits, ctr }) => (
-                          <tr key={rank}>
-                            <td className="py-1.5 text-[var(--cream-dim)]">Position {rank}</td>
-                            <td className="py-1.5 text-[var(--cream-faint)] text-right">{ctr} CTR</td>
-                            <td className="py-1.5 font-semibold text-[var(--cream-dim)] text-right tabular-nums">
-                              {visits.toLocaleString()} <span className="font-normal text-[var(--cream-faint)]">visits</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    {scores.traffic_prediction ? (
+                      <table className="w-full text-xs">
+                        <tbody className="divide-y divide-gray-50">
+                          {([
+                            { rank: 1, visits: scores.traffic_prediction.at_rank_1, ctr: '28%' },
+                            { rank: 3, visits: scores.traffic_prediction.at_rank_3, ctr: '11%' },
+                            { rank: 5, visits: scores.traffic_prediction.at_rank_5, ctr: '6%' },
+                            { rank: 10, visits: scores.traffic_prediction.at_rank_10, ctr: '2%' },
+                          ]).map(({ rank, visits, ctr }) => (
+                            <tr key={rank}>
+                              <td className="py-1.5 text-[var(--cream-dim)]">Position {rank}</td>
+                              <td className="py-1.5 text-[var(--cream-faint)] text-right">{ctr} CTR</td>
+                              <td className="py-1.5 font-semibold text-[var(--cream-dim)] text-right tabular-nums">
+                                {visits.toLocaleString()} <span className="font-normal text-[var(--cream-faint)]">visits</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-sm text-[var(--cream-faint)]">Re-score to generate prediction.</p>
+                    )}
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Links tab */}
+        {activeTab === 'links' && article.content && (
+          <div>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--cream)]">Link Opportunities</h3>
+                <p className="text-xs text-[var(--cream-faint)] mt-0.5">
+                  Internal links boost topical authority. External citations build E-E-A-T trust signals.
+                </p>
+              </div>
+              <button
+                onClick={handleFindLinks}
+                disabled={linkLoading}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                style={{ background: '#B87333', color: 'white' }}
+              >
+                {linkLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                {linkLoading ? 'Scanning…' : linkRecs ? 'Re-scan' : 'Find Link Opportunities'}
+              </button>
+            </div>
+
+            {linkError && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 mb-4">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {linkError}
+              </div>
+            )}
+
+            {!linkRecs && !linkLoading && (
+              <div className="border-2 border-dashed border-[rgba(184,115,51,0.2)] rounded-xl p-10 text-center">
+                <Link2 className="w-8 h-8 text-[var(--cream-faint)] mx-auto mb-3" />
+                <p className="text-sm text-[var(--cream-dim)]">
+                  Click &quot;Find Link Opportunities&quot; to scan this article for internal and external link gaps.
+                </p>
+              </div>
+            )}
+
+            {linkRecs && (
+              <div className="space-y-8">
+                {/* Internal links */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 rounded-full bg-[var(--copper)]" />
+                    <h4 className="text-sm font-semibold text-[var(--cream)]">
+                      Internal Links ({linkRecs.internal.length})
+                    </h4>
+                    <span className="text-xs text-[var(--cream-faint)]">— links to your other articles</span>
+                  </div>
+                  {linkRecs.internal.length === 0 ? (
+                    <p className="text-sm text-[var(--cream-faint)] pl-4">No internal link opportunities found — publish more articles to enable this.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {linkRecs.internal.map((rec, i) => {
+                        const isApplied = appliedLinks.has(rec.anchorText)
+                        const isApplying = applyingLink === rec.anchorText
+                        const urlVal = internalUrls[rec.anchorText] ?? ''
+                        return (
+                          <div
+                            key={i}
+                            className={`rounded-xl p-4 border transition-colors ${isApplied ? 'border-green-500/30 bg-[rgba(34,197,94,0.05)]' : 'border-[rgba(184,115,51,0.2)] bg-[var(--ink)]'}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center flex-wrap gap-2 mb-2">
+                                  <code className="text-xs px-2 py-0.5 rounded font-mono" style={{ background: 'rgba(184,115,51,0.12)', color: 'var(--copper-lt)' }}>
+                                    {rec.anchorText}
+                                  </code>
+                                  <span className="text-xs text-[var(--cream-faint)]">→</span>
+                                  <span className="text-xs font-medium text-[var(--cream-dim)]">{rec.targetArticleTitle}</span>
+                                </div>
+                                <p className="text-xs text-[var(--cream-faint)] italic mb-3">
+                                  &ldquo;…{rec.context}…&rdquo;
+                                </p>
+                                <p className="text-xs text-[var(--cream-dim)] mb-3">{rec.reason}</p>
+                                {!isApplied && (
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="url"
+                                      value={urlVal}
+                                      onChange={(e) => setInternalUrls((prev) => ({ ...prev, [rec.anchorText]: e.target.value }))}
+                                      placeholder="Paste published URL of that article…"
+                                      className="flex-1 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B87333]"
+                                      style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.2)', color: 'var(--cream)' }}
+                                    />
+                                    <button
+                                      onClick={() => handleApplyLink(rec.anchorText, urlVal)}
+                                      disabled={!urlVal.trim() || isApplying}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-40"
+                                      style={{ background: '#B87333', color: 'white' }}
+                                    >
+                                      {isApplying ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                      Add
+                                    </button>
+                                  </div>
+                                )}
+                                {isApplied && (
+                                  <span className="text-xs text-green-400 font-medium">✓ Link added</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* External links */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 rounded-full bg-blue-400" />
+                    <h4 className="text-sm font-semibold text-[var(--cream)]">
+                      External Citations ({linkRecs.external.length})
+                    </h4>
+                    <span className="text-xs text-[var(--cream-faint)]">— authoritative sources to cite</span>
+                  </div>
+                  {linkRecs.external.length === 0 ? (
+                    <p className="text-sm text-[var(--cream-faint)] pl-4">No external citation opportunities found.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {linkRecs.external.map((rec, i) => {
+                        const isApplied = appliedLinks.has(rec.anchorText)
+                        const isApplying = applyingLink === rec.anchorText
+                        const urlVal = externalUrls[rec.anchorText] ?? ''
+                        return (
+                          <div
+                            key={i}
+                            className={`rounded-xl p-4 border transition-colors ${isApplied ? 'border-green-500/30 bg-[rgba(34,197,94,0.05)]' : 'border-[rgba(184,115,51,0.2)] bg-[var(--ink)]'}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center flex-wrap gap-2 mb-2">
+                                  <code className="text-xs px-2 py-0.5 rounded font-mono" style={{ background: 'rgba(59,130,246,0.12)', color: '#93c5fd' }}>
+                                    {rec.anchorText}
+                                  </code>
+                                  <span className="text-xs px-2 py-0.5 rounded text-[var(--cream-faint)]" style={{ background: 'var(--ink-card)' }}>
+                                    {rec.suggestedDomain}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-[var(--cream-faint)] italic mb-2">
+                                  &ldquo;…{rec.context}…&rdquo;
+                                </p>
+                                <p className="text-xs text-[var(--cream-dim)] mb-3">{rec.reason}</p>
+                                {!isApplied && (
+                                  <div className="space-y-2">
+                                    <a
+                                      href={`https://www.google.com/search?q=${encodeURIComponent(rec.suggestedQuery)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                      Search: {rec.suggestedQuery}
+                                    </a>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="url"
+                                        value={urlVal}
+                                        onChange={(e) => setExternalUrls((prev) => ({ ...prev, [rec.anchorText]: e.target.value }))}
+                                        placeholder="Paste the source URL…"
+                                        className="flex-1 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B87333]"
+                                        style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.2)', color: 'var(--cream)' }}
+                                      />
+                                      <button
+                                        onClick={() => handleApplyLink(rec.anchorText, urlVal)}
+                                        disabled={!urlVal.trim() || isApplying}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-40"
+                                        style={{ background: '#B87333', color: 'white' }}
+                                      >
+                                        {isApplying ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                        Cite
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                                {isApplied && (
+                                  <span className="text-xs text-green-400 font-medium">✓ Citation added</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -9,6 +9,8 @@ import {
   computeReadability,
   computeGEO,
   computeAEO,
+  buildRankingPrediction,
+  buildTrafficPrediction,
 } from '@/lib/article-scoring'
 import type { ArticleScores } from '@/lib/supabase/types'
 
@@ -93,11 +95,16 @@ export async function POST(request: Request) {
         const geo = computeGEO(content)
         const aeo = computeAEO(content)
 
-        const scores: Pick<ArticleScores, 'seo' | 'readability' | 'geo' | 'aeo'> = {
+        const ranking_prediction = buildRankingPrediction(null, seo.score)
+        const traffic_prediction = buildTrafficPrediction(null)
+
+        const scores: ArticleScores = {
           seo,
           readability,
           geo,
           aeo,
+          ranking_prediction,
+          traffic_prediction,
         }
 
         // Step 2 — AI analysis
