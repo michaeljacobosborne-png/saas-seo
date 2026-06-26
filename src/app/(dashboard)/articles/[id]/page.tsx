@@ -132,6 +132,34 @@ function ConfidenceChip({ confidence }: { confidence: 'low' | 'medium' | 'high' 
   )
 }
 
+function FixButton({ onFix }: { onFix: () => void }) {
+  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const handleClick = () => {
+    if (state !== 'idle') return
+    setState('sending')
+    onFix()
+    setTimeout(() => setState('sent'), 400)
+    setTimeout(() => setState('idle'), 2200)
+  }
+  if (state === 'sending') return (
+    <span className="shrink-0 flex items-center gap-1 text-xs font-semibold text-[var(--copper)] whitespace-nowrap">
+      <Loader2 className="w-3 h-3 animate-spin" />
+      Sending…
+    </span>
+  )
+  if (state === 'sent') return (
+    <span className="shrink-0 flex items-center gap-1 text-xs font-semibold text-green-500 whitespace-nowrap">
+      <CheckCircle2 className="w-3 h-3" />
+      Sent
+    </span>
+  )
+  return (
+    <button onClick={handleClick} className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-[#A0622A] transition-colors whitespace-nowrap">
+      Fix →
+    </button>
+  )
+}
+
 function CriteriaRow({ label, passed, onFix }: { label: string; passed: boolean; onFix?: () => void }) {
   return (
     <div className="flex items-center gap-2.5 py-1.5">
@@ -139,11 +167,7 @@ function CriteriaRow({ label, passed, onFix }: { label: string; passed: boolean;
         <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
       </div>
       <span className={`text-xs flex-1 ${passed ? 'text-[var(--cream-dim)]' : 'text-[var(--cream-faint)]'}`}>{label}</span>
-      {!passed && onFix && (
-        <button onClick={onFix} className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-[#A0622A] transition-colors whitespace-nowrap">
-          Fix →
-        </button>
-      )}
+      {!passed && onFix && <FixButton onFix={onFix} />}
     </div>
   )
 }
@@ -155,11 +179,7 @@ function SEOCriteriaRow({ label, passed, points, max, onFix }: { label: string; 
         <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
       </div>
       <span className={`text-xs flex-1 ${passed ? 'text-[var(--cream-dim)]' : 'text-[var(--cream-faint)]'}`}>{label}</span>
-      {!passed && onFix && (
-        <button onClick={onFix} className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-[#A0622A] transition-colors whitespace-nowrap">
-          Fix →
-        </button>
-      )}
+      {!passed && onFix && <FixButton onFix={onFix} />}
       <span className="text-xs tabular-nums font-medium text-[var(--cream-dim)] shrink-0">{points}/{max}</span>
     </div>
   )
@@ -210,6 +230,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const getWordCountRef = useRef<(() => number) | null>(null)
   const applyContentRef = useRef<((markdown: string) => void) | null>(null)
   const applyAtRangeRef = useRef<((from: number, to: number, html: string) => void) | null>(null)
+  const appendContentRef = useRef<((html: string) => void) | null>(null)
   const [publishing, setPublishing] = useState(false)
 
   // WordPress publishing
@@ -594,6 +615,122 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           ? 'The rewrite timed out. Please try again.'
           : 'The rewrite was interrupted. Please try again.',
       }])
+    } finally {
+      if (watchdog) clearTimeout(watchdog)
+      if (agentAbortRef.current === controller) agentAbortRef.current = null
+      setAgentStreaming(false)
+    }
+  }, [id])
+
+  const sendPatchMode = useCallback(async (instruction: string) => {
+    // Open the agent panel if it isn't already
+    setAgentOpen(true)
+
+    // Append to existing chat history — never clear it. This is the key difference
+    // from auto mode: users can scroll up and see every fix attempt + outcome.
+    const userMsg: AgentMessage = { role: 'user', content: `Fix: ${instruction}` }
+    const placeholderMsg: AgentMessage = { role: 'assistant', content: '⏳ Applying fix…' }
+
+    setAgentMessages((prev) => [...prev, userMsg, placeholderMsg])
+    setAgentStreaming(true)
+
+    agentAbortRef.current?.abort()
+    const controller = new AbortController()
+    agentAbortRef.current = controller
+
+    // Watchdog in case the serverless function times out
+    let watchdog: ReturnType<typeof setTimeout> | undefined
+    let timedOut = false
+    const resetWatchdog = () => {
+      if (watchdog) clearTimeout(watchdog)
+      watchdog = setTimeout(() => { timedOut = true; controller.abort() }, 90_000)
+    }
+
+    // Helper to replace the placeholder with a final outcome message
+    const finalize = (content: string) => {
+      setAgentMessages((prev) => {
+        if (prev.length === 0) return prev
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: 'assistant', content }
+        return updated
+      })
+    }
+
+    try {
+      resetWatchdog()
+      const originalLength = getEditorTextRef.current?.()?.length ?? 0
+
+      const res = await fetch(`/api/articles/${id}/agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [], mode: 'patch', userInstruction: instruction }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
+        finalize(`❌ ${errorMsg}`)
+        return
+      }
+      if (!res.body) {
+        finalize('❌ No response from agent. Please try again.')
+        return
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        resetWatchdog()
+        buffer += decoder.decode(value)
+      }
+
+      // Parse the structured response
+      const lines = buffer.trimStart().split('\n')
+      const patchTypeLine = lines[0]?.trim() ?? ''
+      const summaryLine = lines[1]?.trim() ?? ''
+      const summary = summaryLine.startsWith('SUMMARY:') ? summaryLine.slice('SUMMARY:'.length).trim() : 'Fix applied.'
+      // Content starts after the blank line (line index 2 is blank, content from index 3)
+      const contentStart = lines.findIndex((l, i) => i >= 2 && l.trim() === '') + 1
+      const content = lines.slice(contentStart > 0 ? contentStart : 2).join('\n').trim()
+
+      if (!content) {
+        finalize('❌ The agent returned empty content. Please try again.')
+        return
+      }
+
+      if (patchTypeLine === 'PATCH:APPEND') {
+        const html = marked.parse(content) as string
+        appendContentRef.current?.(html)
+        finalize(`✅ ${summary}`)
+      } else if (patchTypeLine === 'PATCH:REPLACE') {
+        // Safety check: don't apply if the result is suspiciously shorter than the original
+        if (originalLength > 500 && content.length < originalLength * 0.4) {
+          finalize(`❌ The rewrite came back too short (possible truncation). Original: ~${originalLength} chars, received: ~${content.length} chars. Try again or use the manual editor.`)
+          return
+        }
+        replaceContentRef.current?.(content)
+        finalize(`✅ ${summary}`)
+      } else {
+        // Model didn't follow the format — treat entire response as APPEND
+        const html = marked.parse(buffer) as string
+        appendContentRef.current?.(html)
+        finalize(`✅ Fix applied. (Note: response format was unexpected — appended content to article.)`)
+      }
+    } catch (err) {
+      const aborted = err instanceof DOMException && err.name === 'AbortError'
+      if (aborted && !timedOut) {
+        finalize('❌ Fix was cancelled.')
+        return
+      }
+      console.error('[patch-mode] Fix failed:', err)
+      finalize(aborted
+        ? '❌ The fix timed out. Please try again.'
+        : '❌ Something went wrong. Please try again.')
     } finally {
       if (watchdog) clearTimeout(watchdog)
       if (agentAbortRef.current === controller) agentAbortRef.current = null
@@ -1314,6 +1451,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               replaceContentRef={replaceContentRef}
               applyContentRef={applyContentRef}
               applyAtRangeRef={applyAtRangeRef}
+              appendContentRef={appendContentRef}
               onSelectionChange={handleSelectionChange}
             />
           </div>
@@ -1387,7 +1525,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
                         return (
                           <SEOCriteriaRow key={i} label={c.label} passed={c.passed} points={c.points} max={c.max}
-                            onFix={!c.passed && instruction ? () => { setAgentOpen(true); setAgentMode('auto'); sendAutoMode(instruction) } : undefined}
+                            onFix={!c.passed && instruction ? () => sendPatchMode(instruction) : undefined}
                           />
                         )
                       })}
@@ -1404,7 +1542,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
                         return (
                           <CriteriaRow key={i} label={c.label} passed={c.passed}
-                            onFix={!c.passed && instruction ? () => { setAgentOpen(true); setAgentMode('auto'); sendAutoMode(instruction) } : undefined}
+                            onFix={!c.passed && instruction ? () => sendPatchMode(instruction) : undefined}
                           />
                         )
                       })}
@@ -1421,7 +1559,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
                         return (
                           <CriteriaRow key={i} label={c.label} passed={c.passed}
-                            onFix={!c.passed && instruction ? () => { setAgentOpen(true); setAgentMode('auto'); sendAutoMode(instruction) } : undefined}
+                            onFix={!c.passed && instruction ? () => sendPatchMode(instruction) : undefined}
                           />
                         )
                       })}
