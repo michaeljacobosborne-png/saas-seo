@@ -46,7 +46,7 @@ export async function POST(
   const { id } = await params
   const { messages, mode, selectedText, fixInstruction, userInstruction } = await request.json() as {
     messages: Message[]
-    mode?: 'review' | 'assist' | 'auto'
+    mode?: 'review' | 'assist' | 'auto' | 'patch'
     selectedText?: string
     fixInstruction?: string
     userInstruction?: string   // optional focus instructions for auto mode
@@ -71,6 +71,12 @@ export async function POST(
   if (isFree && mode === 'auto') {
     return NextResponse.json({
       error: 'Auto mode is available on paid plans. Upgrade to let the agent rewrite your full article automatically.',
+    }, { status: 403 })
+  }
+
+  if (isFree && mode === 'patch') {
+    return NextResponse.json({
+      error: 'Patch mode is available on paid plans. Upgrade to let the agent make targeted fixes to your article.',
     }, { status: 403 })
   }
 
@@ -322,6 +328,78 @@ ANTI-SLOP STANDARDS (apply throughout the rewrite):
     })
 
     return new Response(autoStream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  }
+
+  if (mode === 'patch') {
+    const patchSystem = `You are a targeted SEO editor. Your job is to fix ONE specific issue in the article.
+
+ARTICLE CONTEXT:
+Title: ${articleTitle}
+Target keyword: "${article.target_keyword ?? '(none set)'}"
+${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice ?? 'professional'}` : ''}
+${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
+${brand?.expertise_notes ? `\nAUTHOR EXPERTISE:\n${brand.expertise_notes}` : ''}
+${brand?.signature_angles ? `\nSIGNATURE ANGLES:\n${brand.signature_angles}` : ''}
+
+FULL ARTICLE (current):
+${fullContent}
+
+YOUR RESPONSE MUST start with EXACTLY one of these two lines (no spaces, no punctuation):
+PATCH:APPEND
+PATCH:REPLACE
+
+Then on the very next line, a one-sentence summary prefixed with SUMMARY: that describes what you changed.
+
+Then a blank line.
+
+Then the content.
+
+Rules:
+- PATCH:APPEND — Use when the fix only requires ADDING a new section (FAQ, statistics callout, author bio, CTA, schema note, etc). Return ONLY the new section(s) in clean markdown. Do NOT return the rest of the article.
+- PATCH:REPLACE — Use when the fix requires changes scattered throughout (keyword density, heading restructure, readability). Return the COMPLETE revised article in clean markdown.
+- Match the article's existing tone and formatting style.
+- No preamble. No "Here is the..." commentary. Output starts with PATCH:APPEND or PATCH:REPLACE.
+ANTI-SLOP STANDARDS:
+- Active voice. Kill adverbs. No throat-clearing (Importantly, Notably, Ultimately, Essentially).
+- No Wh- starters: What makes this / Which means / Why this matters.
+- No binary contrasts: "Not X — it's Y."
+- No inanimate subjects doing human actions.
+- Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, moreover, furthermore, utilize, facilitate.`
+
+    const patchStream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder()
+        try {
+          const anthropicStream = anthropic.messages.stream({
+            model: AGENT_MODEL,
+            max_tokens: 8192,
+            system: patchSystem,
+            messages: [{ role: 'user', content: `Fix this specific issue: ${userInstruction ?? 'improve the article'}` }],
+          })
+          for await (const event of anthropicStream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text))
+            }
+          }
+          try {
+            const fm = await anthropicStream.finalMessage()
+            await logUsageEvent({ userId: user.id, feature: 'agent_patch', model: AGENT_MODEL, inputTokens: fm.usage.input_tokens, outputTokens: fm.usage.output_tokens })
+          } catch { /* never block the stream on cost logging */ }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Stream error'
+          controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`))
+        } finally {
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(patchStream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'X-Content-Type-Options': 'nosniff',

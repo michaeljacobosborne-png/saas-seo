@@ -81,10 +81,11 @@ interface ArticleEditorProps {
   replaceContentRef?: React.MutableRefObject<((markdown: string) => void) | null>  // full replace (auto mode)
   applyContentRef?: React.MutableRefObject<((markdown: string) => void) | null>   // insert at cursor (review mode)
   applyAtRangeRef?: React.MutableRefObject<((from: number, to: number, html: string) => void) | null>
+  appendContentRef?: React.MutableRefObject<((html: string) => void) | null>      // append at end (patch mode)
   onSelectionChange?: (text: string, from: number, to: number) => void
 }
 
-export default function ArticleEditor({ articleId, initialContent, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, onSelectionChange }: ArticleEditorProps) {
+export default function ArticleEditor({ articleId, initialContent, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef, onSelectionChange }: ArticleEditorProps) {
   const supabase = createClient()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
@@ -164,6 +165,11 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
           editor.chain().focus().deleteRange({ from, to }).insertContentAt(from, html).run()
         }
       }
+      if (appendContentRef) {
+        appendContentRef.current = (html: string) => {
+          editor.commands.insertContentAt(editor.state.doc.content.size, html)
+        }
+      }
     }
     return () => {
       getTextRef.current = null
@@ -171,8 +177,9 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
       if (replaceContentRef) replaceContentRef.current = null
       if (applyContentRef) applyContentRef.current = null
       if (applyAtRangeRef) applyAtRangeRef.current = null
+      if (appendContentRef) appendContentRef.current = null
     }
-  }, [editor, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef])
+  }, [editor, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef])
 
 
   if (!editor) return null
