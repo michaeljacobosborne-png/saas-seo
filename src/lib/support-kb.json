@@ -1,0 +1,673 @@
+{
+  "meta": {
+    "product": "Byline SEO",
+    "url": "app.bylineseo.com",
+    "support_email": "hi@bylineseo.com",
+    "last_updated": "2026-06-05",
+    "version": "1.0"
+  },
+  "agent_personality": {
+    "name": "Byline Support",
+    "tone": "Direct, knowledgeable, unhurried. You know this product cold and you treat the user as a capable adult. You give specific answers, not generic reassurance. You never say 'Great question!' or 'Absolutely!' You don't pad responses with filler. When something is a known issue, you say so clearly and give the exact fix. When something needs escalation to Michael, you say so without apologizing excessively.",
+    "rules": [
+      "Always answer the specific question asked before offering additional context.",
+      "If you know the exact fix, lead with it. Context comes after.",
+      "Never say 'I understand your frustration' — just solve the problem.",
+      "Avoid passive voice. Active sentences only.",
+      "Do not use filler affirmations: Great!, Absolutely!, Of course!, Certainly!",
+      "When you don't know something, say so directly and offer to escalate.",
+      "Match the user's register — if they're terse, be terse. If they want context, give context.",
+      "For billing issues, always confirm what you're going to do before doing anything that affects money.",
+      "For P0 issues, gather details quickly and escalate — don't debug endlessly with the user.",
+      "Keep responses under 120 words unless a detailed walkthrough is genuinely necessary.",
+      "Cite exact UI paths when giving instructions: e.g. 'Settings > Manage Subscription'.",
+      "Never promise features on a timeline unless Michael has confirmed them."
+    ],
+    "escalation_trigger": "Escalate to Michael (hi@bylineseo.com) for: any billing dispute over $50, data loss reports, account access failures lasting more than 24 hours, and any issue where you've attempted a fix twice without success."
+  },
+  "entries": [
+    {
+      "id": "kb_001",
+      "category": "product",
+      "priority": "p2",
+      "title": "How keyword research works",
+      "trigger_phrases": [
+        "how does keyword research work",
+        "where does keyword data come from",
+        "what data source",
+        "keyword results accurate",
+        "where do keywords come from"
+      ],
+      "agent_response": "Byline pulls keyword data from DataForSEO, which aggregates search volume, difficulty, and CPC from Google's keyword planner data. When you start a research project, we query DataForSEO for up to 50 related keyword ideas per seed, then run them through GPT-4o-mini to cluster them into 4–6 topic groups. Results are also cached globally for 90 days — so if another Byline user already researched the same keyword recently, your results load from cache instead of hitting the API, which is faster.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "DataForSEO is called in /api/keywords/research/route.ts via lib/dataforseo.ts. Cache table is keyword_cache with 90-day TTL. GPT-4o-mini handles clustering. Route has maxDuration=60 (60s timeout on Vercel)."
+    },
+    {
+      "id": "kb_002",
+      "category": "technical",
+      "priority": "p1",
+      "title": "Keyword research timed out or stuck on 'Researching…'",
+      "trigger_phrases": [
+        "keyword research timed out",
+        "keyword stuck researching",
+        "keyword spinning forever",
+        "keywords not loading",
+        "research never finished",
+        "keyword project shows error",
+        "research error"
+      ],
+      "agent_response": "The keyword research API has a 60-second timeout. If it times out, the project status will flip to 'error'. The fix: open the project, and the page will re-trigger the research automatically when you load it. If you're still seeing 'Researching…' after 90 seconds with no results, close the tab, reopen the project URL, and wait another 60 seconds. If it errors a second time in a row, let me know the project name and I'll investigate — it's usually a DataForSEO service blip that clears on retry.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Route is /api/keywords/research with maxDuration=60. On error it sets status='error'. The project detail page at /keywords/[id] polls status and re-fires research if pending. If it's erroring repeatedly, check DataForSEO API key validity and quota in the dashboard. Error is returned as NextResponse 502 or 500 depending on failure point."
+    },
+    {
+      "id": "kb_003",
+      "category": "product",
+      "priority": "p2",
+      "title": "What the AI keyword discovery agent does (vs. direct keyword entry)",
+      "trigger_phrases": [
+        "what is the discovery agent",
+        "difference between direct keyword and agent",
+        "ai keyword discovery",
+        "help me find keywords",
+        "4 questions keyword",
+        "research brief"
+      ],
+      "agent_response": "When you click 'New Research' you get two paths. 'I have a keyword' runs research immediately on what you type — fastest route if you already know your target. 'Help me find keywords' opens a short AI conversation (4 questions about your topic, audience, intent, and competitors) and generates a research brief with 15–20 targeted seed keywords. The brief path is better when you're starting fresh or want cluster recommendations tailored to a specific audience.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Discovery agent is at /api/keywords/discover. Uses Claude Haiku. Emits a <research_brief> XML tag when done. The brief path is the 'agent' discoverMode in the keywords page component."
+    },
+    {
+      "id": "kb_004",
+      "category": "product",
+      "priority": "p2",
+      "title": "Article generation — the full workflow (keyword → brief → generate)",
+      "trigger_phrases": [
+        "how do I generate an article",
+        "how does article generation work",
+        "what is a brief",
+        "brief vs generate",
+        "workflow for creating content",
+        "steps to write an article"
+      ],
+      "agent_response": "The full flow is: (1) Run keyword research to get a cluster of keywords. (2) Select the keywords you want to target and click 'Generate Brief' — this creates an SEO content brief with target keyword, secondary keywords, H1 options, meta description, URL slug, and a section-by-section outline. (3) From the brief, click 'Generate Article' to write the full draft. The generator uses the brief as its blueprint and your brand profile for voice and tone. Once the draft is ready, run scoring to see your SEO, GEO, AEO, and Readability scores.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Brief generation is /api/articles/generate-brief using GPT-4o. Draft generation is /api/articles/generate-draft using GPT-4o with maxDuration=120. Brief requires: articleId, keywordProjectId, selectedKeywords, brandProfileId. Draft uses the brief.outline to structure writing."
+    },
+    {
+      "id": "kb_005",
+      "category": "product",
+      "priority": "p2",
+      "title": "What 'two-pass research' means in article generation",
+      "trigger_phrases": [
+        "two pass",
+        "second pass",
+        "article generation slow",
+        "why is generation taking so long",
+        "pass 1 pass 2",
+        "expansion pass"
+      ],
+      "agent_response": "When the first generation pass produces a draft that's under 85% of your target word count, Byline automatically runs a second pass. It first identifies 3–4 subtopics that need more depth (using GPT-4o-mini), then queries DataForSEO for related keyword data on those angles, and finally runs GPT-4o again to expand the article with real content on those topics. This is why generation sometimes takes longer — two-pass articles can take 90+ seconds total. Growth and Team plans also get a 'polish pass' that generates 3 alternative intros and conclusions and picks the strongest ones.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Two-pass logic is in /api/articles/generate-draft. Pass 2 triggers when countWords(content) < Math.floor(targetWordCount * 0.85). Polish pass (intro/conclusion alternatives) runs after Pass 2 for Growth (price_1Td2ZGB6USGnItproo97FT39) and Agency/Team price IDs. Route maxDuration is 120s."
+    },
+    {
+      "id": "kb_006",
+      "category": "technical",
+      "priority": "p1",
+      "title": "Article generation failed mid-stream or article stuck on 'Generating'",
+      "trigger_phrases": [
+        "article generation failed",
+        "generation stopped",
+        "article stuck generating",
+        "article never finished",
+        "draft didn't save",
+        "generation error",
+        "generation timed out"
+      ],
+      "agent_response": "If generation errors out, the article status resets to 'brief_ready' so you can retry without losing your brief. Go to the article, and you should see the 'Generate Article' button available again — click it to retry. Generation can take up to 2 minutes for longer articles with a second research pass. If the button isn't appearing after a page refresh, try opening the article directly via its URL. If it errors twice in a row on the same article, let me know the article title and your target word count.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "On Pass 1 failure, status resets to 'brief_ready'. The API is /api/articles/generate-draft with maxDuration=120. If Vercel's function timeout is hit (120s ceiling), the article will be left in 'generating' status and require a manual status reset. Michael can reset via Supabase directly: update articles set status='brief_ready' where id='...'."
+    },
+    {
+      "id": "kb_007",
+      "category": "product",
+      "priority": "p2",
+      "title": "What the SEO score measures",
+      "trigger_phrases": [
+        "what is SEO score",
+        "how is SEO score calculated",
+        "SEO score breakdown",
+        "what does SEO score check",
+        "improve SEO score"
+      ],
+      "agent_response": "The SEO score (out of 100) checks 9 criteria: target keyword in the H1 (+15), keyword in the first 100 words (+10), keyword in the meta description (+10), meta description length between 120–155 characters (+5), 2–4 H2 headings (+10), secondary keywords present (+15 proportional), word count between 1800–2500 (+10), FAQ section present (+10), and keyword density under 3% (+10). Each criterion shows pass/fail in the score breakdown panel. The score updates when you click 'Score Article' — it doesn't update automatically after agent edits, so re-score after making changes.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Score logic is in /api/articles/score/route.ts, computeSEO function. Max is 100. H2 count target is 2–4 (not 3+), word count target is 1800–2500. Secondary keywords score is proportional: (present/total)*15."
+    },
+    {
+      "id": "kb_008",
+      "category": "product",
+      "priority": "p2",
+      "title": "What the Readability score measures",
+      "trigger_phrases": [
+        "readability score",
+        "how is readability calculated",
+        "readability breakdown",
+        "passive voice score",
+        "sentence length score"
+      ],
+      "agent_response": "Readability starts at 100 and deductions are applied for: average sentence length over 20 words (−10) or over 25 words (−25), passive voice instances — more than 5 costs −10, more than 10 costs −20, and average paragraph length over 120 words (−5) or over 150 words (−15). The target is sentences averaging 15–20 words and paragraphs around 100 words. Byline's article generator is trained to avoid passive voice and vary sentence length, but agent edits can re-introduce problems — re-score after editing.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Logic in computeReadability in /api/articles/score/route.ts. Passive voice detection uses regex: /\\b(was|were|is|are|been|being|be)\\s+\\w+ed\\b/gi. Not perfect — misses some constructions. Sentence split uses /[.!?]+/ which can produce false splits on abbreviations."
+    },
+    {
+      "id": "kb_009",
+      "category": "product",
+      "priority": "p2",
+      "title": "What the GEO score measures (Generative Engine Optimization)",
+      "trigger_phrases": [
+        "what is GEO score",
+        "generative engine optimization",
+        "GEO score breakdown",
+        "AI search optimization",
+        "optimize for AI search"
+      ],
+      "agent_response": "GEO (Generative Engine Optimization) scores how well your article is structured to be cited by AI search engines like ChatGPT, Perplexity, and Google's AI Overviews. The score checks five things: a definitional statement in the first 500 words (+20), at least 3 H2 sections (+20), stat or data references throughout (+20), a FAQ section (+20), and a word count of 1500+ (+20). AI engines favor structured, authoritative content — articles that define terms clearly, use data, and answer questions directly.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "computeGEO in /api/articles/score/route.ts. Stat detection uses regex for keywords like 'according to', 'percent', '%', numeric multipliers. Definition detection uses regex: /\\b\\w[\\w\\s]*\\s+is\\s+(a|an|the)\\b|\\brefers?\\s+to\\b/i — checks first 500 words."
+    },
+    {
+      "id": "kb_010",
+      "category": "product",
+      "priority": "p2",
+      "title": "What the AEO score measures (Answer Engine Optimization)",
+      "trigger_phrases": [
+        "what is AEO score",
+        "answer engine optimization",
+        "AEO score breakdown",
+        "featured snippet",
+        "direct answer paragraph"
+      ],
+      "agent_response": "AEO (Answer Engine Optimization) scores how well your article is set up to capture featured snippets and direct-answer results. It checks: FAQ section with 3+ H3 question headings (+40 for 3+, +20 for 1–2), a short direct-answer paragraph of 40–80 words (+30), lists or numbered steps present (+15), and a Key Takeaways or Summary section (+15). The direct-answer paragraph is the one AI engines pull for 'What is X?' results — it should appear early and be a crisp prose answer, not a bullet list.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "computeAEO in /api/articles/score/route.ts. H3 question detection: /^###\\s+.+\\?/gm. Key Takeaways detection: /^#{1,3}\\s*(key takeaways?|summary|wrap[\\s-]?up)/im. Direct answer: paragraph 40–80 words, not starting with #."
+    },
+    {
+      "id": "kb_011",
+      "category": "technical",
+      "priority": "p1",
+      "title": "Score not updating after agent edit",
+      "trigger_phrases": [
+        "score didn't change",
+        "score not updating",
+        "agent fixed the issue but score is the same",
+        "score still low after edit",
+        "score didn't refresh"
+      ],
+      "agent_response": "Scores in Byline don't update automatically when you edit — you need to click 'Score Article' again after making changes. After the agent applies edits (Auto mode rewrites the full article, Assist mode rewrites selected text), wait for the edit to save, then click the Score button at the top of the article view. The score recalculates fresh against the current content.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Scoring is a manual POST to /api/articles/score. The UI does not auto-re-score on save. The article editor auto-saves content to Supabase on a debounce timer, but scoring is separate."
+    },
+    {
+      "id": "kb_012",
+      "category": "product",
+      "priority": "p2",
+      "title": "Editorial agent — Review mode (what it does)",
+      "trigger_phrases": [
+        "what is review mode",
+        "editorial agent review",
+        "agent review",
+        "agent feedback",
+        "how does the agent review work"
+      ],
+      "agent_response": "Review mode is available on all paid plans including Starter. It's a chat interface where the agent reads your full article, your brand profile, and your score breakdown, then gives specific paragraph-level editorial feedback — not generic tips. It quotes the actual lines that need work and suggests concrete rewrites. It also tracks memory across sessions so it doesn't repeat the same feedback on subsequent visits. Ask it anything: 'What's the weakest section?', 'Rewrite this intro', 'Add a FAQ question about X'.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Review mode is the default mode in /api/articles/[id]/agent/route.ts. Uses Claude Sonnet 4.6. Memory is stored in agent_memory table (memory_type: 'account' or 'article'). Weak areas from scores are passed to system prompt. No plan gating for review mode."
+    },
+    {
+      "id": "kb_013",
+      "category": "product",
+      "priority": "p2",
+      "title": "Editorial agent — Assist mode (what it does, which plans)",
+      "trigger_phrases": [
+        "what is assist mode",
+        "assist mode not available",
+        "agent assist",
+        "select text rewrite",
+        "targeted rewrite",
+        "can't access assist mode"
+      ],
+      "agent_response": "Assist mode lets you select any text in your article, then ask the agent to rewrite just that selection. You highlight a sentence or paragraph, give an instruction ('make this more direct', 'add the target keyword here naturally'), and the agent returns a rewrite in-place. Assist mode is available on Growth plan and above. If you're on Starter, you'll see the mode locked — upgrading to Growth at $99/mo unlocks it along with 30 articles/month.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "canAssist = plan === 'pro' || plan === 'team' || plan === 'agency'. Plan 'pro' maps to 'Growth' in pricing UI. Returns 403 with upgrade message if plan is 'starter'. Streams via Claude Sonnet 4.6. Selection is passed as selectedText, instruction as fixInstruction."
+    },
+    {
+      "id": "kb_014",
+      "category": "product",
+      "priority": "p2",
+      "title": "Editorial agent — Auto mode (what it does, which plans)",
+      "trigger_phrases": [
+        "what is auto mode",
+        "auto mode locked",
+        "auto rewrite",
+        "one click rewrite",
+        "auto fix article",
+        "full article rewrite"
+      ],
+      "agent_response": "Auto mode rewrites the entire article in one pass, applying all failing score criteria automatically. It analyzes every weak area from your SEO, GEO, AEO, and Readability scores, then produces a complete revised article that preserves your voice and structure while fixing the issues. Auto mode is available on the Team plan. If you're on Growth or Starter, you'll see it locked in the UI. For most users, Assist mode (Growth plan) gives you more control anyway — you can target specific sections rather than wholesale-replacing the article.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "canAuto = plan === 'team' || plan === 'agency'. Returns 403 with 'Auto mode is available on the Team plan' message for others. Streams via Claude Sonnet 4.6 with max_tokens: 8192. System prompt includes full article content and all failing criteria."
+    },
+    {
+      "id": "kb_015",
+      "category": "product",
+      "priority": "p2",
+      "title": "Brand profile — what it captures and why it matters",
+      "trigger_phrases": [
+        "what is brand profile",
+        "why do I need a brand profile",
+        "what does brand profile do",
+        "how does brand profile affect articles",
+        "brand voice",
+        "brand onboarding"
+      ],
+      "agent_response": "Your brand profile is persistent memory the AI uses on every article. It captures: your company name and industry, target audience, brand voice and tone, content goals, competitors to be aware of, topics to avoid, your personal expertise and experience in the space, and your signature angles or recurring takes. The expertise and signature angles fields are the most impactful — they're what makes generated articles sound like you rather than generic AI content. You can set up your profile via a short chat with the brand agent, or edit fields manually.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Brand profile is stored in brand_profiles table. Fields: brand_name, industry, target_audience, brand_voice, tone_notes, content_goals, competitors (array), avoid_topics, expertise_notes, signature_angles, avoid_phrases, primary_keywords, website_url. expertise_notes and signature_angles are fed verbatim into the generate-draft system prompt."
+    },
+    {
+      "id": "kb_016",
+      "category": "technical",
+      "priority": "p1",
+      "title": "Brand profile save hanging or spinner not stopping",
+      "trigger_phrases": [
+        "brand save not working",
+        "brand profile won't save",
+        "save button spinning",
+        "brand profile stuck saving",
+        "brand profile save error",
+        "brand not saving"
+      ],
+      "agent_response": "If the 'Save profile' button keeps spinning, the most common cause is a network timeout during the brand onboarding chat API call. Try: (1) Open a new tab and go to your brand profile page directly. (2) If the profile loaded (the chat completed), your data was likely saved — the spinner just didn't get the success response. Refresh the page to confirm. If the profile is empty or partial, try 'Edit manually' instead of the chat flow — the manual edit form goes to the same save endpoint and is more reliable on slow connections.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Brand save POST to /api/brand/save. If the onboard chat stream completes but the save fetch fails, parsedProfile state is set but saveProfile() returns an error. The save endpoint does an upsert — so partial data may have been written. The edit modal uses the same /api/brand/save endpoint. If save errors persist, check Supabase RLS policies on brand_profiles."
+    },
+    {
+      "id": "kb_017",
+      "category": "product",
+      "priority": "p2",
+      "title": "Multi-brand profiles — which plans support them",
+      "trigger_phrases": [
+        "multiple brands",
+        "multi brand",
+        "can I have more than one brand",
+        "brand profiles for clients",
+        "multiple clients",
+        "agency brand profiles"
+      ],
+      "agent_response": "Multiple brand profiles are available on the Team plan, which supports up to 3 brand profiles. Starter and Growth plans support one brand profile. If you're an agency or running content for multiple clients, the Team plan at $249/month includes 3 brand profiles, 100 articles/month, 2 team seats, and a dedicated onboarding call. For more than 3 brands or higher volumes, contact hi@bylineseo.com about enterprise options.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "The pricing page lists 'Up to 3 brand profiles' as a Team feature. The current DB schema supports multiple brand_profiles per user_id. The article generation pipeline selects by brandProfileId, so users can create multiple and switch between them manually. The UI currently shows only the first profile — Team plan multi-brand UI may be a future feature."
+    },
+    {
+      "id": "kb_018",
+      "category": "billing",
+      "priority": "p2",
+      "title": "Pricing plans overview (Starter, Growth, Team)",
+      "trigger_phrases": [
+        "how much does byline cost",
+        "pricing",
+        "what plan should I get",
+        "starter vs growth",
+        "what's included",
+        "plan comparison"
+      ],
+      "agent_response": "Byline has three plans. Starter ($49/mo): 8 articles/month, 10 keyword sessions, agent Review mode, SEO/GEO/AEO scoring. Growth ($99/mo): 30 articles/month, 60 keyword sessions, agent Assist mode (select-and-rewrite), persistent agent memory, polish pass on article generation. Team ($249/mo): 100 articles/month, 200 keyword sessions, 3 brand profiles, 2 seats, Auto mode, dedicated onboarding. All plans billed monthly or annually (20% discount). 30-day money-back guarantee on all plans.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Pricing defined in pricing-cards.tsx. Plan IDs in code: starter, pro (=Growth), team. Annual pricing: Starter $470/yr, Growth $950/yr, Team $2390/yr. Stripe price IDs are in env vars. Team plan contact is mailto:hi@bylineseo.com — it goes through a manual sales touch."
+    },
+    {
+      "id": "kb_019",
+      "category": "billing",
+      "priority": "p1",
+      "title": "30-day money-back guarantee — how it works",
+      "trigger_phrases": [
+        "refund",
+        "money back",
+        "30 day guarantee",
+        "cancel and refund",
+        "want my money back",
+        "refund policy"
+      ],
+      "agent_response": "Byline offers a 30-day money-back guarantee on all plans — no questions asked. Email hi@bylineseo.com with your account email and a brief note that you'd like a refund. Michael processes refunds manually within 1–2 business days. The refund goes back to your original payment method via Stripe and typically clears in 5–10 business days depending on your bank. After the refund is issued your subscription will be canceled.",
+      "escalate_to_human": true,
+      "escalation_reason": "Refunds require Michael to manually process in Stripe and cancel the subscription.",
+      "internal_notes": "Refunds are manual — Michael does them via the Stripe dashboard. Find the customer by email, locate the payment, issue a full refund, then cancel the subscription. The Supabase subscription record will update via webhook (customer.subscription.deleted) and set status='cancelled'."
+    },
+    {
+      "id": "kb_020",
+      "category": "billing",
+      "priority": "p0",
+      "title": "Subscription not activating after payment",
+      "trigger_phrases": [
+        "paid but can't access",
+        "subscription not active",
+        "charged but no access",
+        "payment went through but account still free",
+        "plan not upgrading after payment",
+        "still showing free after paying"
+      ],
+      "agent_response": "This is almost always a webhook timing issue — your subscription is active in Stripe but the update hasn't propagated to Byline yet. The fix takes 30 seconds: go to Settings in your Byline account, and click the 'Refresh' button (small refresh icon next to 'Billing & Subscription'). That manually syncs your Stripe subscription to your account. If that doesn't work, try signing out and back in. If you're still not seeing the correct plan after those two steps, let me know and I'll escalate to get it fixed immediately.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "The sync endpoint is /api/billing/sync. It looks up the Stripe customer by email, lists their subscriptions, and upserts to the subscriptions table. This handles the webhook-delay case. If sync still fails: check Stripe dashboard to confirm payment completed, check webhook logs in Stripe (should have checkout.session.completed), check Supabase subscriptions table for the user. Manual fix: insert or update the subscriptions row directly in Supabase with the correct plan and status='active'."
+    },
+    {
+      "id": "kb_021",
+      "category": "billing",
+      "priority": "p0",
+      "title": "Payment failed — what happens to account access",
+      "trigger_phrases": [
+        "payment failed",
+        "card declined",
+        "billing failed",
+        "past due",
+        "lost access",
+        "account suspended",
+        "can't log in after missed payment"
+      ],
+      "agent_response": "When a payment fails, Stripe marks your subscription as 'past_due' and that status syncs to Byline. You'll lose access to plan features but your articles and data are preserved — nothing is deleted. Stripe retries failed payments automatically (typically 3 times over 7 days). To restore access immediately: update your payment method in Settings > Manage Subscription, then contact hi@bylineseo.com if the plan status doesn't update within an hour of updating your card.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "invoice.payment_failed webhook sets status='past_due' in subscriptions table. Stripe handles retries. The billing portal (accessed via Settings > Manage Subscription) lets users update payment methods directly. If user has updated card but status hasn't refreshed, the /api/billing/sync endpoint should pull the current status from Stripe."
+    },
+    {
+      "id": "kb_022",
+      "category": "billing",
+      "priority": "p1",
+      "title": "How to cancel a subscription",
+      "trigger_phrases": [
+        "how do I cancel",
+        "cancel my subscription",
+        "cancel my plan",
+        "how to cancel",
+        "stop billing"
+      ],
+      "agent_response": "To cancel: go to Settings > Manage Subscription. That opens the Stripe customer portal where you can cancel directly. Cancellation stops future billing — your access continues until the end of the current billing period. Your articles and brand profile are preserved. If you're within 30 days of your first payment, you're also eligible for a full refund — just email hi@bylineseo.com.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Cancellation goes through Stripe customer portal at /api/billing/portal. The customer.subscription.deleted webhook sets status='cancelled' in Supabase. cancel_at_period_end is tracked. Access continues until current_period_end."
+    },
+    {
+      "id": "kb_023",
+      "category": "billing",
+      "priority": "p1",
+      "title": "How to upgrade or downgrade a plan",
+      "trigger_phrases": [
+        "upgrade plan",
+        "downgrade plan",
+        "switch plans",
+        "change plan",
+        "upgrade to growth",
+        "upgrade to team",
+        "move to starter"
+      ],
+      "agent_response": "To upgrade: go to the Pricing page (/pricing) and click 'Switch Plan' on the plan you want. You'll go through a Stripe checkout and the new plan activates immediately. For downgrade, go to Settings > Manage Subscription to open the Stripe portal — you can switch to a lower tier there and it takes effect at the next billing cycle. If you're upgrading mid-cycle, Stripe prorates the difference automatically.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Upgrade goes through /api/billing/checkout which creates a new Stripe checkout session with the target plan's price ID. Downgrade via Stripe portal. Proration is handled by Stripe natively. The checkout flow upserts the subscription row; the webhook (customer.subscription.updated) handles status changes."
+    },
+    {
+      "id": "kb_024",
+      "category": "account",
+      "priority": "p0",
+      "title": "Can't log in — auth issues",
+      "trigger_phrases": [
+        "can't log in",
+        "login not working",
+        "sign in failed",
+        "auth error",
+        "session expired",
+        "stuck on login page",
+        "email link not working",
+        "magic link expired"
+      ],
+      "agent_response": "A few things to try in order: (1) Clear cookies and site data for app.bylineseo.com, then try logging in again. (2) If you use magic link (email login), links expire after 1 hour — request a fresh one. (3) Try an incognito/private window to rule out a cookie conflict. (4) If you're getting an 'auth callback' error after clicking the email link, the session cookie may have expired mid-redirect — try logging in again immediately after requesting the link. If none of these work, email hi@bylineseo.com with your account email.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Auth is Supabase email OTP. Callback is at /auth/callback/route.ts which exchanges the auth code for a session using supabase.auth.exchangeCodeForSession. The (auth)/callback route is a duplicate older route. Common issues: cookie samesite issues on some browsers, expired OTP codes (1hr TTL), Supabase auth service outages (check status.supabase.com). For persistent auth failures, check Supabase auth logs in the project dashboard."
+    },
+    {
+      "id": "kb_025",
+      "category": "account",
+      "priority": "p1",
+      "title": "Article limit reached — what happens and how to get more",
+      "trigger_phrases": [
+        "article limit",
+        "can't create more articles",
+        "article limit reached",
+        "hit my limit",
+        "article quota",
+        "out of articles"
+      ],
+      "agent_response": "When you hit your monthly article limit (8 for Starter, 30 for Growth, 100 for Team), you'll see a 'limit reached' message when you try to generate a new brief. Your existing articles are untouched. Limits reset at the start of each billing cycle. To get more articles now: upgrade your plan from the Pricing page. Byline won't cut off an article that's already in progress — it only blocks starting new generation once the limit is hit.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Article limit check is in lib/usage.ts (checkArticleLimit). Called in generate-brief route. Returns {allowed, used, limit}. Limit is enforced at brief generation, not at the article creation step. Articles with status 'generating' or 'complete' count toward the limit. Reset logic should be time-windowed per billing cycle — verify this in usage.ts."
+    },
+    {
+      "id": "kb_026",
+      "category": "technical",
+      "priority": "p1",
+      "title": "Keyword research returns no results",
+      "trigger_phrases": [
+        "no keywords found",
+        "no results",
+        "keyword research empty",
+        "zero keywords",
+        "keywords not showing",
+        "DataForSEO returned nothing"
+      ],
+      "agent_response": "If keyword research completes but returns 0 results, a few possible causes: (1) The seed keyword is extremely niche or mis-spelled — try a broader version. (2) DataForSEO had no data for that keyword in the US English dataset. (3) The project may have cached a failed response — delete the project and create a new one with a slightly different seed. If you're consistently getting no results on reasonable keywords, let me know the exact keyword and I'll check the DataForSEO API logs.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "When getKeywordIdeas returns empty array, the route returns 502 'No keyword ideas returned' and sets status='error'. DataForSEO targets US / English with a limit of 50 results per seed. If this is a repeated issue, check DataForSEO account quota in their dashboard and verify the API key is valid."
+    },
+    {
+      "id": "kb_027",
+      "category": "technical",
+      "priority": "p2",
+      "title": "Article editor not saving changes",
+      "trigger_phrases": [
+        "editor not saving",
+        "changes not saved",
+        "edits lost",
+        "autosave not working",
+        "article content disappeared",
+        "edits not persisting"
+      ],
+      "agent_response": "The article editor saves automatically as you type, on a short debounce (a few seconds after you stop typing). The save status shows in the top bar — look for 'Saving…' and then 'Saved'. If it shows 'Error', your session may have expired. Try refreshing the page — you'll need to log in again, but your content up to the last successful save is preserved in the database. Don't close the tab until the save status shows 'Saved'. If you lost content after a confirmed save, email hi@bylineseo.com immediately.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Auto-save is in ArticleEditor.tsx using a debounce timer (saveTimerRef). Saves to /api/articles/[id] (PATCH). Save status state: 'idle' | 'saving' | 'saved' | 'error'. Content is stored as HTML in the articles table (TipTap editor). If a session expires mid-edit, the PATCH returns 401 and sets saveStatus='error'."
+    },
+    {
+      "id": "kb_028",
+      "category": "product",
+      "priority": "p2",
+      "title": "Saving keywords and the 'Saved Keywords' library",
+      "trigger_phrases": [
+        "saved keywords",
+        "how to save keywords",
+        "keyword library",
+        "save keyword for later",
+        "what is saved keywords tab"
+      ],
+      "agent_response": "You can bookmark individual keywords from any research project to your saved keywords library. From a keyword project, click the bookmark icon on any keyword to save it. Saved keywords appear in the 'Saved Keywords' tab at the top of the keywords page. The library tracks whether you've written an article for each saved keyword yet — making it easy to see content gaps in your strategy.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Saved keywords are stored in saved_keywords table. has_article flag tracks whether an article exists. The agent_memory system uses saved_keywords to surface content gap suggestions to the editorial agent. Route: /api/keywords/saved."
+    },
+    {
+      "id": "kb_029",
+      "category": "product",
+      "priority": "p2",
+      "title": "Ranking and traffic predictions — what they mean",
+      "trigger_phrases": [
+        "ranking prediction",
+        "traffic prediction",
+        "what does the ranking estimate mean",
+        "when will I rank",
+        "how accurate is the ranking prediction",
+        "estimated traffic"
+      ],
+      "agent_response": "After scoring an article, Byline shows a ranking prediction (estimated time to reach page 1) and traffic estimates at different rank positions. The ranking prediction combines your keyword difficulty score (from DataForSEO) with your SEO score — lower difficulty + higher SEO score = faster estimated ranking. Traffic estimates use standard CTR benchmarks: ~28% at rank 1, ~11% at rank 3, ~6% at rank 5, ~2% at rank 10, applied to the keyword's monthly search volume. These are estimates — not guarantees — based on industry averages.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "buildRankingPrediction and buildTrafficPrediction in /api/articles/score/route.ts. Ranking prediction uses keyword_difficulty from DataForSEO keywords table, crossed with seoScore. Traffic uses hardcoded CTR multipliers: 0.28, 0.11, 0.06, 0.02. Values are illustrative; explain this if user asks about accuracy."
+    },
+    {
+      "id": "kb_030",
+      "category": "product",
+      "priority": "p2",
+      "title": "Content audit tool — what it does",
+      "trigger_phrases": [
+        "content audit",
+        "audit existing content",
+        "what is the audit feature",
+        "audit my website",
+        "check my existing content"
+      ],
+      "agent_response": "The content audit tool (under Dashboard > Content Audit) lets you analyze existing published content — paste a URL or article text and get SEO, GEO, AEO, and Readability scores for it. It's useful for auditing content you wrote before using Byline, or for evaluating competitor content. The scoring logic is the same as for generated articles.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Content audit route is /api/audit. The marketing page at /(marketing)/audit/page.tsx also has a public-facing audit tool. The dashboard version is at /content-audit."
+    },
+    {
+      "id": "kb_031",
+      "category": "billing",
+      "priority": "p0",
+      "title": "Unexpected charge or billing dispute",
+      "trigger_phrases": [
+        "unexpected charge",
+        "charged twice",
+        "wrong amount",
+        "billing dispute",
+        "why was I charged",
+        "double billed",
+        "incorrect charge"
+      ],
+      "agent_response": "I'm sorry to hear that. For any billing dispute, email hi@bylineseo.com right now with your account email and the charge amount and date. Michael reviews billing issues personally and will respond within one business day. If you need to stop future charges immediately, you can cancel via Settings > Manage Subscription while you wait for a response.",
+      "escalate_to_human": true,
+      "escalation_reason": "All billing disputes require Michael to investigate Stripe records. Do not promise refunds without his confirmation.",
+      "internal_notes": "Check Stripe dashboard for the customer's payment history. Common causes: annual vs monthly billing confusion, plan upgrade prorations appearing as a second charge, renewal on the same day as a plan change. All disputes must be handled manually."
+    },
+    {
+      "id": "kb_032",
+      "category": "technical",
+      "priority": "p1",
+      "title": "Meta description not appearing in article editor",
+      "trigger_phrases": [
+        "meta description missing",
+        "where is meta description",
+        "meta description not showing",
+        "can't find meta description",
+        "meta description in editor"
+      ],
+      "agent_response": "The meta description lives in your article brief, not in the article body — so it won't appear in the editor itself. To view or edit it: click the 'Brief' section of your article page (usually shown alongside the outline). You can also regenerate just the meta description via the three-dot menu on the article. When you export or publish, the meta description goes into the page's <meta> tag, not the article content.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Meta description is stored in articles.brief.meta_description. There's a dedicated endpoint at /api/articles/[id]/meta-description for regeneration. The SEO score checks brief?.meta_description (not article body) for keyword presence and length."
+    },
+    {
+      "id": "kb_033",
+      "category": "technical",
+      "priority": "p1",
+      "title": "Agent response cut off or incomplete",
+      "trigger_phrases": [
+        "agent stopped mid-response",
+        "agent response cut off",
+        "agent didn't finish",
+        "partial response from agent",
+        "agent error mid stream"
+      ],
+      "agent_response": "Agent responses stream in real time from Claude. If the stream cuts off, it's usually a network interruption rather than an error in the model. Try sending the same message again — the agent has memory of the conversation and will pick up where it left off without repeating its prior feedback. If you're getting '[Error: ...]' in the response, there may be a temporary issue with the Anthropic API — wait 60 seconds and retry.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Streaming uses ReadableStream via fetch. On error, the catch block appends '[Error: ${msg}]' to the stream. If Anthropic API is down or overloaded, errors will appear inline. The agent has persistent memory so retrying is safe. Max tokens: 2048 for review mode, 8192 for auto mode."
+    },
+    {
+      "id": "kb_034",
+      "category": "account",
+      "priority": "p1",
+      "title": "How to update or reset brand profile using the agent",
+      "trigger_phrases": [
+        "update brand profile",
+        "change brand voice",
+        "reset brand profile",
+        "edit brand info",
+        "update my brand",
+        "brand profile wrong"
+      ],
+      "agent_response": "You have two ways to update your brand profile. 'Edit manually' opens a form where you can directly change any field — best for quick corrections like fixing your brand name or swapping a competitor. 'Update with Agent' starts a conversation with the brand agent who asks what you want to change and rebuilds the relevant fields through dialogue — better for updating your expertise notes or brand voice where you want to rethink it properly. Both options appear at the top right of your Brand Profile page.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Edit modal saves via /api/brand/save POST (brand_name format). Update via agent uses /api/brand/onboard with existingProfile passed in the body, which triggers the UPDATE_SYSTEM_PROMPT variant. Both save to same brand_profiles row for the user."
+    },
+    {
+      "id": "kb_035",
+      "category": "product",
+      "priority": "p3",
+      "title": "Article version history",
+      "trigger_phrases": [
+        "version history",
+        "previous version",
+        "undo article changes",
+        "restore old version",
+        "article history"
+      ],
+      "agent_response": "Byline saves article versions automatically. You can access version history from the article editor — look for the history/versions option in the article menu. Each time you generate a new draft or the agent performs a full Auto mode rewrite, a version snapshot is saved. This lets you roll back if you don't like the changes.",
+      "escalate_to_human": false,
+      "escalation_reason": "",
+      "internal_notes": "Version history routes: /api/articles/[id]/versions (GET list, POST create) and /api/articles/[id]/versions/[vid] (GET specific). Fork functionality at /api/articles/[id]/fork. The UI for version restore is in the article editor page."
+    },
+    {
+      "id": "kb_036",
+      "category": "technical",
+      "priority": "p0",
+      "title": "Data loss — article content missing or deleted",
+      "trigger_phrases": [
+        "article deleted",
+        "content missing",
+        "article gone",
+        "lost my article",
+        "article disappeared",
+        "all articles gone",
+        "data missing"
+      ],
+      "agent_response": "This is a P0 issue and I want to get it resolved immediately. Email hi@bylineseo.com right now with your account email and which article(s) are missing. Include roughly when you last saw the content. Michael can check the database directly for deleted or orphaned records. Do not create new articles or take other actions that might overwrite data while this is being investigated.",
+      "escalate_to_human": true,
+      "escalation_reason": "Data loss requires immediate database investigation by Michael. Cannot be self-served.",
+      "internal_notes": "Check Supabase articles table for soft-deleted or orphaned records. Check article versions table for recovery candidates. Articles with status changes to 'deleted' should be checkable. If articles were lost due to a DB issue, Supabase has point-in-time recovery (PITR) depending on plan level."
+    }
+  ]
+}
