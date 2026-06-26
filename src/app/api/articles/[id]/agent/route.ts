@@ -211,7 +211,7 @@ ANTI-SLOP EDITORIAL STANDARDS:
 - No binary contrasts: "Not X — it's Y." Just say Y.
 - No vague declaratives: "The implications are significant." Name the implication.
 - No throat-clearing: It's worth noting / Importantly / Interestingly / Notably / Ultimately / Essentially.
-- No em dashes for drama. Use a comma or parentheses.
+- Em dashes (—) are banned. Replace with a comma, parentheses, or colon.
 - No quotable one-liners ending paragraphs.
 - No inanimate subjects doing human actions.
 - Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.
@@ -288,7 +288,7 @@ ANTI-SLOP STANDARDS (apply throughout the rewrite):
 - No binary contrasts: "Not X — it's Y." Just say Y.
 - No vague declaratives: "The implications are significant." Name the implication.
 - No throat-clearing: It's worth noting / Importantly / Interestingly / Notably / Ultimately / Essentially.
-- No em dashes for drama. Use a comma or parentheses.
+- Em dashes (—) are banned. Replace with a comma, parentheses, or colon.
 - No quotable one-liners ending paragraphs.
 - No inanimate subjects doing human actions.
 - Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.
@@ -366,6 +366,7 @@ Rules:
 - No preamble. No "Here is the..." commentary. Output starts with PATCH:APPEND or PATCH:REPLACE.
 ANTI-SLOP STANDARDS:
 - Active voice. Kill adverbs. No throat-clearing (Importantly, Notably, Ultimately, Essentially).
+- Em dashes (—) are banned. Replace with a comma, parentheses, or colon.
 - No Wh- starters: What makes this / Which means / Why this matters.
 - No binary contrasts: "Not X — it's Y."
 - No inanimate subjects doing human actions.
@@ -445,7 +446,7 @@ ANTI-SLOP EDITORIAL STANDARDS:
 - No binary contrasts: "Not X — it's Y." Just say Y.
 - No vague declaratives: "The implications are significant." Name the implication.
 - No throat-clearing: It's worth noting / Importantly / Interestingly / Notably / Ultimately / Essentially.
-- No em dashes for drama. Use a comma or parentheses.
+- Em dashes (—) are banned. Replace with a comma, parentheses, or colon.
 - No quotable one-liners ending paragraphs.
 - No inanimate subjects doing human actions.
 - Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, in today's landscape, moreover, furthermore, utilize, facilitate.

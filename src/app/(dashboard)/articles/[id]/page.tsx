@@ -695,9 +695,13 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       const patchTypeLine = lines[0]?.trim() ?? ''
       const summaryLine = lines[1]?.trim() ?? ''
       const summary = summaryLine.startsWith('SUMMARY:') ? summaryLine.slice('SUMMARY:'.length).trim() : 'Fix applied.'
-      // Content starts after the blank line (line index 2 is blank, content from index 3)
-      const contentStart = lines.findIndex((l, i) => i >= 2 && l.trim() === '') + 1
-      const content = lines.slice(contentStart > 0 ? contentStart : 2).join('\n').trim()
+      // Content is everything after the first two header lines (PATCH:*, SUMMARY:*).
+      // Skip any leading blank lines — do NOT depend on a blank line being present,
+      // since the model sometimes omits it and the old findIndex would start slicing
+      // from the first blank line *inside* the content body, losing the top of it.
+      const bodyLines = lines.slice(2)
+      const firstContentLine = bodyLines.findIndex((l) => l.trim() !== '')
+      const content = bodyLines.slice(firstContentLine >= 0 ? firstContentLine : 0).join('\n').trim()
 
       if (!content) {
         finalize('❌ The agent returned empty content. Please try again.')
@@ -707,7 +711,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       if (patchTypeLine === 'PATCH:APPEND') {
         const html = marked.parse(content) as string
         appendContentRef.current?.(html)
-        finalize(`✅ ${summary}`)
+        // Show a preview of what was appended so users can verify without hunting
+        // through the article. First 400 chars gives enough context for debugging.
+        const preview = content.length > 400
+          ? content.slice(0, 400).trimEnd() + '\n\n*(full section appended to article)*'
+          : content
+        finalize(`✅ ${summary}\n\n---\n\n${preview}`)
       } else if (patchTypeLine === 'PATCH:REPLACE') {
         // Safety check: don't apply if the result is suspiciously shorter than the original
         if (originalLength > 500 && content.length < originalLength * 0.4) {
@@ -715,12 +724,15 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           return
         }
         replaceContentRef.current?.(content)
-        finalize(`✅ ${summary}`)
+        finalize(`✅ ${summary} (full article rewritten)`)
       } else {
         // Model didn't follow the format — treat entire response as APPEND
         const html = marked.parse(buffer) as string
         appendContentRef.current?.(html)
-        finalize(`✅ Fix applied. (Note: response format was unexpected — appended content to article.)`)
+        const preview = buffer.length > 400
+          ? buffer.slice(0, 400).trimEnd() + '\n\n*(full response appended to article)*'
+          : buffer
+        finalize(`✅ Fix applied. (Note: response format was unexpected — appended content to article.)\n\n---\n\n${preview}`)
       }
     } catch (err) {
       const aborted = err instanceof DOMException && err.name === 'AbortError'
@@ -2103,7 +2115,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 )}
                 {agentMessages.map((msg, i) => {
                   const isStreamingThis = agentStreaming && i === agentMessages.length - 1
-                  const applicable = !isStreamingThis && msg.role === 'assistant' && agentMode === 'review'
+                  const isLastAssistant = i === agentMessages.length - 1
+                  const applicable = !isStreamingThis && msg.role === 'assistant' && agentMode === 'review' && isLastAssistant
                     ? extractApplicableContent(msg.content)
                     : null
                   return (
