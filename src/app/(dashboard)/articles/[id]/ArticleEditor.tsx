@@ -14,10 +14,7 @@ import {
   Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, Quote, Table2,
 } from 'lucide-react'
-import Table from '@tiptap/extension-table'
-import TableRow from '@tiptap/extension-table-row'
-import TableCell from '@tiptap/extension-table-cell'
-import TableHeader from '@tiptap/extension-table-header'
+import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
 
 function prepareContent(content: string): string {
   if (content.trim().startsWith('<')) return content
