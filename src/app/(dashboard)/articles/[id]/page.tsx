@@ -132,24 +132,34 @@ function ConfidenceChip({ confidence }: { confidence: 'low' | 'medium' | 'high' 
   )
 }
 
-function CriteriaRow({ label, passed }: { label: string; passed: boolean }) {
+function CriteriaRow({ label, passed, onFix }: { label: string; passed: boolean; onFix?: () => void }) {
   return (
-    <div className="flex items-start gap-2.5 py-1.5">
-      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[var(--ink-deep)]'}`}>
+    <div className="flex items-center gap-2.5 py-1.5">
+      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[var(--ink-deep)]'}`}>
         <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
       </div>
       <span className={`text-xs flex-1 ${passed ? 'text-[var(--cream-dim)]' : 'text-[var(--cream-faint)]'}`}>{label}</span>
+      {!passed && onFix && (
+        <button onClick={onFix} className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-[#A0622A] transition-colors whitespace-nowrap">
+          Fix →
+        </button>
+      )}
     </div>
   )
 }
 
-function SEOCriteriaRow({ label, passed, points, max }: { label: string; passed: boolean; points: number; max: number }) {
+function SEOCriteriaRow({ label, passed, points, max, onFix }: { label: string; passed: boolean; points: number; max: number; onFix?: () => void }) {
   return (
-    <div className="flex items-start gap-2.5 py-1.5">
-      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[var(--ink-deep)]'}`}>
+    <div className="flex items-center gap-2.5 py-1.5">
+      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[var(--ink-deep)]'}`}>
         <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
       </div>
       <span className={`text-xs flex-1 ${passed ? 'text-[var(--cream-dim)]' : 'text-[var(--cream-faint)]'}`}>{label}</span>
+      {!passed && onFix && (
+        <button onClick={onFix} className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-[#A0622A] transition-colors whitespace-nowrap">
+          Fix →
+        </button>
+      )}
       <span className="text-xs tabular-nums font-medium text-[var(--cream-dim)] shrink-0">{points}/{max}</span>
     </div>
   )
@@ -470,11 +480,12 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       }
 
       if (isAssist && lastResponseRef.current) {
-        const html = marked.parse(lastResponseRef.current) as string
+        const cleaned = extractApplicableContent(lastResponseRef.current) ?? lastResponseRef.current
+        const html = marked.parse(cleaned) as string
         if (assist.selectionRange) {
           applyAtRangeRef.current?.(assist.selectionRange.from, assist.selectionRange.to, html)
         } else {
-          applyContentRef.current?.(lastResponseRef.current)
+          applyContentRef.current?.(cleaned)
         }
         setAssistApplied(true)
         setTimeout(() => setAssistApplied(false), 2500)
@@ -936,13 +947,109 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     <div className={`flex gap-0 h-full min-h-screen ${agentOpen ? 'pr-0' : ''}`}>
       {/* Main content */}
       <div className={`flex-1 min-w-0 p-8 transition-all duration-300 ${agentOpen ? 'max-w-none' : 'max-w-4xl'}`}>
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="min-w-0 flex-1">
-            <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[var(--cream-faint)] hover:text-[var(--cream-dim)] mb-3 transition-colors w-fit">
+        {/* Header: nav row + full-width title row */}
+        <div className="mb-6">
+          {/* Row 1: back link + action buttons */}
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Articles
             </Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDuplicate}
+                disabled={duplicating}
+                title="Duplicate article"
+                className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] text-[var(--cream-dim)] disabled:opacity-50 transition-colors"
+              >
+                {duplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CopyPlus className="w-4 h-4" />}
+                {duplicating ? 'Duplicating…' : 'Duplicate'}
+              </button>
+              {article.content && (
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] text-[var(--cream-dim)] transition-colors"
+                >
+                  {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Copied!' : 'Copy Markdown'}
+                </button>
+              )}
+              {article.content && (
+                <button
+                  onClick={handleScore}
+                  disabled={scoring}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-[#B87333] text-white rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                >
+                  {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {scores ? 'Re-score' : 'Score Article'}
+                </button>
+              )}
+              {article.content && accountType !== 'free' && (
+                <button
+                  onClick={handlePublish}
+                  disabled={publishing}
+                  title={article.status === 'published' ? 'Mark as Complete (unpublish)' : 'Mark as Published'}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 ${
+                    article.status === 'published'
+                      ? 'border-[rgba(184,115,51,0.4)] text-[var(--copper)] bg-[rgba(184,115,51,0.08)]'
+                      : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
+                  }`}
+                >
+                  {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                  {article.status === 'published' ? 'Published' : 'Publish'}
+                </button>
+              )}
+              {(article.status === 'complete' || article.status === 'published') && wpConnections.length > 0 && accountType !== 'free' && (
+                <button
+                  onClick={openWpModal}
+                  title="Publish to WordPress as a draft"
+                  className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)] transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Publish to WordPress
+                </button>
+              )}
+              {article.content && (
+                <div className="flex items-center gap-2">
+                  {accountType === 'free' && (
+                    <span
+                      title="Free plan includes 3 agent improvements per article"
+                      className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-[rgba(184,115,51,0.1)] text-[var(--copper)] border border-[rgba(184,115,51,0.25)]"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      {agentTurnsUsed >= 3
+                        ? '0 improvements left'
+                        : agentTurnsUsed === 0
+                          ? '3 free improvements'
+                          : `${3 - agentTurnsUsed} remaining`}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => agentOpen ? setAgentOpen(false) : openAgent(article)}
+                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                      agentOpen
+                        ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.25)] text-[#A0622A]'
+                        : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
+                    }`}
+                  >
+                    <Bot className="w-4 h-4" />
+                    Agent
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                title="Delete article"
+                className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50 transition-colors"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+          {/* Row 2: title full-width */}
+          <div>
             {editingTitle ? (
               <input
                 value={titleValue}
@@ -950,18 +1057,18 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 onBlur={handleSaveTitle}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveTitle() } if (e.key === 'Escape') setEditingTitle(false) }}
                 autoFocus
-                className="text-xl font-bold bg-transparent border-b border-[rgba(184,115,51,0.4)] focus:outline-none focus:border-[var(--copper)] text-[var(--cream)] leading-snug w-full"
+                className="text-2xl font-bold bg-transparent border-b border-[rgba(184,115,51,0.4)] focus:outline-none focus:border-[var(--copper)] text-[var(--cream)] leading-snug w-full"
               />
             ) : (
               <button
                 onClick={() => setEditingTitle(true)}
-                className="group flex items-center gap-2 text-left"
+                className="group flex items-center gap-2 text-left w-full"
                 title="Click to rename"
               >
-                <h1 className="text-xl font-bold text-[var(--cream)] leading-snug">
+                <h1 className="text-2xl font-bold text-[var(--cream)] leading-snug">
                   {article.title ?? article.target_keyword ?? 'Untitled'}
                 </h1>
-                <Pencil className="w-3.5 h-3.5 text-[var(--cream-faint)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                <Pencil className="w-4 h-4 text-[var(--cream-faint)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </button>
             )}
             {article.target_keyword && article.title && (
@@ -989,98 +1096,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 {brandSwitchError && <span className="text-xs text-red-500">{brandSwitchError}</span>}
               </div>
             )}
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-4">
-            <button
-              onClick={handleDuplicate}
-              disabled={duplicating}
-              title="Duplicate article"
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] text-[var(--cream-dim)] disabled:opacity-50 transition-colors"
-            >
-              {duplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CopyPlus className="w-4 h-4" />}
-              {duplicating ? 'Duplicating…' : 'Duplicate'}
-            </button>
-            {article.content && (
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-2 px-3 py-2 text-sm border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] text-[var(--cream-dim)] transition-colors"
-              >
-                {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied!' : 'Copy Markdown'}
-              </button>
-            )}
-            {article.content && (
-              <button
-                onClick={handleScore}
-                disabled={scoring}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-[#B87333] text-white rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
-              >
-                {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {scores ? 'Re-score' : 'Score Article'}
-              </button>
-            )}
-            {article.content && accountType !== 'free' && (
-              <button
-                onClick={handlePublish}
-                disabled={publishing}
-                title={article.status === 'published' ? 'Mark as Complete (unpublish)' : 'Mark as Published'}
-                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 ${
-                  article.status === 'published'
-                    ? 'border-[rgba(184,115,51,0.4)] text-[var(--copper)] bg-[rgba(184,115,51,0.08)]'
-                    : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
-                }`}
-              >
-                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
-                {article.status === 'published' ? 'Published' : 'Publish'}
-              </button>
-            )}
-            {(article.status === 'complete' || article.status === 'published') && wpConnections.length > 0 && accountType !== 'free' && (
-              <button
-                onClick={openWpModal}
-                title="Publish to WordPress as a draft"
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)] transition-colors"
-              >
-                <Upload className="w-4 h-4" />
-                Publish to WordPress
-              </button>
-            )}
-            {article.content && (
-              <div className="flex items-center gap-2">
-                {accountType === 'free' && (
-                  <span
-                    title="Free plan includes 3 agent improvements per article"
-                    className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-[rgba(184,115,51,0.1)] text-[var(--copper)] border border-[rgba(184,115,51,0.25)]"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    {agentTurnsUsed >= 3
-                      ? '0 improvements left'
-                      : agentTurnsUsed === 0
-                        ? '3 free improvements'
-                        : `${3 - agentTurnsUsed} remaining`}
-                  </span>
-                )}
-                <button
-                  onClick={() => agentOpen ? setAgentOpen(false) : openAgent(article)}
-                  className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    agentOpen
-                      ? 'bg-[rgba(184,115,51,0.08)] border-[rgba(184,115,51,0.25)] text-[#A0622A]'
-                      : 'border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-[var(--ink-card)]'
-                  }`}
-                >
-                  <Bot className="w-4 h-4" />
-                  Agent
-                </button>
-              </div>
-            )}
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              title="Delete article"
-              className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[rgba(184,115,51,0.2)] text-[var(--cream-dim)] hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50 transition-colors"
-            >
-              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              {deleting ? 'Deleting…' : 'Delete'}
-            </button>
           </div>
         </div>
 
@@ -1368,9 +1383,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.seo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
-                      {Object.values(scores.seo.breakdown).map((c, i) => (
-                        <SEOCriteriaRow key={i} label={c.label} passed={c.passed} points={c.points} max={c.max} />
-                      ))}
+                      {Object.values(scores.seo.breakdown).map((c, i) => {
+                        const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
+                        return (
+                          <SEOCriteriaRow key={i} label={c.label} passed={c.passed} points={c.points} max={c.max}
+                            onFix={!c.passed && instruction ? () => { setAgentOpen(true); setAgentMode('auto'); sendAutoMode(instruction) } : undefined}
+                          />
+                        )
+                      })}
                     </div>
                   </div>
 
@@ -1380,9 +1400,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.aeo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
-                      {Object.values(scores.aeo.breakdown).map((c, i) => (
-                        <CriteriaRow key={i} label={c.label} passed={c.passed} />
-                      ))}
+                      {Object.values(scores.aeo.breakdown).map((c, i) => {
+                        const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
+                        return (
+                          <CriteriaRow key={i} label={c.label} passed={c.passed}
+                            onFix={!c.passed && instruction ? () => { setAgentOpen(true); setAgentMode('auto'); sendAutoMode(instruction) } : undefined}
+                          />
+                        )
+                      })}
                     </div>
                   </div>
 
@@ -1392,9 +1417,14 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <span className="font-bold text-base" style={{ color: COPPER }}>{scores.geo.score}/100</span>
                     </div>
                     <div className="divide-y divide-gray-50">
-                      {Object.values(scores.geo.breakdown).map((c, i) => (
-                        <CriteriaRow key={i} label={c.label} passed={c.passed} />
-                      ))}
+                      {Object.values(scores.geo.breakdown).map((c, i) => {
+                        const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
+                        return (
+                          <CriteriaRow key={i} label={c.label} passed={c.passed}
+                            onFix={!c.passed && instruction ? () => { setAgentOpen(true); setAgentMode('auto'); sendAutoMode(instruction) } : undefined}
+                          />
+                        )
+                      })}
                     </div>
                   </div>
 
