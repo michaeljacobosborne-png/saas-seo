@@ -1,26 +1,28 @@
-// Ahrefs Domain Rating (DR) integration.
+// Domain Rank integration via DataForSEO backlinks/summary.
 //
-// Ahrefs recently opened their Domain Rating endpoint for free use. DR is a
-// 0–100 score representing how strong a domain's backlink profile is — useful
-// context for SEO strategy. We surface it on the dashboard, content audit, and
-// keyword research.
+// Uses the same DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD credentials already
+// configured for keyword research — no additional API key needed.
 //
-// Env var:
-//   AHREFS_API_KEY — from ahrefs.com/api (Domain Rating endpoint is free tier).
-//     When missing, every lookup returns null so the UI degrades gracefully.
+// DataForSEO's `rank` field in the backlinks summary is a 0–100 domain
+// authority score (higher = stronger backlink profile), surfaced in the UI
+// as "DR" for familiarity. Cost: ~$0.01–0.02 per domain per call; results are
+// cached in-memory for 24h so cold instances re-fetch at most once per domain
+// per day.
 //
-// No SDK — native fetch against the v3 REST endpoint.
+// Env vars (same as keyword research):
+//   DATAFORSEO_LOGIN
+//   DATAFORSEO_PASSWORD
 
-const BASE = 'https://api.ahrefs.com/v3'
+const BASE = 'https://api.dataforseo.com/v3'
 
 export interface DomainRating {
-  dr: number
-  ahrefsRank: number
+  dr: number       // DataForSEO domain rank (0–100)
+  ahrefsRank: number // kept for interface compatibility; always 0
 }
 
 // In-memory cache so repeated page renders don't hammer the API. Process-local
-// (per server instance) — that's fine for a soft 24h cache; a cold instance just
-// re-fetches. We cache nulls too (negative caching) to avoid retrying a domain
+// (per server instance) — fine for a soft 24h cache; cold instances just
+// re-fetch. We cache nulls too (negative caching) to avoid retrying a domain
 // that errored on every render.
 const TTL_MS = 24 * 60 * 60 * 1000
 const cache = new Map<string, { value: DomainRating | null; fetchedAt: number }>()
@@ -35,35 +37,41 @@ function getCached(domain: string): { value: DomainRating | null } | undefined {
   return { value: hit.value }
 }
 
-// Fetch DR for a single domain. Resolves to null on any error (missing key,
-// non-200, malformed payload) so one bad domain never breaks the batch.
-async function fetchOne(domain: string, apiKey: string): Promise<DomainRating | null> {
-  const url = `${BASE}/site-explorer/domain-rating?target=${encodeURIComponent(
-    domain
-  )}&date=latest&output=json`
+// Fetch domain rank for a single domain via DataForSEO backlinks/summary/live.
+// Resolves to null on any error so one bad domain never breaks the batch.
+async function fetchOne(
+  domain: string,
+  login: string,
+  password: string
+): Promise<DomainRating | null> {
+  const credentials = Buffer.from(`${login}:${password}`).toString('base64')
   try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+    const res = await fetch(`${BASE}/backlinks/summary/live`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify([{ target: domain, include_subdomains: true }]),
     })
     if (!res.ok) return null
     const data = await res.json()
-    // Ahrefs nests the metrics under `domain_rating`; tolerate a flat shape too.
+    if (data.tasks?.[0]?.status_code !== 20000) return null
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const node = (data?.domain_rating ?? data) as any
-    const dr = Number(node?.domain_rating ?? node?.dr)
-    const ahrefsRank = Number(node?.ahrefs_rank ?? node?.ahrefsRank)
+    const result = data.tasks?.[0]?.result?.[0] as any
+    const dr = Number(result?.rank)
     if (!Number.isFinite(dr)) return null
-    return { dr, ahrefsRank: Number.isFinite(ahrefsRank) ? ahrefsRank : 0 }
+    return { dr, ahrefsRank: 0 }
   } catch {
     return null
   }
 }
 
 /**
- * Fetch Domain Rating for one or more domains. Returns a map of
+ * Fetch Domain Rank for one or more domains via DataForSEO. Returns a map of
  * domain → { dr, ahrefsRank } | null. Requests run in parallel (capped at 10
- * domains). Missing API key → all nulls. Per-domain failures → null for that
- * domain only. Results are cached in-memory for 24h.
+ * domains). Missing credentials → all nulls (UI shows "—"). Per-domain
+ * failures → null for that domain only. Results cached in-memory for 24h.
  */
 export async function fetchDomainRatings(
   domains: string[]
@@ -71,8 +79,9 @@ export async function fetchDomainRatings(
   const targets = domains.slice(0, 10)
   const out: Record<string, DomainRating | null> = {}
 
-  const apiKey = process.env.AHREFS_API_KEY
-  if (!apiKey) {
+  const login = process.env.DATAFORSEO_LOGIN
+  const password = process.env.DATAFORSEO_PASSWORD
+  if (!login || !password) {
     // Graceful no-op: surface nulls everywhere so the UI shows "—".
     for (const d of targets) out[d] = null
     return out
@@ -85,7 +94,7 @@ export async function fetchDomainRatings(
     else toFetch.push(d)
   }
 
-  const results = await Promise.all(toFetch.map((d) => fetchOne(d, apiKey)))
+  const results = await Promise.all(toFetch.map((d) => fetchOne(d, login, password)))
   toFetch.forEach((d, i) => {
     const value = results[i]
     cache.set(d, { value, fetchedAt: Date.now() })

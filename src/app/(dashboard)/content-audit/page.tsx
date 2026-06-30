@@ -28,7 +28,7 @@ function DrBadge({ rating }: { rating: DomainRating | null | undefined }) {
     <span
       className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border border-[rgba(184,115,51,0.3)] text-[var(--copper-lt)]"
       style={{ background: 'rgba(184,115,51,0.1)' }}
-      title="Ahrefs Domain Rating"
+      title="Domain Rank (DataForSEO)"
     >
       <Shield className="w-3 h-3" />
       DR {rating ? rating.dr : '—'}
