@@ -373,32 +373,57 @@ export default function HomePage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-[rgba(184,115,51,0.15)] px-6 py-12">
+      <footer className="border-t border-[rgba(184,115,51,0.15)] px-6 pt-14 pb-10">
         <div className="max-w-5xl mx-auto">
-          {/* Secondary CTA */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-8 mb-8 border-b border-[rgba(184,115,51,0.12)]">
-            <p className="text-[#A89070] text-sm max-w-md leading-relaxed">
-              See what&apos;s holding your content back — no signup required.
-            </p>
-            <Link
-              href="/audit"
-              className="inline-flex items-center self-start sm:self-auto px-5 py-2.5 rounded-lg bg-[#B87333] text-[#F7F3EC] text-sm font-semibold hover:bg-[#A0622A] transition-colors whitespace-nowrap"
-            >
-              Start your free audit →
-            </Link>
+          {/* Column grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-10 mb-12">
+            {/* Brand */}
+            <div className="col-span-2 sm:col-span-1">
+              <p className="text-[#B87333] font-semibold text-base mb-3">Byline</p>
+              <p className="text-[#7A6555] text-sm leading-relaxed">
+                AI-powered content that ranks in search and gets cited by AI engines.
+              </p>
+            </div>
+
+            {/* Free Tools */}
+            <div>
+              <p className="text-[#A89070] text-xs font-semibold uppercase tracking-wider mb-4">Free Tools</p>
+              <ul className="space-y-3 text-sm text-[#7A6555]">
+                <li><Link href="/geo-analyzer" className="hover:text-[#A89070] transition-colors">GEO Analyzer</Link></li>
+                <li><Link href="/ao-analyzer" className="hover:text-[#A89070] transition-colors">AO Analyzer</Link></li>
+                <li><Link href="/audit" className="hover:text-[#A89070] transition-colors">Content Audit</Link></li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <p className="text-[#A89070] text-xs font-semibold uppercase tracking-wider mb-4">Company</p>
+              <ul className="space-y-3 text-sm text-[#7A6555]">
+                <li><Link href="/pricing" className="hover:text-[#A89070] transition-colors">Pricing</Link></li>
+                <li><Link href="/blog" className="hover:text-[#A89070] transition-colors">Blog</Link></li>
+                <li><Link href="/affiliates" className="hover:text-[#A89070] transition-colors">Affiliates</Link></li>
+                <li><a href="mailto:policies@bylineseo.com" className="hover:text-[#A89070] transition-colors">Contact</a></li>
+              </ul>
+            </div>
+
+            {/* Account */}
+            <div>
+              <p className="text-[#A89070] text-xs font-semibold uppercase tracking-wider mb-4">Account</p>
+              <ul className="space-y-3 text-sm text-[#7A6555]">
+                <li><Link href="/login" className="hover:text-[#A89070] transition-colors">Log In</Link></li>
+                <li><Link href="/signup" className="hover:text-[#A89070] transition-colors">Sign Up</Link></li>
+                <li><Link href="/privacy" className="hover:text-[#A89070] transition-colors">Privacy</Link></li>
+                <li><Link href="/terms" className="hover:text-[#A89070] transition-colors">Terms</Link></li>
+              </ul>
+            </div>
           </div>
-          {/* Links row */}
-          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-[#7A6555]">
+
+          {/* Bottom bar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-8 border-t border-[rgba(184,115,51,0.12)] text-xs text-[#7A6555]">
             <span>&copy; {new Date().getFullYear()} Peacock Creative Services LLC</span>
-            <div className="flex flex-wrap items-center gap-6">
-              <Link href="/blog" className="hover:text-[#A89070] transition-colors">Blog</Link>
-              <Link href="/privacy" className="hover:text-[#A89070] transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-[#A89070] transition-colors">Terms</Link>
-              <a href="mailto:policies@bylineseo.com" className="hover:text-[#A89070] transition-colors">Contact</a>
-              <span className="flex items-center gap-4">
-                <a href="#" aria-label="Byline on X" className="hover:text-[#A89070] transition-colors">X</a>
-                <a href="#" aria-label="Byline on LinkedIn" className="hover:text-[#A89070] transition-colors">LinkedIn</a>
-              </span>
+            <div className="flex items-center gap-5">
+              <a href="#" aria-label="Byline on X" className="hover:text-[#A89070] transition-colors">X</a>
+              <a href="#" aria-label="Byline on LinkedIn" className="hover:text-[#A89070] transition-colors">LinkedIn</a>
             </div>
           </div>
         </div>
