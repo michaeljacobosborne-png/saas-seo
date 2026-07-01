@@ -1,4 +1,4 @@
-// GoHighLevel (GHL) API helper — REST API v1 (https://rest.gohighlevel.com/v1/).
+// GoHighLevel (GHL) API helper — REST API v2 (https://services.leadconnectorhq.com).
 //
 // All functions are FIRE-AND-FORGET by contract: they never throw and never
 // block the caller's main request. Every network call is wrapped in try/catch,
@@ -7,9 +7,9 @@
 // experience — callers should invoke these with `void` (or inside an async IIFE)
 // and not await them on the request's critical path.
 //
-// Auth: v1 API keys are scoped to a single location/sub-account, so the location
-// id is implied by the key. GHL_LOCATION_ID is kept for documentation/observability
-// and future v2 migration.
+// Auth: v2 uses PIT (Private Integration Token) keys — pass the token as the
+// Bearer value. GHL_LOCATION_ID is required in the request body for v2 contact
+// upserts (v2 does not infer location from the key alone).
 //
 // NOTE: a separate, simpler GHL integration already exists in the Stripe webhook
 // (`GHL_WEBHOOK_URL`, an inbound-webhook trigger). That stays as-is; this helper
@@ -18,7 +18,7 @@
 const GHL_API_KEY = process.env.GHL_API_KEY
 const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID
 
-const GHL_BASE = 'https://rest.gohighlevel.com/v1'
+const GHL_BASE = 'https://services.leadconnectorhq.com'
 
 // Abort GHL calls that hang so a slow/down GHL can't keep a serverless function
 // alive past its timeout. Fire-and-forget means nothing is awaiting the result,
@@ -51,6 +51,7 @@ async function ghlFetch(
         Authorization: `Bearer ${GHL_API_KEY}`,
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        Version: '2021-07-28',
       },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: controller.signal,
@@ -78,10 +79,10 @@ async function ghlFetch(
   }
 }
 
-// Contact upsert — creates or updates a contact by email. v1's POST /contacts/
-// upserts on email within the location, so re-capturing an existing lead (e.g.
-// an audit_lead who later signs up) updates the same contact rather than
-// duplicating it. Returns the GHL contactId, or null on failure.
+// Contact upsert — creates or updates a contact by email. v2's POST /contacts/
+// upserts on email within the location (locationId is required in the body), so
+// re-capturing an existing lead (e.g. an audit_lead who later signs up) updates
+// the same contact rather than duplicating it. Returns the GHL contactId, or null on failure.
 export async function ghlUpsertContact(params: {
   email: string
   firstName?: string
@@ -103,7 +104,7 @@ export async function ghlUpsertContact(params: {
     if (params.lastName) body.lastName = params.lastName
     if (params.tags?.length) body.tags = params.tags
     if (params.customFields && Object.keys(params.customFields).length) {
-      // v1 accepts custom fields as a flat { key: value } object.
+      // v2 accepts custom fields as a flat { key: value } object.
       body.customField = params.customFields
     }
     if (GHL_LOCATION_ID) body.locationId = GHL_LOCATION_ID
@@ -111,7 +112,7 @@ export async function ghlUpsertContact(params: {
     const data = await ghlFetch('/contacts/', { method: 'POST', body }, { email })
     if (!data) return null
 
-    // v1 returns the contact under `contact`; tolerate a flat shape too.
+    // v2 returns the contact under `contact`; tolerate a flat shape too.
     const contactId: string | undefined = data?.contact?.id ?? data?.id
     if (!contactId) {
       console.error('[GHL] upsert succeeded but no contactId in response', { email })
