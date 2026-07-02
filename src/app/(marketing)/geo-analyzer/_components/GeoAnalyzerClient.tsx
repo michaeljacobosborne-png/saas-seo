@@ -121,7 +121,7 @@ export default function GeoAnalyzerClient() {
       const res = await fetch('/api/audit/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmed, url: url.trim(), source: 'geo_analyzer' }),
+        body: JSON.stringify({ email: trimmed, url: url.trim(), source: 'geo_analyzer', result: result ?? undefined }),
       })
       if (res.ok) {
         setUnlocked(true)

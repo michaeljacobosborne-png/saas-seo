@@ -178,3 +178,38 @@ export async function ghlUpdateCustomField(
     console.error('[GHL] ghlUpdateCustomField unexpected error', err)
   }
 }
+
+// Send a transactional email to a contact via GHL v2 conversations API.
+// from address must be verified in GHL.
+export async function ghlSendEmail(params: {
+  contactId: string
+  toEmail: string
+  subject: string
+  html: string
+  fromEmail?: string
+}): Promise<boolean> {
+  try {
+    if (!isConfigured()) return false
+    const locationId = process.env.GHL_LOCATION_ID
+    const data = await ghlFetch(
+      '/conversations/messages',
+      {
+        method: 'POST',
+        body: {
+          type: 'Email',
+          contactId: params.contactId,
+          locationId,
+          emailFrom: params.fromEmail ?? 'michael@bylineseo.com',
+          emailTo: params.toEmail,
+          subject: params.subject,
+          html: params.html,
+        },
+      },
+      { contactId: params.contactId, toEmail: params.toEmail },
+    )
+    return data !== null
+  } catch (err) {
+    console.error('[GHL] ghlSendEmail unexpected error', err)
+    return false
+  }
+}
