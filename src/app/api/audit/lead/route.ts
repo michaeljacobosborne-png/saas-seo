@@ -56,19 +56,33 @@ function buildAuditEmailHtml(params: {
         <!-- Score -->
         <tr><td style="padding:32px;border-bottom:1px solid #f0ece4;">
           <h2 style="color:#1c1917;font-size:20px;margin:0 0 16px;">Your GEO Score for <span style="color:#B87333;">${domain || 'your site'}</span></h2>
-          <table cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="padding-right:20px;">
-                <div style="width:80px;height:80px;border-radius:50%;border:4px solid ${scoreColor};display:flex;align-items:center;justify-content:center;text-align:center;line-height:80px;">
-                  <span style="font-size:28px;font-weight:bold;color:${scoreColor};">${score}</span>
-                </div>
-              </td>
-              <td>
-                <div style="display:inline-block;background:${scoreColor}22;color:${scoreColor};font-size:24px;font-weight:bold;padding:8px 16px;border-radius:8px;">${grade}</div>
-                <p style="color:#57534e;font-size:13px;margin:6px 0 0;">${gradeLabel} — out of 100</p>
-              </td>
-            </tr>
-          </table>
+          <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+  <tr>
+    <td style="padding-right:20px;vertical-align:middle;">
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+        <tr>
+          <td width="84" height="84" style="width:84px;height:84px;border-radius:50%;border:4px solid ${scoreColor};text-align:center;vertical-align:middle;font-size:28px;font-weight:bold;color:${scoreColor};font-family:Arial,sans-serif;">
+            ${score}
+          </td>
+        </tr>
+      </table>
+    </td>
+    <td style="vertical-align:middle;">
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+        <tr>
+          <td style="background:${scoreColor}22;border-radius:8px;padding:8px 16px;text-align:center;">
+            <span style="font-size:24px;font-weight:bold;color:${scoreColor};font-family:Arial,sans-serif;">${grade}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-top:6px;">
+            <span style="color:#57534e;font-size:13px;font-family:Arial,sans-serif;">${gradeLabel} — out of 100</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
         </td></tr>
 
         <!-- Top recommendations -->
@@ -191,7 +205,7 @@ export async function POST(request: Request) {
         toEmail: email,
         subject: `Your GEO Analysis for ${domain || 'your site'} — Score: ${body.result.score}/100`,
         html,
-        fromEmail: 'michael@bylineseo.com',
+        fromEmail: 'michael@lc.bylineseo.com',
       })
     }
   })

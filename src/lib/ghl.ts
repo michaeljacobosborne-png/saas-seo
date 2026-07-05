@@ -199,7 +199,7 @@ export async function ghlSendEmail(params: {
           type: 'Email',
           contactId: params.contactId,
           locationId,
-          emailFrom: params.fromEmail ?? 'michael@bylineseo.com',
+          emailFrom: params.fromEmail ?? 'michael@lc.bylineseo.com',
           emailTo: params.toEmail,
           subject: params.subject,
           html: params.html,

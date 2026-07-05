@@ -11,7 +11,6 @@ const playfair = { fontFamily: 'var(--font-playfair, "Playfair Display", serif)'
 
 const comingSoonSlots = [
   { label: 'Product Hunt' },
-  { label: 'There\'s An AI For That' },
   { label: 'Futurepedia' },
 ]
 
@@ -90,6 +89,29 @@ export default function FeaturedPage() {
               </a>
               <p className="text-xs text-[#998876]">
                 Listed on <a href="https://dang.ai" rel="dofollow noopener" target="_blank" className="underline hover:text-[#1C1917]">dang.ai</a> — the curated AI tools directory trusted by builders and marketers.
+              </p>
+            </div>
+
+            {/* Fazier — live badge */}
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-[#E7E0D6] bg-white p-8 text-center gap-4">
+              {/* eslint-disable-next-line react/jsx-no-target-blank */}
+              <a
+                href="https://fazier.com/launches/bylineseo.com"
+                target="_blank"
+                rel="noopener"
+                style={{ display: 'inline-block', textDecoration: 'none' }}
+                aria-label="Featured on Fazier"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=featured&theme=light"
+                  alt="Fazier badge"
+                  width={250}
+                  style={{ display: 'block', width: '200px', maxWidth: '100%', height: 'auto', border: 0, outline: 'none', textDecoration: 'none' }}
+                />
+              </a>
+              <p className="text-xs text-[#998876]">
+                Featured on <a href="https://fazier.com/launches/bylineseo.com" rel="noopener" target="_blank" className="underline hover:text-[#1C1917]">fazier.com</a> — the AI product launch platform.
               </p>
             </div>
 
