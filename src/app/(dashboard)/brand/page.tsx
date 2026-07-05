@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState, KeyboardEvent, ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { BrandProfile } from '@/lib/supabase/types'
+import type { BrandProfile, VoiceFingerprint } from '@/lib/supabase/types'
+import { VoiceSetupWidget } from '@/components/VoiceSetupWidget'
 import {
   Loader2, Send, X, Plus, Building2, Target, MessageSquare,
   TrendingUp, Shield, Users, CheckCircle2, Pencil, Globe, ArrowRight, Sparkles,
@@ -101,6 +102,8 @@ export default function BrandPage() {
   const [pageState, setPageState] = useState<'loading' | 'quickstart' | 'chat' | 'profile'>('loading')
   const [existingProfile, setExistingProfile] = useState<BrandProfile | null>(null)
   const [isUpdate, setIsUpdate] = useState(false)
+  const [accountType, setAccountType] = useState<string | null>(null)
+  const [voiceFingerprint, setVoiceFingerprint] = useState<VoiceFingerprint | null>(null)
 
   // Quick-start onboarding (structured form) — Step 1 is the short required core,
   // Step 2 is optional detail. Built to replace the long open-ended chat for new
@@ -149,9 +152,19 @@ export default function BrandPage() {
       .eq('user_id', user.id)
       .maybeSingle()
 
+    // Also load account type and voice fingerprint in parallel
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: acctData } = await (supabase as any)
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    setAccountType(acctData?.account_type ?? null)
+
     if (data) {
       const profile = data as BrandProfile
       setExistingProfile(profile)
+      setVoiceFingerprint((data as BrandProfile & { voice_fingerprint?: VoiceFingerprint }).voice_fingerprint ?? null)
       setEditForm({
         brand_name: profile.brand_name,
         website_url: profile.website_url ?? '',
@@ -878,6 +891,14 @@ export default function BrandPage() {
           )}
         </div>
       </div>
+
+      {/* Voice Personality — paid-only, separate from onboarding */}
+      <VoiceSetupWidget
+        websiteUrl={p.website_url ?? null}
+        isPaid={accountType === 'paid'}
+        existingFingerprint={voiceFingerprint}
+        onSaved={(fp) => setVoiceFingerprint(fp)}
+      />
 
       {/* Edit modal */}
       {showEditModal && (

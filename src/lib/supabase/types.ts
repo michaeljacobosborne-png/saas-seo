@@ -1,5 +1,14 @@
 export type BrandVoice = 'professional' | 'friendly' | 'authoritative' | 'conversational' | 'witty' | 'inspirational'
 
+export type VoiceFingerprint = {
+  style_summary: string
+  phrases: string[]
+  sample: string
+  avoid: string
+  posts_analyzed: number
+  crawled_at: string
+}
+
 export interface Subscription {
   id: string
   user_id: string
@@ -28,6 +37,8 @@ export interface BrandProfile {
   avoid_topics: string | null
   tone_examples: string | null
   content_goals: string | null
+  voice_fingerprint: VoiceFingerprint | null
+  voice_status: 'none' | 'ready'
   created_at: string
   updated_at: string
 }
