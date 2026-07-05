@@ -13,8 +13,6 @@ import {
   TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
   Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink, Trash2, Pencil, Link2,
 } from 'lucide-react'
-import type { VoiceFingerprint } from '@/lib/supabase/types'
-import { ArticleVoiceWidget } from '@/components/ArticleVoiceWidget'
 
 const ArticleEditor = dynamic<React.ComponentProps<typeof ArticleEditorType>>(() => import('./ArticleEditor'), { ssr: false })
 
@@ -291,7 +289,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   // Free tier state
   const [accountType, setAccountType] = useState<string | null>(null)
-  const [voiceFingerprint, setVoiceFingerprint] = useState<VoiceFingerprint | null>(null)
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
   // Review-mode agent turns already spent on THIS article (free tier caps at 3).
   const [agentTurnsUsed, setAgentTurnsUsed] = useState(0)
@@ -348,15 +345,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       setAccountType(data?.account_type ?? null)
       const used = ((data?.agent_turns_used as Record<string, number> | null) ?? {})[id] ?? 0
       setAgentTurnsUsed(used)
-
-      // Load voice fingerprint from brand profile
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: brandData } = await (supabase as any)
-        .from('brand_profiles')
-        .select('voice_fingerprint')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      setVoiceFingerprint((brandData?.voice_fingerprint as VoiceFingerprint | null) ?? null)
     }
     loadProfile()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2368,20 +2356,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             )}
           </div>
         </div>
-      )}
-
-      {/* Voice widget — floating pill in bottom-right corner, shifts left when agent panel is open */}
-      {article?.content && (
-        <ArticleVoiceWidget
-          isPaid={accountType === 'paid'}
-          hasVoiceProfile={!!voiceFingerprint}
-          agentOpen={agentOpen}
-          selectedText={selectedText}
-          selectionRange={selectionRange}
-          applyAtRangeRef={applyAtRangeRef}
-          replaceContentRef={replaceContentRef}
-          getEditorTextRef={getEditorTextRef}
-        />
       )}
 
       {/* Free-tier agent limit modal — shown when the API 403s with FREE_TIER_LIMIT */}
