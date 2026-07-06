@@ -92,6 +92,20 @@ export default function DashboardGeoAnalyzer() {
   const [copied, setCopied] = useState(false)
   const resultsRef = useRef<HTMLDivElement>(null)
 
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+
+  // Admin gate — only the account owner can access this page
+  useEffect(() => {
+    async function checkAdmin() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setIsAdmin(false); return }
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? 'michaeljacobosborne@gmail.com'
+      setIsAdmin(user.email === adminEmail)
+    }
+    checkAdmin()
+  }, [])
+
   // Pre-fill with user's own site URL from brand profile
   useEffect(() => {
     async function prefill() {
@@ -241,6 +255,23 @@ export default function DashboardGeoAnalyzer() {
         await saveResult(finalResult, trimmed)
       } else { setError('Analysis failed. Please try again.'); setStatus('error') }
     } catch { setError('Network error. Please try again.'); setStatus('error') }
+  }
+
+  // Admin gate — show loading or access denied
+  if (isAdmin === null) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--copper)' }} />
+      </div>
+    )
+  }
+  if (!isAdmin) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+        <h1 style={{ ...playfair, color: 'var(--cream)' }} className="text-2xl font-bold mb-3">Internal tool</h1>
+        <p className="text-sm" style={{ color: 'var(--cream-faint)' }}>This feature is not available on your plan.</p>
+      </div>
+    )
   }
 
   return (

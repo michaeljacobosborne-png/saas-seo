@@ -30,19 +30,22 @@ function XTwitterIcon({ className }: { className?: string }) {
 // `freeAccess` marks the routes a free-tier user can actually open. The rest are
 // shown greyed out with a lock icon and route to /pricing on click.
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, freeAccess: true },
-  { href: '/brand', label: 'Brand', icon: Building2, freeAccess: false },
-  { href: '/keywords', label: 'Keywords', icon: Search, freeAccess: false },
-  { href: '/keywords/saved', label: 'Saved Keywords', icon: Bookmark, freeAccess: false },
-  { href: '/articles', label: 'Articles', icon: FileText, freeAccess: true },
-  { href: '/content-audit', label: 'Content Audit', icon: BarChart2, freeAccess: false },
-  { href: '/geo-analyzer', label: 'GEO Analyzer', icon: Bot, freeAccess: false },
-  { href: '/reports', label: 'Audit Reports', icon: FileText, freeAccess: true },
-  { href: '/settings', label: 'Settings', icon: Settings, freeAccess: true },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, freeAccess: true, adminOnly: false },
+  { href: '/brand', label: 'Brand', icon: Building2, freeAccess: false, adminOnly: false },
+  { href: '/keywords', label: 'Keywords', icon: Search, freeAccess: false, adminOnly: false },
+  { href: '/keywords/saved', label: 'Saved Keywords', icon: Bookmark, freeAccess: false, adminOnly: false },
+  { href: '/articles', label: 'Articles', icon: FileText, freeAccess: true, adminOnly: false },
+  { href: '/content-audit', label: 'Content Audit', icon: BarChart2, freeAccess: false, adminOnly: false },
+  { href: '/geo-lab', label: 'GEO Analyzer', icon: Bot, freeAccess: false, adminOnly: true },
+  { href: '/reports', label: 'Audit Reports', icon: FileText, freeAccess: true, adminOnly: false },
+  { href: '/settings', label: 'Settings', icon: Settings, freeAccess: true, adminOnly: false },
 ]
+
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? 'michaeljacobosborne@gmail.com'
 
 export default function DashboardSidebar({ userEmail, accountType }: { userEmail: string; accountType: 'free' | 'paid' }) {
   const isFree = accountType === 'free'
+  const isAdmin = userEmail === ADMIN_EMAIL
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
 
@@ -66,7 +69,9 @@ export default function DashboardSidebar({ userEmail, accountType }: { userEmail
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon, freeAccess }) => {
+        {navItems.map(({ href, label, icon: Icon, freeAccess, adminOnly }) => {
+          // Hide admin-only items from non-admin users entirely
+          if (adminOnly && !isAdmin) return null
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
           const locked = isFree && !freeAccess
           if (locked) {

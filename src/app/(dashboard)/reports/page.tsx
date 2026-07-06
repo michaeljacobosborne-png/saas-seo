@@ -8,11 +8,63 @@ type AuditRow = {
   domain: string | null
   created_at: string
   share_token: string
+  tool: string | null
   result: {
+    // Content audit fields
     gaps?: Array<unknown>
     pageCount?: number
     quickWins?: string[]
+    // GEO/AO fields
+    score?: number
+    grade?: string
   } | null
+}
+
+function ResultBadge({ row }: { row: AuditRow }) {
+  const tool = row.tool ?? 'audit'
+  const result = row.result
+
+  if (tool === 'geo' || tool === 'ao') {
+    const score = result?.score ?? 0
+    const grade = result?.grade ?? '?'
+    const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626'
+    const bg = score >= 70 ? 'rgba(22,163,74,0.1)' : score >= 40 ? 'rgba(217,119,6,0.1)' : 'rgba(220,38,38,0.1)'
+    return (
+      <span
+        className="text-xs font-semibold px-2 py-0.5 rounded-full"
+        style={{ background: bg, color }}
+      >
+        {tool.toUpperCase()} {score}/100 ({grade})
+      </span>
+    )
+  }
+
+  // Content audit
+  const gapCount = Array.isArray(result?.gaps) ? result.gaps.length : 0
+  return (
+    <span
+      className="text-xs font-semibold px-2 py-0.5 rounded-full"
+      style={{ background: 'rgba(184,115,51,0.12)', color: 'var(--copper)' }}
+    >
+      {gapCount} gap{gapCount !== 1 ? 's' : ''}
+    </span>
+  )
+}
+
+function ToolLabel({ tool }: { tool: string | null }) {
+  const t = tool ?? 'audit'
+  const labels: Record<string, string> = {
+    geo: 'GEO',
+    ao: 'AO',
+    audit: 'Content Audit',
+    geo_analyzer: 'GEO',
+    ao_analyzer: 'AO',
+  }
+  return (
+    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--ink)', color: 'var(--cream-faint)', border: '1px solid var(--border)' }}>
+      {labels[t] ?? t}
+    </span>
+  )
 }
 
 export default async function ReportsPage() {
@@ -22,7 +74,7 @@ export default async function ReportsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: audits } = await (supabase as any)
     .from('audit_results')
-    .select('id, domain, created_at, share_token, result')
+    .select('id, domain, created_at, share_token, result, tool')
     .eq('user_id', user!.id)
     .order('created_at', { ascending: false }) as { data: AuditRow[] | null }
 
@@ -35,7 +87,7 @@ export default async function ReportsPage() {
           Audit Reports
         </h1>
         <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>
-          Saved content gap audit reports for your sites.
+          Saved audit reports — content gap audits, GEO scores, and AO analyses.
         </p>
       </div>
 
@@ -69,39 +121,27 @@ export default async function ReportsPage() {
           <table className="w-full" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--ink-card)' }}>
-                <th
-                  className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: 'var(--cream-faint)' }}
-                >
+                <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>
                   Domain
                 </th>
-                <th
-                  className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: 'var(--cream-faint)' }}
-                >
+                <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>
+                  Type
+                </th>
+                <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>
                   Date
                 </th>
-                <th
-                  className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: 'var(--cream-faint)' }}
-                >
-                  Gaps Found
+                <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>
+                  Result
                 </th>
-                <th
-                  className="text-right px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: 'var(--cream-faint)' }}
-                >
+                <th className="text-right px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody>
               {list.map((row, i) => {
-                const gapCount = Array.isArray(row.result?.gaps) ? row.result.gaps.length : 0
                 const date = new Date(row.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
+                  year: 'numeric', month: 'short', day: 'numeric',
                 })
                 const reportUrl = `https://app.bylineseo.com/report/${row.share_token}`
                 return (
@@ -118,17 +158,13 @@ export default async function ReportsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="text-sm" style={{ color: 'var(--cream-dim)' }}>
-                        {date}
-                      </span>
+                      <ToolLabel tool={row.tool} />
                     </td>
                     <td className="px-5 py-4">
-                      <span
-                        className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: 'rgba(184,115,51,0.12)', color: 'var(--copper)' }}
-                      >
-                        {gapCount} gaps
-                      </span>
+                      <span className="text-sm" style={{ color: 'var(--cream-dim)' }}>{date}</span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <ResultBadge row={row} />
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-2">
@@ -138,7 +174,7 @@ export default async function ReportsPage() {
                           style={{ color: 'var(--copper)', border: '1px solid rgba(184,115,51,0.25)' }}
                         >
                           <ExternalLink className="w-3 h-3" />
-                          View report
+                          View
                         </Link>
                         <CopyLinkButton url={reportUrl} />
                       </div>
