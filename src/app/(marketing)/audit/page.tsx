@@ -54,6 +54,8 @@ export default function PublicAuditPage() {
   const [emailUnlocked, setEmailUnlocked] = useState(false)
   const [capturedEmail, setCapturedEmail] = useState('')
   const [unlockStatus, setUnlockStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [shareToken, setShareToken] = useState<string | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
 
   // Anchors for the in-page scroll behaviour: starting an audit scrolls the
   // results into view; the bottom CTA scrolls back up to the hero input.
@@ -95,12 +97,15 @@ export default function PublicAuditPage() {
           email: trimmed,
           url: url.trim(),
           gapCount: result?.gaps?.length ?? 0,
+          result,
           leadEventId,
         }),
       })
       if (res.ok) {
+        const data = await res.json()
         setEmailUnlocked(true)
         setCapturedEmail(trimmed)
+        setShareToken(data.shareToken ?? null)
         if (typeof window !== 'undefined' && (window as any).fbq) {
           (window as any).fbq('track', 'Lead', { content_name: 'audit_email_gate' }, { eventID: leadEventId })
         }
@@ -397,6 +402,37 @@ export default function PublicAuditPage() {
                   Found <strong>{result.gaps?.length ?? 0}</strong> content gaps.
                 </p>
               </div>
+
+              {/* Share link — shown after email unlock */}
+              {emailUnlocked && shareToken && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(`https://app.bylineseo.com/report/${shareToken}`)
+                        setShareCopied(true)
+                        setTimeout(() => setShareCopied(false), 2000)
+                      } catch {
+                        /* clipboard unavailable */
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-[#E7E0D6] bg-white text-[#B87333] hover:bg-[#B87333]/8 transition-colors"
+                  >
+                    {shareCopied ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
+                        Copy share link
+                      </>
+                    )}
+                  </button>
+                  <span className="text-xs text-[#998876]">Share this report with your team</span>
+                </div>
+              )}
 
               {/* Quick wins */}
               {result.quickWins?.length > 0 && (

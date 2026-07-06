@@ -264,7 +264,7 @@ Rules:
 
   // ── SAVE ────────────────────────────────────────────────────────────────────
   if (action === 'save') {
-    const { voiceFingerprint } = body as { voiceFingerprint: VoiceFingerprint }
+    const { voiceFingerprint } = body as unknown as { voiceFingerprint: VoiceFingerprint }
     if (!voiceFingerprint) return NextResponse.json({ error: 'Missing voiceFingerprint' }, { status: 400 })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

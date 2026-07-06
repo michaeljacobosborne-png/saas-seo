@@ -36,6 +36,7 @@ const navItems = [
   { href: '/keywords/saved', label: 'Saved Keywords', icon: Bookmark, freeAccess: false },
   { href: '/articles', label: 'Articles', icon: FileText, freeAccess: true },
   { href: '/content-audit', label: 'Content Audit', icon: BarChart2, freeAccess: false },
+  { href: '/reports', label: 'Audit Reports', icon: FileText, freeAccess: true },
   { href: '/settings', label: 'Settings', icon: Settings, freeAccess: true },
 ]
 

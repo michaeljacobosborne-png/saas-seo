@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { ghlUpsertContact, ghlAddToWorkflow, ghlUpdateCustomField, ghlSendEmail } from '@/lib/ghl'
 import { createServiceClient } from '@/lib/supabase/service'
+import { createClient } from '@/lib/supabase/server'
 import { sendMetaCapiEvent } from '@/lib/meta-capi'
 
 function extractDomain(rawUrl: string): string {
@@ -124,19 +125,28 @@ function buildAuditEmailHtml(params: {
 </html>`
 }
 
+type GeoAuditResult = {
+  score: number
+  grade: string
+  breakdown: Array<{ name: string; score: number; maxScore: number; status: string; detail: string }>
+  recommendations: Array<{ priority: string; title: string; description: string; impact: string }>
+  quickWins: string[]
+}
+
+type ContentAuditResult = {
+  gaps: Array<{ title: string; description: string; priority: 'high' | 'medium' | 'low'; suggestedKeyword: string }>
+  topicClusters: unknown[]
+  quickWins: string[]
+  pageCount: number
+}
+
 export async function POST(request: Request) {
   let body: {
     email?: string
     url?: string
     gapCount?: number
     leadEventId?: string
-    result?: {
-      score: number
-      grade: string
-      breakdown: Array<{ name: string; score: number; maxScore: number; status: string; detail: string }>
-      recommendations: Array<{ priority: string; title: string; description: string; impact: string }>
-      quickWins: string[]
-    }
+    result?: GeoAuditResult | ContentAuditResult
     source?: string
   }
 
@@ -156,8 +166,19 @@ export async function POST(request: Request) {
 
   console.log(`[audit-lead] email=${email} url=${(body.url ?? '').trim()} gaps=${body.gapCount ?? 0}`)
 
-  // Save audit result and get UUID (if result provided)
+  // Try to get logged-in user (optional — may be null for anonymous audit visitors)
+  let userId: string | null = null
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user?.id) userId = user.id
+  } catch {
+    // Not critical — proceed without user_id
+  }
+
+  // Save audit result and get UUID + share_token (if result provided)
   let resultId: string | null = null
+  let shareToken: string | null = null
   if (body.result) {
     try {
       const supabase = createServiceClient()
@@ -168,12 +189,15 @@ export async function POST(request: Request) {
           domain: domain || null,
           result: body.result,
           source,
+          url: (body.url ?? '').trim() || null,
+          user_id: userId,
         })
-        .select('id')
+        .select('id, share_token')
         .single()
       if (!error && data) {
         resultId = data.id as string
-        console.log(`[audit-lead] saved result ${resultId} for ${email}`)
+        shareToken = data.share_token as string
+        console.log(`[audit-lead] saved result ${resultId} share_token=${shareToken} for ${email}`)
       } else if (error) {
         console.error('[audit-lead] failed to save result:', error)
       }
@@ -190,22 +214,23 @@ export async function POST(request: Request) {
     if (workflowId) await ghlAddToWorkflow(contactId, workflowId)
     if (domain) await ghlUpdateCustomField(contactId, 'audit_domain', domain)
 
-    // Send results email if we have a result; otherwise send a simple welcome email
-    if (resultId && body.result) {
+    // Send results email if we have a GEO audit result (has score + grade); otherwise send welcome email
+    const geoResult = (body.result && 'score' in body.result) ? body.result as GeoAuditResult : null
+    if (resultId && geoResult) {
       const resultsUrl = `https://bylineseo.com/audit/results/${resultId}`
       const html = buildAuditEmailHtml({
         email,
         domain,
-        score: body.result.score,
-        grade: body.result.grade,
+        score: geoResult.score,
+        grade: geoResult.grade,
         resultsUrl,
-        topRecs: body.result.recommendations ?? [],
-        quickWins: body.result.quickWins ?? [],
+        topRecs: geoResult.recommendations ?? [],
+        quickWins: geoResult.quickWins ?? [],
       })
       await ghlSendEmail({
         contactId,
         toEmail: email,
-        subject: `Your GEO Analysis for ${domain || 'your site'} — Score: ${body.result.score}/100`,
+        subject: `Your GEO Analysis for ${domain || 'your site'} — Score: ${geoResult.score}/100`,
         html,
         fromEmail: 'michael@lc.bylineseo.com',
       })
@@ -260,5 +285,5 @@ export async function POST(request: Request) {
     eventSourceUrl: 'https://app.bylineseo.com/audit',
   })
 
-  return NextResponse.json({ ok: true, resultId })
+  return NextResponse.json({ ok: true, resultId, shareToken })
 }
