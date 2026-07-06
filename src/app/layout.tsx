@@ -28,21 +28,21 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL("https://app.bylineseo.com"),
   title: {
-    default: "Byline — Know what ranks. Say what matters.",
+    default: "Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content",
     template: "%s | Byline",
   },
   description:
-    "Real keyword data. AI-generated content. An editorial agent that rewrites what's holding you back. Built for serious content operators.",
+    "Byline is the AI SEO platform with real keyword data, AI article generation, and an editorial agent that rewrites what's holding you back.",
   openGraph: {
     type: "website",
     siteName: "Byline",
-    title: "Byline — Know what ranks. Say what matters.",
+    title: "Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content",
     description:
       "Real keyword data. AI-generated content. An editorial agent that rewrites what's holding you back. Built for serious content operators.",
     url: "https://app.bylineseo.com",
     images: [
       {
-        url: "/og-image.png",
+        url: "/dashboard-screenshot-1.png",
         width: 1200,
         height: 630,
         alt: "Byline — AI SEO content platform",
@@ -51,10 +51,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Byline — Know what ranks. Say what matters.",
+    title: "Byline — AI SEO Writing Tool",
     description:
-      "Real keyword data. AI-generated content. An editorial agent that rewrites what's holding you back. Built for serious content operators.",
-    images: ["/og-image.png"],
+      "Real keyword data. AI-generated content. An editorial agent that rewrites what's holding you back.",
+    images: ["/dashboard-screenshot-1.png"],
   },
   robots: {
     index: true,
@@ -69,6 +69,10 @@ export const metadata: Metadata = {
   ...(process.env.GOOGLE_SITE_VERIFICATION
     ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
     : {}),
+  // Facebook domain verification (required for pixel attribution & conversion API)
+  other: {
+    'facebook-domain-verification': 'd773dmc1g6sjagtg6izsgop6iwuqcn',
+  },
 };
 
 export default function RootLayout({

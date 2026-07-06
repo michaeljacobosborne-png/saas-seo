@@ -1,5 +1,21 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import PricingCards from './pricing-cards'
+
+export const metadata: Metadata = {
+  title: 'Pricing — Byline AI SEO Platform',
+  description:
+    'Simple, transparent pricing for Byline. Start free and upgrade when you\'re ready. Plans for solo creators, agencies, and enterprise teams.',
+  alternates: {
+    canonical: 'https://app.bylineseo.com/pricing',
+  },
+  openGraph: {
+    title: 'Byline Pricing — AI SEO Plans for Every Team',
+    description: 'Start free. Upgrade when you\'re ready. AI keyword research, content generation, and editorial rewrites — all in one platform.',
+    url: 'https://app.bylineseo.com/pricing',
+    type: 'website',
+  },
+}
 
 export default async function PricingPage() {
   try {

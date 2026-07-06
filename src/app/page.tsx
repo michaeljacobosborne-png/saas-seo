@@ -6,9 +6,24 @@ import NavLinks from './_components/NavLinks'
 import FounderBanner from './_components/FounderBanner'
 
 export const metadata: Metadata = {
-  title: 'Byline — Content that ranks. An agent that fixes it.',
+  title: 'Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content',
   description:
-    'Byline is the only SEO platform with an editorial agent that reads your article, identifies what\'s holding it back, and rewrites the weak sections — directly inside your editor.',
+    'Byline is the AI SEO platform that researches real keywords, generates articles, and rewrites weak sections with an editorial agent — directly inside your editor. Try it free.',
+  alternates: {
+    canonical: 'https://app.bylineseo.com',
+  },
+  openGraph: {
+    title: 'Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content',
+    description:
+      'The AI SEO platform with real keyword data, AI article generation, and an editorial agent that rewrites what\'s holding you back.',
+    url: 'https://app.bylineseo.com',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Byline — AI SEO Writing Tool',
+    description: 'Real keyword data. AI content generation. An editorial agent that fixes what\'s holding you back.',
+  },
 }
 
 function GuaranteeLine({ light = false }: { light?: boolean }) {
@@ -46,8 +61,38 @@ const COMPARISON_ROWS = [
   { feature: 'Price', byline: 'From $49', other: 'From $89' },
 ]
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Byline',
+  url: 'https://app.bylineseo.com',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  description:
+    'AI SEO platform with real keyword research, article generation, and an editorial agent that identifies and rewrites weak content sections.',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+    description: 'Free trial available',
+  },
+  featureList: [
+    'AI keyword research',
+    'SEO content generation',
+    'Editorial rewrite agent',
+    'GEO (Generative Engine Optimization) scoring',
+    'Answer Optimization analysis',
+    'Free SEO audit tool',
+  ],
+}
+
 export default function HomePage() {
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="min-h-full bg-[#1C1917] text-[#F7F3EC]">
 
       {/* ── Nav ── */}
@@ -430,5 +475,6 @@ export default function HomePage() {
       </footer>
 
     </div>
+    </>
   )
 }

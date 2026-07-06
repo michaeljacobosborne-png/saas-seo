@@ -86,6 +86,7 @@ export default function PublicAuditPage() {
     const trimmed = email.trim()
     if (!trimmed || unlockStatus === 'sending') return
     setUnlockStatus('sending')
+    const leadEventId = `audit_lead_${Date.now()}_${Math.random().toString(36).slice(2)}`
     try {
       const res = await fetch('/api/audit/lead', {
         method: 'POST',
@@ -94,11 +95,15 @@ export default function PublicAuditPage() {
           email: trimmed,
           url: url.trim(),
           gapCount: result?.gaps?.length ?? 0,
+          leadEventId,
         }),
       })
       if (res.ok) {
         setEmailUnlocked(true)
         setCapturedEmail(trimmed)
+        if (typeof window !== 'undefined' && (window as any).fbq) {
+          (window as any).fbq('track', 'Lead', { content_name: 'audit_email_gate' }, { eventID: leadEventId })
+        }
         try {
           localStorage.setItem(
             'byline_audit_result_v2',
@@ -197,6 +202,10 @@ export default function PublicAuditPage() {
       } else if (finalResult) {
         setResult(finalResult)
         setStatus('done')
+        // Fire ViewContent when partial report loads (non-converter retargeting pool)
+        if (typeof window !== 'undefined' && (window as any).fbq) {
+          (window as any).fbq('track', 'ViewContent', { content_name: 'audit_report', content_category: 'seo_audit' })
+        }
       } else {
         setError('Audit failed. Please try again.')
         setStatus('error')

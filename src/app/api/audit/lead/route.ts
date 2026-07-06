@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { ghlUpsertContact, ghlAddToWorkflow, ghlUpdateCustomField, ghlSendEmail } from '@/lib/ghl'
 import { createServiceClient } from '@/lib/supabase/service'
+import { sendMetaCapiEvent } from '@/lib/meta-capi'
 
 function extractDomain(rawUrl: string): string {
   const raw = (rawUrl ?? '').trim()
@@ -128,6 +129,7 @@ export async function POST(request: Request) {
     email?: string
     url?: string
     gapCount?: number
+    leadEventId?: string
     result?: {
       score: number
       grade: string
@@ -181,14 +183,14 @@ export async function POST(request: Request) {
   }
 
   after(async () => {
-    const contactId = await ghlUpsertContact({ email, tags: ['audit_lead', 'byline_lead'] })
+    const contactId = await ghlUpsertContact({ email, tags: ['audit_lead', 'byline_lead', `source_${source ?? 'unknown'}`] })
     if (!contactId) return
 
     const workflowId = process.env.GHL_WORKFLOW_AUDIT_NURTURE_ID
     if (workflowId) await ghlAddToWorkflow(contactId, workflowId)
     if (domain) await ghlUpdateCustomField(contactId, 'audit_domain', domain)
 
-    // Send results email if we have a result
+    // Send results email if we have a result; otherwise send a simple welcome email
     if (resultId && body.result) {
       const resultsUrl = `https://bylineseo.com/audit/results/${resultId}`
       const html = buildAuditEmailHtml({
@@ -207,7 +209,55 @@ export async function POST(request: Request) {
         html,
         fromEmail: 'michael@lc.bylineseo.com',
       })
+    } else {
+      // No audit result (e.g. AO Analyzer lead) — send a simple nurture welcome email
+      const welcomeHtml = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f7f3ec;font-family:Georgia,serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f3ec;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+        <tr><td style="background:#1c1917;padding:28px 32px;">
+          <h1 style="color:#B87333;font-family:Georgia,serif;font-size:22px;margin:0;">Byline</h1>
+          <p style="color:#a8a29e;font-size:13px;margin:6px 0 0;">AI-powered content that ranks</p>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h2 style="color:#1c1917;font-size:20px;margin:0 0 16px;">Your Byline analysis is ready</h2>
+          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">Thanks for signing up — here's what Byline can do for your content.</p>
+          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">Byline generates long-form articles optimised for both traditional search and AI engines like ChatGPT, Gemini, and Perplexity — so your content gets cited, not just ranked.</p>
+          <ul style="color:#57534e;font-size:14px;line-height:1.6;padding-left:20px;margin:0 0 24px;">
+            <li style="margin-bottom:8px;">GEO scoring on every article before it publishes</li>
+            <li style="margin-bottom:8px;">Keyword research built into the brief</li>
+            <li style="margin-bottom:8px;">One-click publishing to your CMS</li>
+          </ul>
+          <a href="https://bylineseo.com/pricing" style="display:inline-block;background:#B87333;color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:bold;padding:14px 28px;border-radius:8px;text-decoration:none;">
+            See plans →
+          </a>
+        </td></tr>
+        <tr><td style="background:#f7f3ec;padding:20px 32px;text-align:center;">
+          <p style="color:#a8a29e;font-size:12px;margin:0;">© ${new Date().getFullYear()} Byline · <a href="https://bylineseo.com" style="color:#a8a29e;">bylineseo.com</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+      await ghlSendEmail({
+        contactId,
+        toEmail: email,
+        subject: 'Your Byline analysis is ready',
+        html: welcomeHtml,
+        fromEmail: 'michael@lc.bylineseo.com',
+      })
     }
+  })
+
+  void sendMetaCapiEvent({
+    eventName: 'Lead',
+    eventId: body.leadEventId ?? `audit_lead_fallback_${Date.now()}`,
+    email: email,
+    eventSourceUrl: 'https://app.bylineseo.com/audit',
   })
 
   return NextResponse.json({ ok: true, resultId })

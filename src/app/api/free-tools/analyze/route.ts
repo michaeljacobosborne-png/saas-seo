@@ -145,19 +145,45 @@ export async function POST(request: Request) {
 
         let html: string
         try {
-          const res = await fetch(target, {
-            signal: AbortSignal.timeout(10000),
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-              Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            },
+          // Full browser-like headers to avoid 403s from Cloudflare/WAFs
+          const browserHeaders = {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+            Referer: 'https://www.google.com/',
+          }
+
+          let res = await fetch(target, {
+            signal: AbortSignal.timeout(12000),
+            headers: browserHeaders,
           })
+
+          // Retry with www. prefix if initial fetch fails
+          if (!res.ok && !target.includes('://www.')) {
+            const withWww = target.replace('://', '://www.')
+            try {
+              res = await fetch(withWww, {
+                signal: AbortSignal.timeout(12000),
+                headers: browserHeaders,
+              })
+            } catch { /* use original res */ }
+          }
+
           if (!res.ok) {
-            send({
-              type: 'error',
-              error: `Could not fetch that URL (HTTP ${res.status}). Check the address and try again.`,
-            })
+            // For 403s specifically give a more helpful message
+            const msg = res.status === 403
+              ? `That site is blocking automated requests (HTTP 403). Try a different URL or a specific blog post/page instead of the homepage.`
+              : `Could not fetch that URL (HTTP ${res.status}). Check the address and try again.`
+            send({ type: 'error', error: msg })
             controller.close()
             return
           }
