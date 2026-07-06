@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, Building2, Search, Bookmark, FileText, BarChart2,
-  Settings, X, Menu, Lock, Sparkles,
+  Settings, X, Menu, Lock, Sparkles, Bot,
 } from 'lucide-react'
 import SignOutButton from './SignOutButton'
 import ThemeToggle from '@/app/_components/ThemeToggle'
@@ -36,6 +36,7 @@ const navItems = [
   { href: '/keywords/saved', label: 'Saved Keywords', icon: Bookmark, freeAccess: false },
   { href: '/articles', label: 'Articles', icon: FileText, freeAccess: true },
   { href: '/content-audit', label: 'Content Audit', icon: BarChart2, freeAccess: false },
+  { href: '/geo-analyzer', label: 'GEO Analyzer', icon: Bot, freeAccess: false },
   { href: '/reports', label: 'Audit Reports', icon: FileText, freeAccess: true },
   { href: '/settings', label: 'Settings', icon: Settings, freeAccess: true },
 ]

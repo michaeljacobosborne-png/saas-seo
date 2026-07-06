@@ -1,11 +1,15 @@
 import type { MetadataRoute } from 'next'
+import { isSanityConfigured } from '@/sanity/env'
+import { client } from '@/sanity/lib/client'
+import { postSlugsQuery } from '@/sanity/lib/queries'
 
 const BASE_URL = 'https://app.bylineseo.com'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
 
-  return [
+  // Static pages
+  const staticEntries: MetadataRoute.Sitemap = [
     // Homepage
     {
       url: BASE_URL,
@@ -71,4 +75,35 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
   ]
+
+  // Blog entries — pulled live from Sanity when configured
+  let blogEntries: MetadataRoute.Sitemap = []
+  if (isSanityConfigured) {
+    try {
+      const slugs: { slug: string }[] = await client.fetch(postSlugsQuery)
+      if (slugs.length > 0) {
+        // Blog index
+        blogEntries.push({
+          url: `${BASE_URL}/blog`,
+          lastModified: now,
+          changeFrequency: 'daily',
+          priority: 0.8,
+        })
+        // Individual posts
+        blogEntries = [
+          ...blogEntries,
+          ...slugs.map(({ slug }) => ({
+            url: `${BASE_URL}/blog/${slug}`,
+            lastModified: now,
+            changeFrequency: 'weekly' as const,
+            priority: 0.75,
+          })),
+        ]
+      }
+    } catch {
+      // Sanity unreachable at build time — skip blog entries rather than fail build
+    }
+  }
+
+  return [...staticEntries, ...blogEntries]
 }
