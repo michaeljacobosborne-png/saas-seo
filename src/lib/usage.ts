@@ -135,15 +135,7 @@ export async function checkArticleLimit(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('plan')
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .limit(1)
-    .maybeSingle()
-
-  const plan = (sub?.plan ?? 'starter') as keyof typeof PLAN_LIMITS
+  const plan = await resolvePlan(userId, supabase)
   const limit = PLAN_LIMITS[plan]?.articles ?? 0
 
   const periodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
@@ -157,7 +149,7 @@ export async function checkArticleLimit(
   const used = count ?? 0
 
   return {
-    allowed: limit === Infinity || used < limit,
+    allowed: used < limit,
     used,
     limit,
   }

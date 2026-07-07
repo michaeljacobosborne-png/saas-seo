@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from('subscriptions')
-      .select('plan, stripe_price_id, status')
+      .select('plan, status')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .limit(1)
@@ -88,24 +88,13 @@ export async function POST(request: Request) {
   const audience = brand?.target_audience ?? 'readers looking to learn'
 
   // Determine whether this user's plan unlocks the intro/conclusion polish pass.
-  // Growth (pro) and Agency plans get it; Starter and Free do not.
-  const GROWTH_PRICE_ID = 'price_1Td2ZGB6USGnItproo97FT39'
-  const AGENCY_PRICE_ID = 'price_1Td2ZHB6USGnItpr5Y0SpVBn'
+  // Pro and Agency plans get it; Starter and Free do not.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const activeSub = subData as { plan: string; stripe_price_id?: string | null } | null
+  const activeSub = subData as { plan: string } | null
   const accountType = profileData?.account_type ?? null
-  let runPolishPass = false
-  if (accountType !== 'free' && activeSub) {
-    if (GROWTH_PRICE_ID || AGENCY_PRICE_ID) {
-      // Price IDs configured: use them for precise plan matching
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const priceId = (activeSub as any).stripe_price_id as string | null
-      runPolishPass = priceId === GROWTH_PRICE_ID || priceId === AGENCY_PRICE_ID
-    } else {
-      // Price IDs not yet configured — fall back to plan name (better to give too much than too little)
-      runPolishPass = activeSub.plan === 'pro' || activeSub.plan === 'agency'
-    }
-  }
+  const runPolishPass =
+    accountType !== 'free' &&
+    (activeSub?.plan === 'pro' || activeSub?.plan === 'agency' || activeSub?.plan === 'team')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const outlineText = (brief.outline as any[] ?? []).map((s: any) => {

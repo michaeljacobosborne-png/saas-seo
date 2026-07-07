@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Search, Loader2, AlertCircle, CheckCircle2, ArrowRight,
-  History, RefreshCw, ChevronDown, ChevronUp, Copy, Check,
+  History, RefreshCw, ChevronDown, ChevronUp, Copy, Check, ExternalLink,
 } from 'lucide-react'
 
 interface Factor {
@@ -36,6 +36,7 @@ interface HistoryEntry {
   score: number
   grade: string
   created_at: string
+  share_token: string | null
 }
 
 const playfair = { fontFamily: 'var(--font-playfair, "Playfair Display", serif)' }
@@ -133,18 +134,19 @@ export default function DashboardGeoAnalyzer() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('audit_results')
-        .select('id, url, created_at, result')
+        .select('id, url, created_at, result, share_token')
         .eq('user_id', user.id)
         .eq('tool', 'geo')
         .order('created_at', { ascending: false })
         .limit(10)
       if (data) {
-        setHistory(data.map((row: { id: string; url: string; created_at: string; result: { score?: number; grade?: string } }) => ({
+        setHistory(data.map((row: { id: string; url: string; created_at: string; result: { score?: number; grade?: string }; share_token: string | null }) => ({
           id: row.id,
           url: row.url,
           created_at: row.created_at,
           score: row.result?.score ?? 0,
           grade: row.result?.grade ?? '?',
+          share_token: row.share_token ?? null,
         })))
       }
     }
@@ -183,18 +185,19 @@ export default function DashboardGeoAnalyzer() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('audit_results')
-        .select('id, url, created_at, result')
+        .select('id, url, created_at, result, share_token')
         .eq('user_id', user.id)
         .eq('tool', 'geo')
         .order('created_at', { ascending: false })
         .limit(10)
       if (data) {
-        setHistory(data.map((row: { id: string; url: string; created_at: string; result: { score?: number; grade?: string } }) => ({
+        setHistory(data.map((row: { id: string; url: string; created_at: string; result: { score?: number; grade?: string }; share_token: string | null }) => ({
           id: row.id,
           url: row.url,
           created_at: row.created_at,
           score: row.result?.score ?? 0,
           grade: row.result?.grade ?? '?',
+          share_token: row.share_token ?? null,
         })))
       }
     } finally {
@@ -479,13 +482,27 @@ export default function DashboardGeoAnalyzer() {
                         {new Date(h.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => { setUrl(h.url); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                          className="text-xs px-3 py-1 rounded-lg border transition-colors"
-                          style={{ color: 'var(--copper)', borderColor: 'rgba(184,115,51,0.3)' }}
-                        >
-                          Re-run
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          {h.share_token && (
+                            <a
+                              href={`/report/${h.share_token}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-lg border transition-colors"
+                              style={{ color: 'var(--copper)', borderColor: 'rgba(184,115,51,0.3)' }}
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Report
+                            </a>
+                          )}
+                          <button
+                            onClick={() => { setUrl(h.url); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                            className="text-xs px-3 py-1 rounded-lg border transition-colors"
+                            style={{ color: 'var(--cream-dim)', borderColor: 'var(--border)' }}
+                          >
+                            Re-run
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

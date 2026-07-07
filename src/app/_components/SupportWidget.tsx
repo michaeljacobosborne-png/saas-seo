@@ -22,8 +22,6 @@ const QUICK_ACTIONS = [
 export default function SupportWidget() {
   const pathname = usePathname()
   const isChatPage = pathname === '/brand' || /^\/articles\//.test(pathname)
-  if (isChatPage) return null
-
 
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<View>('chat')
@@ -42,6 +40,9 @@ export default function SupportWidget() {
   useEffect(() => {
     messagesRef.current?.scrollTo({ top: messagesRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  // Early return after all hooks — React rules require hooks before any conditional return
+  if (isChatPage) return null
 
   async function sendMessage(text: string) {
     const trimmed = text.trim()

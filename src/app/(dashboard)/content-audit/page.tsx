@@ -7,7 +7,7 @@ import Link from 'next/link'
 import SearchConsolePages from './search-console-pages'
 import {
   BarChart2, RefreshCw, Loader2, AlertCircle, ArrowRight,
-  Search, CheckCircle2, Clock, ChevronDown, ChevronUp, Shield,
+  Search, CheckCircle2, Clock, ChevronDown, ChevronUp, Shield, ExternalLink, Copy, Check,
 } from 'lucide-react'
 
 type DomainRating = { dr: number; ahrefsRank: number }
@@ -105,6 +105,12 @@ export default function DashboardAuditPage() {
   const [showSlowHint, setShowSlowHint] = useState(false)
   // Competitor Domain Ratings, keyed by the guessed domain (competitorToDomain).
   const [competitorDr, setCompetitorDr] = useState<Record<string, DomainRating | null>>({})
+  // Saved report share token (set after each successful audit save)
+  const [auditShareToken, setAuditShareToken] = useState<string | null>(null)
+  const [auditCopied, setAuditCopied] = useState(false)
+  // History of past content audits from audit_results table
+  const [auditHistory, setAuditHistory] = useState<Array<{ id: string; url: string | null; created_at: string; gaps: number; share_token: string | null }>>([])
+  const [showAuditHistory, setShowAuditHistory] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY)
@@ -159,6 +165,24 @@ export default function DashboardAuditPage() {
         setResult(dbCache.result)
         setStatus('done')
         setLastRun(new Date(dbCache.runAt))
+      }
+
+      // Load past audit history from audit_results
+      const { data: historyRows } = await sb
+        .from('audit_results')
+        .select('id, url, created_at, result, share_token')
+        .eq('user_id', user.id)
+        .eq('tool', 'audit')
+        .order('created_at', { ascending: false })
+        .limit(10)
+      if (historyRows && active) {
+        setAuditHistory(historyRows.map((row: { id: string; url: string | null; created_at: string; result: { gaps?: unknown[] }; share_token: string | null }) => ({
+          id: row.id,
+          url: row.url,
+          created_at: row.created_at,
+          gaps: Array.isArray(row.result?.gaps) ? row.result.gaps.length : 0,
+          share_token: row.share_token,
+        })))
       }
 
       // Only trigger auto-run if we have no cached result
@@ -257,6 +281,41 @@ export default function DashboardAuditPage() {
 
       const toCache: CachedAudit = { result: finalResult, url: targetUrl.trim(), runAt: now.toISOString() }
       localStorage.setItem(LS_RESULT_KEY, JSON.stringify(toCache))
+      // Save to audit_results for history + shareable report link (non-fatal)
+      try {
+        const saveRes = await fetch('/api/audit/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: targetUrl.trim(), result: finalResult, tool: 'audit' }),
+        })
+        if (saveRes.ok) {
+          const saved = await saveRes.json()
+          if (saved.shareToken) {
+            setAuditShareToken(saved.shareToken)
+            // Refresh history
+            const { data: { user: u } } = await supabase.auth.getUser()
+            if (u) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data: newHistory } = await (supabase as any)
+                .from('audit_results')
+                .select('id, url, created_at, result, share_token')
+                .eq('user_id', u.id)
+                .eq('tool', 'audit')
+                .order('created_at', { ascending: false })
+                .limit(10)
+              if (newHistory) {
+                setAuditHistory(newHistory.map((row: { id: string; url: string | null; created_at: string; result: { gaps?: unknown[] }; share_token: string | null }) => ({
+                  id: row.id,
+                  url: row.url,
+                  created_at: row.created_at,
+                  gaps: Array.isArray(row.result?.gaps) ? row.result.gaps.length : 0,
+                  share_token: row.share_token,
+                })))
+              }
+            }
+          }
+        }
+      } catch { /* non-fatal */ }
       // Also persist to brand_profiles for cross-device access (non-fatal)
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -660,6 +719,100 @@ export default function DashboardAuditPage() {
                   )
                 })}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Share link for most recent audit */}
+      {auditShareToken && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border" style={{ background: 'var(--ink-card)', borderColor: 'rgba(184,115,51,0.3)' }}>
+          <div>
+            <p className="text-xs font-semibold" style={{ color: 'var(--copper)' }}>Report saved to your account</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--cream-faint)' }}>
+              app.bylineseo.com/report/{auditShareToken.slice(0, 8)}…
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href={`/report/${auditShareToken}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              style={{ color: 'var(--copper)', borderColor: 'rgba(184,115,51,0.4)' }}
+            >
+              <ExternalLink className="w-3 h-3" />
+              View
+            </a>
+            <button
+              onClick={async () => {
+                await navigator.clipboard.writeText(`${window.location.origin}/report/${auditShareToken}`)
+                setAuditCopied(true)
+                setTimeout(() => setAuditCopied(false), 2000)
+              }}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              style={{ color: auditCopied ? '#16a34a' : 'var(--copper)', borderColor: auditCopied ? '#16a34a' : 'rgba(184,115,51,0.4)' }}
+            >
+              {auditCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {auditCopied ? 'Copied!' : 'Copy link'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Past audit history */}
+      {auditHistory.length > 0 && (
+        <div className="rounded-2xl border" style={{ background: 'var(--ink-card)', borderColor: 'var(--border)' }}>
+          <button
+            onClick={() => setShowAuditHistory(!showAuditHistory)}
+            className="w-full flex items-center justify-between px-6 py-4 text-sm font-semibold"
+            style={{ color: 'var(--cream)' }}
+          >
+            <span className="flex items-center gap-2">
+              <Clock className="w-4 h-4" style={{ color: 'var(--copper)' }} />
+              Past Content Audits
+            </span>
+            {showAuditHistory ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+          {showAuditHistory && (
+            <div className="border-t" style={{ borderColor: 'var(--border)' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: 'var(--border)' }}>
+                    <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>URL</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>Gaps</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>Date</th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditHistory.map((h) => (
+                    <tr key={h.id} className="border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
+                      <td className="px-6 py-3 font-mono text-xs truncate max-w-[200px]" style={{ color: 'var(--cream-dim)' }}>{h.url ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className="font-semibold" style={{ color: 'var(--copper)' }}>{h.gaps} gap{h.gaps !== 1 ? 's' : ''}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--cream-faint)' }}>
+                        {new Date(h.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {h.share_token && (
+                          <a
+                            href={`/report/${h.share_token}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-lg border transition-colors"
+                            style={{ color: 'var(--copper)', borderColor: 'rgba(184,115,51,0.3)' }}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Report
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

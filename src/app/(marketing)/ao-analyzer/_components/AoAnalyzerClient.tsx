@@ -536,7 +536,7 @@ export default function AoAnalyzerClient() {
                             {emailStatus === 'sending' ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : null}
-                            Unlock report →
+                            See all {freeRecs.length + lockedRecs.length} recommendations →
                           </button>
                         </div>
                         {emailStatus === 'error' && (

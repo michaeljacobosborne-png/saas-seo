@@ -139,7 +139,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/pricing`)
       }
 
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(`${origin}${safeNext}`)
     }
   }
 

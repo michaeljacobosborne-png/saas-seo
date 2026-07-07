@@ -353,7 +353,7 @@ export default function HomePage() {
                 $49<span className="text-base font-normal text-[#7A6555]">/mo</span>
               </div>
               <p className="text-sm text-[#A89070] leading-relaxed mb-6">
-                Research, generate, and score articles. 8 articles per month, 5 agent sessions.
+                Research, generate, and score articles. 8 articles per month, 10 keyword sessions.
               </p>
               <Link
                 href="/pricing"
