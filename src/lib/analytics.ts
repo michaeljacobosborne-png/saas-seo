@@ -7,6 +7,7 @@
 // no-op if `window`, `gtag`, or `fbq` aren't available yet.
 
 import { subscriptionEventId } from './analytics-events'
+import { rdt } from './reddit-pixel'
 
 type Params = Record<string, unknown>
 
@@ -67,6 +68,7 @@ export const analytics = {
   signUp(userId: string): void {
     gtagEvent('sign_up', { method: 'supabase', user_id: userId })
     fbqTrack('sign_up')
+    rdt('SignUp')
   },
 
   /** Fired when a user clicks a pricing/upgrade button. */
@@ -98,5 +100,6 @@ export const analytics = {
       { currency: 'USD', value, content_name: plan, content_type: 'product' },
       subscriptionEventId(subscriptionId),
     )
+    rdt('Purchase', { currency: 'USD', value, transactionId: subscriptionId })
   },
 }
