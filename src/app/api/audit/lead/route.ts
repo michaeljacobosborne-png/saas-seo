@@ -210,12 +210,23 @@ export async function POST(request: Request) {
     const contactId = await ghlUpsertContact({ email, tags: ['audit_lead', 'byline_lead', `source_${source ?? 'unknown'}`] })
     if (!contactId) return
 
-    const workflowId = process.env.GHL_WORKFLOW_AUDIT_NURTURE_ID
-    if (workflowId) await ghlAddToWorkflow(contactId, workflowId)
-    if (domain) await ghlUpdateCustomField(contactId, 'audit_domain', domain)
-
     // Send results email if we have a GEO audit result (has score + grade); otherwise send welcome email
     const geoResult = (body.result && 'score' in body.result) ? body.result as GeoAuditResult : null
+
+    // Route to source-specific workflow
+    const workflowId =
+      source === 'geo_analyzer' ? process.env.GHL_WORKFLOW_GEO_NURTURE_ID :
+      source === 'ao_analyzer'  ? process.env.GHL_WORKFLOW_AO_NURTURE_ID  :
+      process.env.GHL_WORKFLOW_AUDIT_NURTURE_ID
+
+    if (workflowId) await ghlAddToWorkflow(contactId, workflowId)
+
+    // Update custom fields
+    if (domain) await ghlUpdateCustomField(contactId, 'audit_domain', domain)
+    if (source === 'geo_analyzer' && geoResult) {
+      await ghlUpdateCustomField(contactId, 'geo_score', String(geoResult.score))
+      await ghlUpdateCustomField(contactId, 'geo_grade', geoResult.grade)
+    }
     if (resultId && geoResult) {
       const resultsUrl = `https://bylineseo.com/audit/results/${resultId}`
       const html = buildAuditEmailHtml({
