@@ -64,13 +64,6 @@ fbq('init', '${FB_PIXEL_ID}');`}
         data-pid="bQq413m7bf7t4c5e"
         data-version="062024"
       />
-
-      {/* Reddit Pixel — base init + a single PageVisit on load. SPA route
-          changes are not re-tracked (Reddit has no per-route requirement);
-          conversion events (SignUp, Purchase) fire via src/lib/reddit-pixel.ts. */}
-      <Script id="reddit-pixel" strategy="afterInteractive">
-        {`!function(w,d){if(!w.rdt){var p=w.rdt=function(){p.sendEvent?p.sendEvent.apply(p,arguments):p.callQueue.push(arguments)};p.callQueue=[];var t=d.createElement("script");t.src="https://www.redditstatic.com/ads/v2.js",t.async=!0;var s=d.getElementsByTagName("script")[0];s.parentNode.insertBefore(t,s)}w.rdt("init","a2_j8679g6sf5so",{optOut:false,useDecimalCurrencyValues:true});w.rdt("track","PageVisit")}(window,document);`}
-      </Script>
     </>
   )
 }

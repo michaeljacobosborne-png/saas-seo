@@ -1,6 +1,7 @@
 // Client-side Reddit Pixel (rdt) helper. The base pixel + init + PageVisit is
-// loaded once from <AnalyticsScripts /> in the root layout; this module is the
-// single place we fire Reddit conversion events (SignUp, Purchase, …).
+// loaded once from <RedditPixel /> (src/components/RedditPixel.tsx) in the root
+// layout; this module is the single place we fire Reddit conversion events
+// (SignUp, Lead, Purchase, …).
 //
 // Safe to call during SSR / before the pixel script loads: it no-ops if
 // `window` or `window.rdt` isn't available yet.

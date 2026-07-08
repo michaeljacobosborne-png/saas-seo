@@ -12,6 +12,7 @@ import {
   Mail,
 } from 'lucide-react'
 import NavLinks from '../../../_components/NavLinks'
+import { rdt } from '@/lib/reddit-pixel'
 
 interface Factor {
   name: string
@@ -133,6 +134,7 @@ export default function AoAnalyzerClient() {
         body: JSON.stringify({ email: trimmed, url: url.trim(), source: 'ao_analyzer' }),
       })
       if (res.ok) {
+        rdt('Lead', { source: 'ao_analyzer' })
         setUnlocked(true)
         setEmailSubmitted(true)
         setEmailStatus('sent')

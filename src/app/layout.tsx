@@ -6,6 +6,8 @@ import { AnalyticsScripts } from "./_components/AnalyticsScripts";
 import { AnalyticsPageView } from "./_components/AnalyticsPageView";
 import { ThemeScript } from "./_components/ThemeScript";
 import PostHogProvider from "@/components/PostHogProvider";
+import { RedditPixel } from "@/components/RedditPixel";
+import { createClient } from "@/lib/supabase/server";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -75,11 +77,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Best-effort logged-in email for Reddit Pixel advanced matching. Null on
+  // marketing/auth pages (visitor not signed in) — the pixel then plain-inits.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html
       lang="en"
@@ -90,6 +99,7 @@ export default function RootLayout({
         <PostHogProvider>
           <ThemeScript />
           <AnalyticsScripts />
+          <RedditPixel email={user?.email ?? null} />
           <Suspense fallback={null}>
             <AnalyticsPageView />
           </Suspense>

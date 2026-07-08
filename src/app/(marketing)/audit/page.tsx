@@ -7,6 +7,7 @@ import {
   ArrowRight, CheckCircle2, Mail, Sparkles, Zap, Target, Telescope,
 } from 'lucide-react'
 import NavLinks from '../../_components/NavLinks'
+import { rdt } from '@/lib/reddit-pixel'
 
 type Gap = {
   title: string
@@ -109,6 +110,7 @@ export default function PublicAuditPage() {
         if (typeof window !== 'undefined' && (window as any).fbq) {
           (window as any).fbq('track', 'Lead', { content_name: 'audit_email_gate' }, { eventID: leadEventId })
         }
+        rdt('Lead', { content_name: 'audit_email_gate' })
         try {
           localStorage.setItem(
             'byline_audit_result_v2',

@@ -12,6 +12,7 @@ import {
   Mail,
 } from 'lucide-react'
 import NavLinks from '../../../_components/NavLinks'
+import { rdt } from '@/lib/reddit-pixel'
 
 interface Factor {
   name: string
@@ -124,6 +125,7 @@ export default function GeoAnalyzerClient() {
         body: JSON.stringify({ email: trimmed, url: url.trim(), source: 'geo_analyzer', result: result ?? undefined }),
       })
       if (res.ok) {
+        rdt('Lead', { source: 'geo_analyzer' })
         setUnlocked(true)
         setEmailSubmitted(true)
         setEmailStatus('sent')
