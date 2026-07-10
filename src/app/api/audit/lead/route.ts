@@ -3,6 +3,7 @@ import { ghlUpsertContact, ghlAddToWorkflow, ghlUpdateCustomField, ghlSendEmail 
 import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import { sendMetaCapiEvent } from '@/lib/meta-capi'
+import { sendRedditCapiEvent } from '@/lib/reddit-capi'
 
 function extractDomain(rawUrl: string): string {
   const raw = (rawUrl ?? '').trim()
@@ -148,6 +149,7 @@ export async function POST(request: Request) {
     leadEventId?: string
     result?: GeoAuditResult | ContentAuditResult
     source?: string
+    conversionId?: string
   }
 
   try {
@@ -221,6 +223,16 @@ export async function POST(request: Request) {
 
     if (workflowId) await ghlAddToWorkflow(contactId, workflowId)
 
+    // Reddit CAPI — Lead event (server-side, deduplicates with browser pixel)
+    await sendRedditCapiEvent({
+      trackingType: 'Lead',
+      email,
+      externalId: userId ?? undefined,
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? request.headers.get('x-real-ip') ?? undefined,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+      conversionId: body.conversionId,
+    })
+
     // Update custom fields
     if (domain) await ghlUpdateCustomField(contactId, 'audit_domain', domain)
     if (source === 'geo_analyzer' && geoResult) {
@@ -246,8 +258,32 @@ export async function POST(request: Request) {
         fromEmail: 'michael@lc.bylineseo.com',
       })
     } else {
-      // No audit result (e.g. AO Analyzer lead) — send a simple nurture welcome email
-      const welcomeHtml = `<!DOCTYPE html>
+      // Either content audit result (has gaps) or AO analyzer lead (no result data)
+      const contentResult = (body.result && 'gaps' in body.result) ? body.result as ContentAuditResult : null
+
+      if (resultId && contentResult) {
+        // Content audit email — branded, shows top gaps + quick wins
+        const topGaps = (contentResult.gaps ?? []).slice(0, 3)
+        const quickWins = (contentResult.quickWins ?? []).slice(0, 3)
+        const gapCount = contentResult.gaps?.length ?? 0
+        const pageCount = contentResult.pageCount ?? 0
+
+        const gapsHtml = topGaps.map(g => `
+          <tr>
+            <td style="padding:12px 16px;border-bottom:1px solid #f0ece4;">
+              <div style="display:inline-block;background:${g.priority === 'high' ? '#fee2e2' : g.priority === 'medium' ? '#fef3c7' : '#dcfce7'};color:${g.priority === 'high' ? '#dc2626' : g.priority === 'medium' ? '#d97706' : '#16a34a'};font-size:11px;font-weight:bold;padding:2px 8px;border-radius:4px;text-transform:uppercase;font-family:Arial,sans-serif;">${g.priority}</div>
+              <strong style="display:block;color:#1c1917;font-size:14px;margin:6px 0 4px;">${g.title}</strong>
+              <p style="color:#57534e;font-size:13px;margin:0 0 4px;">${g.description}</p>
+              ${g.suggestedKeyword ? `<span style="color:#B87333;font-size:12px;font-style:italic;">Keyword: ${g.suggestedKeyword}</span>` : ''}
+            </td>
+          </tr>
+        `).join('')
+
+        const winsHtml = quickWins.map(w => `
+          <li style="color:#57534e;font-size:13px;margin-bottom:6px;">✓ ${w}</li>
+        `).join('')
+
+        const contentAuditHtml = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f7f3ec;font-family:Georgia,serif;">
@@ -256,19 +292,77 @@ export async function POST(request: Request) {
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
         <tr><td style="background:#1c1917;padding:28px 32px;">
           <h1 style="color:#B87333;font-family:Georgia,serif;font-size:22px;margin:0;">Byline</h1>
-          <p style="color:#a8a29e;font-size:13px;margin:6px 0 0;">AI-powered content that ranks</p>
+          <p style="color:#a8a29e;font-size:13px;margin:6px 0 0;">Your Content Gap Analysis</p>
+        </td></tr>
+        <tr><td style="padding:32px;border-bottom:1px solid #f0ece4;">
+          <h2 style="color:#1c1917;font-size:20px;margin:0 0 8px;">Content gaps found for <span style="color:#B87333;">${domain || 'your site'}</span></h2>
+          <p style="color:#57534e;font-size:14px;margin:0;">We scanned ${pageCount > 0 ? `${pageCount} pages` : 'your site'} and found <strong style="color:#1c1917;">${gapCount} content gap${gapCount !== 1 ? 's' : ''}</strong> where competitors are ranking and you're not.</p>
+        </td></tr>
+        ${topGaps.length > 0 ? `
+        <tr><td style="padding:24px 32px 0;">
+          <h3 style="color:#1c1917;font-size:16px;margin:0 0 12px;">Top Gaps to Close</h3>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #f0ece4;border-radius:8px;overflow:hidden;">
+            ${gapsHtml}
+          </table>
+        </td></tr>` : ''}
+        ${quickWins.length > 0 ? `
+        <tr><td style="padding:24px 32px 0;">
+          <h3 style="color:#1c1917;font-size:16px;margin:0 0 12px;">Quick Wins</h3>
+          <ul style="margin:0;padding-left:0;list-style:none;">${winsHtml}</ul>
+        </td></tr>` : ''}
+        <tr><td style="padding:32px;text-align:center;border-top:1px solid #f0ece4;margin-top:24px;">
+          <a href="https://bylineseo.com/audit/results/${resultId}" style="display:inline-block;background:#B87333;color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:bold;padding:14px 28px;border-radius:8px;text-decoration:none;margin-bottom:16px;">
+            View Your Full Gap Report →
+          </a>
+          <p style="color:#a8a29e;font-size:12px;margin:16px 0 0;">
+            Want Byline to write articles that close these gaps automatically? <a href="https://bylineseo.com/pricing" style="color:#B87333;">Start free</a>
+          </p>
+        </td></tr>
+        <tr><td style="background:#f7f3ec;padding:20px 32px;text-align:center;">
+          <p style="color:#a8a29e;font-size:12px;margin:0;">© ${new Date().getFullYear()} Byline · <a href="https://bylineseo.com" style="color:#a8a29e;">bylineseo.com</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+
+        await ghlSendEmail({
+          contactId,
+          toEmail: email,
+          subject: `Your content gap report for ${domain || 'your site'} — ${gapCount} gaps found`,
+          html: contentAuditHtml,
+          fromEmail: 'michael@lc.bylineseo.com',
+        })
+      } else {
+        // AO Analyzer or other lead — branded welcome email
+        const isAo = source === 'ao_analyzer'
+        const welcomeHtml = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f7f3ec;font-family:Georgia,serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f3ec;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+        <tr><td style="background:#1c1917;padding:28px 32px;">
+          <h1 style="color:#B87333;font-family:Georgia,serif;font-size:22px;margin:0;">Byline</h1>
+          <p style="color:#a8a29e;font-size:13px;margin:6px 0 0;">${isAo ? 'Your AI Optimization Analysis' : 'AI-powered content that ranks'}</p>
         </td></tr>
         <tr><td style="padding:32px;">
-          <h2 style="color:#1c1917;font-size:20px;margin:0 0 16px;">Your Byline analysis is ready</h2>
-          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">Thanks for signing up — here's what Byline can do for your content.</p>
-          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">Byline generates long-form articles optimised for both traditional search and AI engines like ChatGPT, Gemini, and Perplexity — so your content gets cited, not just ranked.</p>
+          <h2 style="color:#1c1917;font-size:20px;margin:0 0 16px;">${isAo ? `Your AO Analysis for ${domain || 'your site'}` : 'Your Byline analysis is ready'}</h2>
+          ${isAo ? `
+          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">We analyzed <strong style="color:#1c1917;">${domain || 'your site'}</strong> for AI engine visibility — how often ChatGPT, Gemini, and Perplexity cite your content vs. competitors.</p>
+          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 24px;">Byline's AO scoring is built into every article it generates, so your content is optimised to get cited — not just ranked.</p>
+          ` : `
+          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">Thanks for trying Byline. We generate long-form articles optimised for traditional search <em>and</em> AI engines like ChatGPT, Gemini, and Perplexity — so your content gets cited, not just ranked.</p>
+          `}
           <ul style="color:#57534e;font-size:14px;line-height:1.6;padding-left:20px;margin:0 0 24px;">
-            <li style="margin-bottom:8px;">GEO scoring on every article before it publishes</li>
+            <li style="margin-bottom:8px;">GEO + AO scoring on every article before it publishes</li>
             <li style="margin-bottom:8px;">Keyword research built into the brief</li>
             <li style="margin-bottom:8px;">One-click publishing to your CMS</li>
           </ul>
           <a href="https://bylineseo.com/pricing" style="display:inline-block;background:#B87333;color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:bold;padding:14px 28px;border-radius:8px;text-decoration:none;">
-            See plans →
+            ${isAo ? 'Start optimizing for AI →' : 'See plans →'}
           </a>
         </td></tr>
         <tr><td style="background:#f7f3ec;padding:20px 32px;text-align:center;">
@@ -279,21 +373,17 @@ export async function POST(request: Request) {
   </table>
 </body>
 </html>`
-      await ghlSendEmail({
-        contactId,
-        toEmail: email,
-        subject: 'Your Byline analysis is ready',
-        html: welcomeHtml,
-        fromEmail: 'michael@lc.bylineseo.com',
-      })
+        await ghlSendEmail({
+          contactId,
+          toEmail: email,
+          subject: isAo
+            ? `Your AO Analysis for ${domain || 'your site'} — AI visibility insights`
+            : 'Welcome to Byline — your AI content platform',
+          html: welcomeHtml,
+          fromEmail: 'michael@lc.bylineseo.com',
+        })
+      }
     }
-  })
-
-  void sendMetaCapiEvent({
-    eventName: 'Lead',
-    eventId: body.leadEventId ?? `audit_lead_fallback_${Date.now()}`,
-    email: email,
-    eventSourceUrl: 'https://app.bylineseo.com/audit',
   })
 
   return NextResponse.json({ ok: true, resultId, shareToken })
