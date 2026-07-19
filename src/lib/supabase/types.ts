@@ -32,6 +32,27 @@ export interface BrandProfile {
   updated_at: string
 }
 
+export interface OutreachProspect {
+  id: string
+  created_at: string
+  updated_at: string
+  email: string
+  domain: string
+  contact_name: string | null
+  status: 'new' | 'preparing' | 'ready_for_review' | 'approved' | 'sent' | 'failed' | 'stopped'
+  chosen_audit: 'content' | 'geo' | 'ao' | null
+  audit_reason: string | null
+  audit_result_id: string | null
+  share_token: string | null
+  draft_subject: string | null
+  draft_html: string | null
+  ghl_contact_id: string | null
+  step: number
+  next_action_at: string | null
+  sent_at: string | null
+  last_error: string | null
+}
+
 export interface KeywordProject {
   id: string
   user_id: string
