@@ -14,76 +14,16 @@ import {
 import NavLinks from '../../../_components/NavLinks'
 import { rdt } from '@/lib/reddit-pixel'
 
-interface Factor {
-  name: string
-  score: number
-  maxScore: number
-  status: 'good' | 'needs-work' | 'missing'
-  detail: string
-}
-
-interface Recommendation {
-  priority: 'high' | 'medium' | 'low'
-  title: string
-  description: string
-  impact: string
-}
-
-interface AnalysisResult {
-  score: number
-  grade: string
-  breakdown: Factor[]
-  recommendations: Recommendation[]
-  quickWins: string[]
-}
+import {
+  FactorBreakdown,
+  ScoreHeader,
+  toAnalysisResult,
+  type AnalysisResult,
+  type Recommendation,
+} from '@/components/audit/AuditReportParts'
 
 // Playfair Display is loaded globally as a CSS variable in the root layout.
 const playfair = { fontFamily: 'var(--font-playfair, "Playfair Display", serif)' }
-
-function ScoreCircle({ score, grade }: { score: number; grade: string }) {
-  const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626'
-  const gradeColor =
-    score >= 70
-      ? 'bg-green-100 text-green-700'
-      : score >= 40
-      ? 'bg-amber-100 text-amber-700'
-      : 'bg-red-100 text-red-700'
-  return (
-    <div className="flex items-center gap-6 mb-6">
-      <div
-        className="w-24 h-24 rounded-full flex items-center justify-center border-4 shrink-0"
-        style={{ borderColor: color }}
-      >
-        <span className="text-3xl font-bold" style={{ color }}>
-          {score}
-        </span>
-      </div>
-      <div>
-        <div
-          className={`inline-flex items-center justify-center w-12 h-12 rounded-xl text-2xl font-bold mb-1 ${gradeColor}`}
-        >
-          {grade}
-        </div>
-        <p className="text-sm text-[#57534E]">AO Score</p>
-        <p className="text-xs text-[#998876]">out of 100</p>
-      </div>
-    </div>
-  )
-}
-
-function StatusBadge({ status }: { status: Factor['status'] }) {
-  const map = {
-    good: 'bg-green-100 text-green-700',
-    'needs-work': 'bg-amber-100 text-amber-700',
-    missing: 'bg-red-100 text-red-700',
-  }
-  const label = { good: 'Good', 'needs-work': 'Needs work', missing: 'Missing' }
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${map[status]}`}>
-      {label[status]}
-    </span>
-  )
-}
 
 function PriorityBadge({ priority }: { priority: Recommendation['priority'] }) {
   const map = {
@@ -182,7 +122,8 @@ export default function AoAnalyzerClient() {
       const handleEvent = (line: string) => {
         const trimmedLine = line.trim()
         if (!trimmedLine) return
-        let evt: { type?: string; step?: number; total?: number; message?: string; error?: string } & Partial<AnalysisResult>
+        let evt: { type?: string; step?: number; total?: number; message?: string; error?: string } & Partial<AnalysisResult> &
+          Record<string, unknown>
         try {
           evt = JSON.parse(trimmedLine)
         } catch {
@@ -195,13 +136,7 @@ export default function AoAnalyzerClient() {
             message: evt.message ?? '',
           })
         } else if (evt.type === 'result') {
-          finalResult = {
-            score: evt.score ?? 0,
-            grade: evt.grade ?? 'F',
-            breakdown: evt.breakdown ?? [],
-            recommendations: evt.recommendations ?? [],
-            quickWins: evt.quickWins ?? [],
-          }
+          finalResult = toAnalysisResult(evt)
         } else if (evt.type === 'error') {
           streamError = evt.error ?? 'Analysis failed. Please try again.'
         }
@@ -385,44 +320,16 @@ export default function AoAnalyzerClient() {
             <div className="space-y-6 mb-8">
               {/* Score + Grade */}
               <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
-                <ScoreCircle score={result.score} grade={result.grade} />
+                <ScoreHeader result={result} scoreLabel="Answer readiness score" />
 
-                {/* 6-factor breakdown */}
+                {/* Factor breakdown */}
                 <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-4">
-                  6 Factor Breakdown
+                  Factor Breakdown
                 </h2>
-                <div className="space-y-3">
-                  {result.breakdown.map((factor, i) => (
-                    <div key={i}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#1C1917]">{factor.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-[#998876]">
-                            {factor.score}/{factor.maxScore}
-                          </span>
-                          <StatusBadge status={factor.status} />
-                        </div>
-                      </div>
-                      <div className="h-1.5 bg-[#F7F3EC] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.round((factor.score / factor.maxScore) * 100)}%`,
-                            backgroundColor:
-                              factor.status === 'good'
-                                ? '#16a34a'
-                                : factor.status === 'needs-work'
-                                ? '#d97706'
-                                : '#dc2626',
-                          }}
-                        />
-                      </div>
-                      {factor.detail && (
-                        <p className="text-xs text-[#57534E] mt-1">{factor.detail}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <FactorBreakdown
+                  result={result}
+                  note="This is an assessment of how ready your published content is to be quoted in an answer — not a measurement of how often AI tools or featured snippets currently surface it."
+                />
               </div>
 
               {/* Quick Wins */}

@@ -24,10 +24,20 @@ function buildAuditEmailHtml(params: {
   resultsUrl: string
   topRecs: Array<{ title: string; description: string; priority: string }>
   quickWins: string[]
+  scoreWithheld?: boolean
 }): string {
-  const { domain, score, grade, resultsUrl, topRecs, quickWins } = params
-  const scoreColor = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626'
-  const gradeLabel = score >= 70 ? 'Good' : score >= 40 ? 'Needs Work' : 'Poor'
+  const { domain, score, grade, resultsUrl, topRecs, quickWins, scoreWithheld } = params
+  // When the engine withheld the score, the email must not invent one.
+  const scoreColor = scoreWithheld ? '#998876' : score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626'
+  const scoreDisplay = scoreWithheld ? '—' : String(score)
+  const gradeDisplay = scoreWithheld ? 'N/A' : grade
+  const gradeLabel = scoreWithheld
+    ? 'Not enough of the page could be read to score it'
+    : score >= 70
+      ? 'Few structural obstacles found — out of 100'
+      : score >= 40
+        ? 'Room for improvement — out of 100'
+        : 'Significant gaps to address — out of 100'
 
   const recsHtml = topRecs.slice(0, 3).map(r => `
     <tr>
@@ -58,14 +68,14 @@ function buildAuditEmailHtml(params: {
 
         <!-- Score -->
         <tr><td style="padding:32px;border-bottom:1px solid #f0ece4;">
-          <h2 style="color:#1c1917;font-size:20px;margin:0 0 16px;">Your GEO Score for <span style="color:#B87333;">${domain || 'your site'}</span></h2>
+          <h2 style="color:#1c1917;font-size:20px;margin:0 0 16px;">Your content readiness score for <span style="color:#B87333;">${domain || 'your site'}</span></h2>
           <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
   <tr>
     <td style="padding-right:20px;vertical-align:middle;">
       <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
         <tr>
           <td width="84" height="84" style="width:84px;height:84px;border-radius:50%;border:4px solid ${scoreColor};text-align:center;vertical-align:middle;font-size:28px;font-weight:bold;color:${scoreColor};font-family:Arial,sans-serif;">
-            ${score}
+            ${scoreDisplay}
           </td>
         </tr>
       </table>
@@ -74,12 +84,12 @@ function buildAuditEmailHtml(params: {
       <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
         <tr>
           <td style="background:${scoreColor}22;border-radius:8px;padding:8px 16px;text-align:center;">
-            <span style="font-size:24px;font-weight:bold;color:${scoreColor};font-family:Arial,sans-serif;">${grade}</span>
+            <span style="font-size:24px;font-weight:bold;color:${scoreColor};font-family:Arial,sans-serif;">${gradeDisplay}</span>
           </td>
         </tr>
         <tr>
           <td style="padding-top:6px;">
-            <span style="color:#57534e;font-size:13px;font-family:Arial,sans-serif;">${gradeLabel} — out of 100</span>
+            <span style="color:#57534e;font-size:13px;font-family:Arial,sans-serif;">${gradeLabel}</span>
           </td>
         </tr>
       </table>
@@ -132,6 +142,8 @@ type GeoAuditResult = {
   breakdown: Array<{ name: string; score: number; maxScore: number; status: string; detail: string }>
   recommendations: Array<{ priority: string; title: string; description: string; impact: string }>
   quickWins: string[]
+  /** Set by the audit engine when too little of the page could be read to score it. */
+  scoreWithheld?: boolean
 }
 
 type ContentAuditResult = {
@@ -236,8 +248,9 @@ export async function POST(request: Request) {
     // Update custom fields
     if (domain) await ghlUpdateCustomField(contactId, 'audit_domain', domain)
     if (source === 'geo_analyzer' && geoResult) {
-      await ghlUpdateCustomField(contactId, 'geo_score', String(geoResult.score))
-      await ghlUpdateCustomField(contactId, 'geo_grade', geoResult.grade)
+      // A withheld score must not be filed in the CRM as a real zero.
+      await ghlUpdateCustomField(contactId, 'geo_score', geoResult.scoreWithheld ? 'not scored' : String(geoResult.score))
+      await ghlUpdateCustomField(contactId, 'geo_grade', geoResult.scoreWithheld ? 'N/A' : geoResult.grade)
     }
     if (resultId && geoResult) {
       const resultsUrl = `https://bylineseo.com/audit/results/${resultId}`
@@ -249,11 +262,14 @@ export async function POST(request: Request) {
         resultsUrl,
         topRecs: geoResult.recommendations ?? [],
         quickWins: geoResult.quickWins ?? [],
+        scoreWithheld: geoResult.scoreWithheld,
       })
       await ghlSendEmail({
         contactId,
         toEmail: email,
-        subject: `Your GEO Analysis for ${domain || 'your site'} — Score: ${geoResult.score}/100`,
+        subject: geoResult.scoreWithheld
+          ? `Your GEO Analysis for ${domain || 'your site'}`
+          : `Your GEO Analysis for ${domain || 'your site'} — Score: ${geoResult.score}/100`,
         html,
         fromEmail: 'michael@lc.bylineseo.com',
       })

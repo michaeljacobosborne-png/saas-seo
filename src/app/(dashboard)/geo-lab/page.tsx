@@ -6,13 +6,18 @@ import {
   Search, Loader2, AlertCircle, CheckCircle2, ArrowRight,
   History, RefreshCw, ChevronDown, ChevronUp, Copy, Check, ExternalLink,
 } from 'lucide-react'
+import { toAnalysisResult } from '@/components/audit/AuditReportParts'
 
 interface Factor {
   name: string
   score: number
   maxScore: number
-  status: 'good' | 'needs-work' | 'missing'
+  status: 'good' | 'needs-work' | 'missing' | 'unverified'
+  /** False when the factor could not be assessed; excluded from the total. */
+  scored?: boolean
+  label?: string
   detail: string
+  evidence?: { url: string; kind: string; snippet: string }[]
 }
 
 interface Recommendation {
@@ -28,6 +33,12 @@ interface AnalysisResult {
   breakdown: Factor[]
   recommendations: Recommendation[]
   quickWins: string[]
+  scoreWithheld?: boolean
+  withheldReason?: string
+  rawScore?: number
+  assessedMaxScore?: number
+  pagesInspected?: { url: string; ok: boolean; wordCount: number }[]
+  notes?: string[]
 }
 
 interface HistoryEntry {
@@ -41,7 +52,32 @@ interface HistoryEntry {
 
 const playfair = { fontFamily: 'var(--font-playfair, "Playfair Display", serif)' }
 
-function ScoreCircle({ score, grade }: { score: number; grade: string }) {
+function ScoreCircle({ result }: { result: AnalysisResult }) {
+  const { score, grade, scoreWithheld, withheldReason, rawScore, assessedMaxScore } = result
+
+  if (scoreWithheld) {
+    return (
+      <div className="mb-4">
+        <div className="flex items-center gap-6 mb-3">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center border-4 border-[rgba(255,255,255,0.15)] shrink-0">
+            <span className="text-2xl font-bold" style={{ color: 'var(--cream-faint)' }}>—</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--cream)' }}>No score published</p>
+            <p className="text-xs mt-1 max-w-xs" style={{ color: 'var(--cream-faint)' }}>
+              A score is only published when enough of the page could be read to stand behind it.
+            </p>
+          </div>
+        </div>
+        {withheldReason && (
+          <p className="text-sm rounded-xl px-4 py-3 bg-[var(--ink-card)]" style={{ color: 'var(--cream-faint)' }}>
+            {withheldReason}
+          </p>
+        )}
+      </div>
+    )
+  }
+
   const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626'
   const gradeColor =
     score >= 70 ? 'bg-green-100 text-green-700' :
@@ -59,16 +95,35 @@ function ScoreCircle({ score, grade }: { score: number; grade: string }) {
         <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl text-xl font-bold mb-1 ${gradeColor}`}>
           {grade}
         </div>
-        <p className="text-sm" style={{ color: 'var(--cream-faint)' }}>GEO Score / 100</p>
+        <p className="text-sm" style={{ color: 'var(--cream-faint)' }}>Content readiness score / 100</p>
+        {typeof rawScore === 'number' && assessedMaxScore ? (
+          <p className="text-xs" style={{ color: 'var(--cream-faint)' }}>
+            {rawScore} of {assessedMaxScore} points assessed
+          </p>
+        ) : null}
       </div>
     </div>
   )
 }
 
-function StatusBadge({ status }: { status: Factor['status'] }) {
-  const map = { good: 'bg-green-100 text-green-700', 'needs-work': 'bg-amber-100 text-amber-700', missing: 'bg-red-100 text-red-700' }
-  const label = { good: 'Good', 'needs-work': 'Needs work', missing: 'Missing' }
-  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${map[status]}`}>{label[status]}</span>
+function StatusBadge({ status, label }: { status: Factor['status']; label?: string }) {
+  const map: Record<string, string> = {
+    good: 'bg-green-100 text-green-700',
+    'needs-work': 'bg-amber-100 text-amber-700',
+    missing: 'bg-red-100 text-red-700',
+    unverified: 'bg-[var(--ink-card)] text-[var(--cream-faint)] border border-[rgba(255,255,255,0.12)]',
+  }
+  const labels: Record<string, string> = {
+    good: 'Good',
+    'needs-work': 'Needs work',
+    missing: 'Not on this page',
+    unverified: 'Unable to assess',
+  }
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${map[status] ?? map.unverified}`}>
+      {label ?? labels[status] ?? status}
+    </span>
+  )
 }
 
 function PriorityBadge({ priority }: { priority: Recommendation['priority'] }) {
@@ -235,10 +290,13 @@ export default function DashboardGeoAnalyzer() {
 
       const handleEvent = (line: string) => {
         const t = line.trim(); if (!t) return
-        let evt: { type?: string; step?: number; total?: number; message?: string; error?: string } & Partial<AnalysisResult>
+        let evt: { type?: string; step?: number; total?: number; message?: string; error?: string } & Partial<AnalysisResult> &
+          Record<string, unknown>
         try { evt = JSON.parse(t) } catch { return }
         if (evt.type === 'progress') setProgress({ step: evt.step ?? 0, total: evt.total ?? 3, message: evt.message ?? '' })
-        else if (evt.type === 'result') finalResult = { score: evt.score ?? 0, grade: evt.grade ?? 'F', breakdown: evt.breakdown ?? [], recommendations: evt.recommendations ?? [], quickWins: evt.quickWins ?? [] }
+        else if (evt.type === 'result') {
+          finalResult = toAnalysisResult(evt)
+        }
         else if (evt.type === 'error') streamError = evt.error ?? 'Analysis failed.'
       }
 
@@ -372,32 +430,59 @@ export default function DashboardGeoAnalyzer() {
 
             {/* Score */}
             <div className="rounded-2xl border p-6" style={{ background: 'var(--ink-card)', borderColor: 'var(--border)' }}>
-              <ScoreCircle score={result.score} grade={result.grade} />
+              <ScoreCircle result={result} />
               <h2 className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--cream-faint)' }}>
-                7 Factor Breakdown
+                Factor Breakdown
               </h2>
-              <div className="space-y-3">
-                {result.breakdown.map((factor, i) => (
-                  <div key={i}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium" style={{ color: 'var(--cream)' }}>{factor.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>{factor.score}/{factor.maxScore}</span>
-                        <StatusBadge status={factor.status} />
+              <div className="space-y-4">
+                {result.breakdown.map((factor, i) => {
+                  const unscored = factor.scored === false || factor.status === 'unverified'
+                  return (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1 gap-3">
+                        <span className="text-sm font-medium" style={{ color: 'var(--cream)' }}>{factor.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>
+                            {unscored ? '—' : `${factor.score}/${factor.maxScore}`}
+                          </span>
+                          <StatusBadge status={factor.status} label={factor.label} />
+                        </div>
                       </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+                        {!unscored && (
+                          <div className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${Math.round((factor.score / factor.maxScore) * 100)}%`,
+                              backgroundColor: factor.status === 'good' ? '#16a34a' : factor.status === 'needs-work' ? '#d97706' : '#dc2626',
+                            }}
+                          />
+                        )}
+                      </div>
+                      {factor.detail && <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'var(--cream-faint)' }}>{factor.detail}</p>}
+                      {factor.evidence && factor.evidence.length > 0 && (
+                        <details className="mt-1.5">
+                          <summary className="text-xs cursor-pointer" style={{ color: 'var(--copper)' }}>
+                            What we found ({factor.evidence.length})
+                          </summary>
+                          <ul className="mt-1.5 space-y-1.5 pl-3 border-l-2" style={{ borderColor: 'var(--border)' }}>
+                            {factor.evidence.map((e, j) => (
+                              <li key={j} className="text-xs break-words" style={{ color: 'var(--cream-faint)' }}>
+                                <span className="uppercase tracking-wide text-[10px]">{e.kind}</span> {e.snippet}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-                      <div className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${Math.round((factor.score / factor.maxScore) * 100)}%`,
-                          backgroundColor: factor.status === 'good' ? '#16a34a' : factor.status === 'needs-work' ? '#d97706' : '#dc2626',
-                        }}
-                      />
-                    </div>
-                    {factor.detail && <p className="text-xs mt-1" style={{ color: 'var(--cream-faint)' }}>{factor.detail}</p>}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
+              {result.pagesInspected && result.pagesInspected.length > 0 && (
+                <p className="text-xs mt-5 pt-4 border-t leading-relaxed" style={{ color: 'var(--cream-faint)', borderColor: 'var(--border)' }}>
+                  Pages inspected: {result.pagesInspected.filter((p) => p.ok).map((p) => p.url).join(', ') || 'none'}.
+                  {' '}Heuristic assessment of content readiness — not a measurement of actual AI visibility.
+                </p>
+              )}
             </div>
 
             {/* Quick Wins */}

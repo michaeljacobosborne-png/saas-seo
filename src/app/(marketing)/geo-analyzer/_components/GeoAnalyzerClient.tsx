@@ -14,67 +14,16 @@ import {
 import NavLinks from '../../../_components/NavLinks'
 import { rdt } from '@/lib/reddit-pixel'
 
-interface Factor {
-  name: string
-  score: number
-  maxScore: number
-  status: 'good' | 'needs-work' | 'missing'
-  detail: string
-}
-
-interface Recommendation {
-  priority: 'high' | 'medium' | 'low'
-  title: string
-  description: string
-  impact: string
-}
-
-interface AnalysisResult {
-  score: number
-  grade: string
-  breakdown: Factor[]
-  recommendations: Recommendation[]
-  quickWins: string[]
-}
+import {
+  FactorBreakdown,
+  ScoreHeader,
+  toAnalysisResult,
+  type AnalysisResult,
+  type Recommendation,
+} from '@/components/audit/AuditReportParts'
 
 // Playfair Display is loaded globally as a CSS variable in the root layout.
 const playfair = { fontFamily: 'var(--font-playfair, "Playfair Display", serif)' }
-
-function ScoreCircle({ score, grade }: { score: number; grade: string }) {
-  const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626'
-  const gradeColor = score >= 70 ? 'bg-green-100 text-green-700' : score >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
-  return (
-    <div className="flex items-center gap-6 mb-6">
-      <div
-        className="w-24 h-24 rounded-full flex items-center justify-center border-4 shrink-0"
-        style={{ borderColor: color }}
-      >
-        <span className="text-3xl font-bold" style={{ color }}>{score}</span>
-      </div>
-      <div>
-        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl text-2xl font-bold mb-1 ${gradeColor}`}>
-          {grade}
-        </div>
-        <p className="text-sm text-[#57534E]">GEO Score</p>
-        <p className="text-xs text-[#998876]">out of 100</p>
-      </div>
-    </div>
-  )
-}
-
-function StatusBadge({ status }: { status: Factor['status'] }) {
-  const map = {
-    good: 'bg-green-100 text-green-700',
-    'needs-work': 'bg-amber-100 text-amber-700',
-    missing: 'bg-red-100 text-red-700',
-  }
-  const label = { good: 'Good', 'needs-work': 'Needs work', missing: 'Missing' }
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${map[status]}`}>
-      {label[status]}
-    </span>
-  )
-}
 
 function PriorityBadge({ priority }: { priority: Recommendation['priority'] }) {
   const map = {
@@ -173,7 +122,8 @@ export default function GeoAnalyzerClient() {
       const handleEvent = (line: string) => {
         const trimmedLine = line.trim()
         if (!trimmedLine) return
-        let evt: { type?: string; step?: number; total?: number; message?: string; error?: string } & Partial<AnalysisResult>
+        let evt: { type?: string; step?: number; total?: number; message?: string; error?: string } & Partial<AnalysisResult> &
+          Record<string, unknown>
         try {
           evt = JSON.parse(trimmedLine)
         } catch {
@@ -186,13 +136,7 @@ export default function GeoAnalyzerClient() {
             message: evt.message ?? '',
           })
         } else if (evt.type === 'result') {
-          finalResult = {
-            score: evt.score ?? 0,
-            grade: evt.grade ?? 'F',
-            breakdown: evt.breakdown ?? [],
-            recommendations: evt.recommendations ?? [],
-            quickWins: evt.quickWins ?? [],
-          }
+          finalResult = toAnalysisResult(evt)
         } else if (evt.type === 'error') {
           streamError = evt.error ?? 'Analysis failed. Please try again.'
         }
@@ -256,8 +200,8 @@ export default function GeoAnalyzerClient() {
             Is Your Site Invisible to AI?
           </h1>
           <p className="text-lg text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-10">
-            See your GEO score — how likely ChatGPT, Gemini, and Perplexity are to cite and
-            recommend your content.
+            See how ready your content is to be read, understood and quoted by ChatGPT, Gemini and
+            Perplexity — scored against your real page, with the evidence shown.
           </p>
 
           <div className="max-w-xl mx-auto">
@@ -301,9 +245,9 @@ export default function GeoAnalyzerClient() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {[
-              { num: '01', heading: 'Crawl your homepage', body: 'Enter your URL and we fetch your page HTML. No login needed — we read what any visitor would see.' },
-              { num: '02', heading: 'Score 7 GEO factors', body: 'We check schema markup, author signals, direct answers, factual claims, content structure, brand clarity, and freshness.' },
-              { num: '03', heading: 'Get your optimization roadmap', body: 'See exactly which factors hurt your score and get a prioritized list of fixes that will improve your AI citation rate.' },
+              { num: '01', heading: 'Read your page properly', body: 'We fetch your page and parse the whole document — headings, links, lists and structured data — then follow your About and blog links. No login needed.' },
+              { num: '02', heading: 'Score 7 GEO factors', body: 'We check schema markup, author signals, direct answers, factual claims, content structure, brand clarity, and freshness — scored in code, with the evidence shown.' },
+              { num: '03', heading: 'Get a prioritized fix list', body: 'See which factors are weak and why, with the exact text or markup we found. Anything we could not verify is labelled, not guessed at.' },
             ].map((step) => (
               <div key={step.num}>
                 <div style={playfair} className="text-3xl font-bold text-[#B87333] mb-3">
@@ -351,44 +295,16 @@ export default function GeoAnalyzerClient() {
             <div className="space-y-6 mb-8">
               {/* Score + Grade */}
               <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
-                <ScoreCircle score={result.score} grade={result.grade} />
+                <ScoreHeader result={result} scoreLabel="Content readiness score" />
 
-                {/* 7-factor breakdown */}
+                {/* Factor breakdown */}
                 <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-4">
-                  7 Factor Breakdown
+                  Factor Breakdown
                 </h2>
-                <div className="space-y-3">
-                  {result.breakdown.map((factor, i) => (
-                    <div key={i}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#1C1917]">{factor.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-[#998876]">
-                            {factor.score}/{factor.maxScore}
-                          </span>
-                          <StatusBadge status={factor.status} />
-                        </div>
-                      </div>
-                      <div className="h-1.5 bg-[#F7F3EC] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.round((factor.score / factor.maxScore) * 100)}%`,
-                            backgroundColor:
-                              factor.status === 'good'
-                                ? '#16a34a'
-                                : factor.status === 'needs-work'
-                                ? '#d97706'
-                                : '#dc2626',
-                          }}
-                        />
-                      </div>
-                      {factor.detail && (
-                        <p className="text-xs text-[#57534E] mt-1">{factor.detail}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <FactorBreakdown
+                  result={result}
+                  note="This is an assessment of how ready your published content is to be quoted — not a measurement of how often AI tools currently cite you."
+                />
               </div>
 
               {/* Quick Wins */}
@@ -569,8 +485,17 @@ export default function GeoAnalyzerClient() {
               and entity signals (15 pts), direct answer content (20 pts), factual citable claims
               (15 pts), content structure (15 pts), brand and entity clarity (10 pts), and freshness
               signals (10 pts). Each factor is scored based on signals found in your page HTML, with
-              a maximum total of 100 points. A score of 70+ indicates your site is well-positioned
-              for AI citation; below 40 means there are significant gaps to address.
+              a maximum total of 100 points. Each factor is scored in code from what we can actually
+              find in your markup and copy, and every finding shows the evidence behind it. If a
+              factor can&apos;t be checked from the pages we read, it&apos;s marked &ldquo;unable to
+              assess&rdquo; and left out of the total rather than counted against you.
+            </p>
+            <p className="mt-4">
+              This is a heuristic assessment of how ready your content is to be quoted — not a
+              measurement of your actual visibility in AI tools. No one outside OpenAI, Google or
+              Perplexity can measure that from your HTML, and any tool claiming otherwise is
+              guessing. A higher score means fewer structural obstacles to being read, understood
+              and quoted; it is not a prediction of citations.
             </p>
           </div>
         </div>

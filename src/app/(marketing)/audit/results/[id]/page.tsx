@@ -7,8 +7,12 @@ interface Factor {
   name: string
   score: number
   maxScore: number
-  status: 'good' | 'needs-work' | 'missing'
+  status: 'good' | 'needs-work' | 'missing' | 'unverified'
+  /** False when the factor could not be assessed; excluded from the total. */
+  scored?: boolean
+  label?: string
   detail: string
+  evidence?: { url: string; kind: string; snippet: string }[]
 }
 
 interface Recommendation {
@@ -24,6 +28,11 @@ interface AuditResult {
   breakdown: Factor[]
   recommendations: Recommendation[]
   quickWins: string[]
+  scoreWithheld?: boolean
+  withheldReason?: string
+  rawScore?: number
+  assessedMaxScore?: number
+  pagesInspected?: { url: string; ok: boolean }[]
 }
 
 interface AuditRecord {
@@ -57,12 +66,18 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
   const record = data as AuditRecord
   const result = record.result
   const scoreColor = result.score >= 70 ? '#16a34a' : result.score >= 40 ? '#d97706' : '#dc2626'
-  const statusMap = {
+  const statusMap: Record<string, string> = {
     good: 'bg-green-100 text-green-700',
     'needs-work': 'bg-amber-100 text-amber-700',
     missing: 'bg-red-100 text-red-700',
+    unverified: 'bg-[#F7F3EC] text-[#57534E] border border-[#E7E0D6]',
   }
-  const statusLabel = { good: 'Good', 'needs-work': 'Needs work', missing: 'Missing' }
+  const statusLabel: Record<string, string> = {
+    good: 'Good',
+    'needs-work': 'Needs work',
+    missing: 'Not on this page',
+    unverified: 'Unable to assess',
+  }
   const priorityMap = {
     high: 'bg-red-100 text-red-700',
     medium: 'bg-amber-100 text-amber-700',
@@ -90,45 +105,96 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
             Analyzed {new Date(record.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
 
-          <div className="flex items-center gap-6 mb-6">
-            <div
-              className="w-24 h-24 rounded-full flex items-center justify-center border-4 shrink-0"
-              style={{ borderColor: scoreColor }}
-            >
-              <span className="text-3xl font-bold" style={{ color: scoreColor }}>{result.score}</span>
-            </div>
-            <div>
-              <div
-                className="inline-flex items-center justify-center w-14 h-14 rounded-xl text-2xl font-bold mb-1"
-                style={{ backgroundColor: scoreColor + '22', color: scoreColor }}
-              >
-                {result.grade}
+          {result.scoreWithheld ? (
+            <div className="mb-6">
+              <div className="flex items-center gap-6 mb-3">
+                <div className="w-24 h-24 rounded-full flex items-center justify-center border-4 border-[#E7E0D6] shrink-0">
+                  <span className="text-3xl font-bold text-[#998876]">—</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#1c1917]">No score published</p>
+                  <p className="text-xs text-[#998876] max-w-xs mt-1">
+                    A score is only published when enough of the page could be read to stand behind it.
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-[#57534E]">GEO Score</p>
-              <p className="text-xs text-[#998876]">out of 100</p>
+              {result.withheldReason && (
+                <p className="text-sm text-[#57534E] bg-[#F7F3EC] border border-[#E7E0D6] rounded-xl px-4 py-3">
+                  {result.withheldReason}
+                </p>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-6 mb-6">
+              <div
+                className="w-24 h-24 rounded-full flex items-center justify-center border-4 shrink-0"
+                style={{ borderColor: scoreColor }}
+              >
+                <span className="text-3xl font-bold" style={{ color: scoreColor }}>{result.score}</span>
+              </div>
+              <div>
+                <div
+                  className="inline-flex items-center justify-center w-14 h-14 rounded-xl text-2xl font-bold mb-1"
+                  style={{ backgroundColor: scoreColor + '22', color: scoreColor }}
+                >
+                  {result.grade}
+                </div>
+                <p className="text-sm text-[#57534E]">Content readiness score</p>
+                <p className="text-xs text-[#998876]">
+                  {typeof result.rawScore === 'number' && result.assessedMaxScore
+                    ? `${result.rawScore} of ${result.assessedMaxScore} points assessed`
+                    : 'out of 100'}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Breakdown */}
           <div className="space-y-3">
-            {result.breakdown?.map((factor) => (
-              <div key={factor.name} className="flex items-start justify-between gap-4 py-3 border-b border-[#F0ECE4] last:border-0">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm text-[#1c1917]">{factor.name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusMap[factor.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {statusLabel[factor.status] ?? factor.status}
-                    </span>
+            {result.breakdown?.map((factor) => {
+              const unscored = factor.scored === false || factor.status === 'unverified'
+              return (
+                <div key={factor.name} className="flex items-start justify-between gap-4 py-3 border-b border-[#F0ECE4] last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-medium text-sm text-[#1c1917]">{factor.name}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusMap[factor.status] ?? statusMap.unverified}`}>
+                        {factor.label ?? statusLabel[factor.status] ?? factor.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#57534E] leading-relaxed">{factor.detail}</p>
+                    {factor.evidence && factor.evidence.length > 0 && (
+                      <ul className="mt-2 space-y-1 border-l-2 border-[#E7E0D6] pl-3">
+                        {factor.evidence.slice(0, 3).map((e, j) => (
+                          <li key={j} className="text-xs text-[#998876] break-words">
+                            <span className="uppercase tracking-wide text-[10px]">{e.kind}</span> {e.snippet}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  <p className="text-xs text-[#998876]">{factor.detail}</p>
+                  <div className="text-right shrink-0">
+                    {unscored ? (
+                      <span className="text-sm text-[#998876]">—</span>
+                    ) : (
+                      <>
+                        <span className="text-sm font-semibold text-[#1c1917]">{factor.score}</span>
+                        <span className="text-xs text-[#998876]">/{factor.maxScore}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-sm font-semibold text-[#1c1917]">{factor.score}</span>
-                  <span className="text-xs text-[#998876]">/{factor.maxScore}</span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
+
+          <p className="text-xs text-[#998876] mt-5 pt-4 border-t border-[#F0ECE4] leading-relaxed">
+            {result.pagesInspected?.filter((p) => p.ok).length
+              ? `Pages inspected: ${result.pagesInspected.filter((p) => p.ok).map((p) => p.url).join(', ')}. `
+              : ''}
+            This is a heuristic assessment of how ready the published content is to be read and quoted —
+            not a measurement of how often AI tools currently cite this site.
+          </p>
         </div>
 
         {/* Recommendations */}
