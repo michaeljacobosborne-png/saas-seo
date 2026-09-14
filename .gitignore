@@ -56,3 +56,6 @@ src_app_*.txt
 # archives and exported site builds
 *.zip
 byline-site - branded/
+*.tar.gz
+claude-backup.zip
+cowork-audit*
