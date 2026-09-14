@@ -1,11 +1,15 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe } from 'lucide-react'
+import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe, Sparkles, Upload } from 'lucide-react'
 import type { Article } from '@/lib/supabase/types'
+import DuplicateArticleButton from './DuplicateArticleButton'
+import DeleteArticleButton from './DeleteArticleButton'
+import PublishButton from './PublishButton'
+import QuickWrite from '../QuickWrite'
 
 const STATUS_CONFIG: Record<Article['status'], { label: string; className: string; icon: React.ElementType; spin?: boolean }> = {
-  draft: { label: 'Draft', className: 'bg-gray-100 text-gray-600', icon: Clock },
-  brief_ready: { label: 'Brief Ready', className: 'bg-blue-50 text-blue-600', icon: BookOpen },
+  draft: { label: 'Draft', className: 'bg-[var(--ink-card)] text-[var(--cream-dim)]', icon: Clock },
+  brief_ready: { label: 'Brief Ready', className: 'bg-[rgba(184,115,51,0.08)] text-[var(--copper)]', icon: BookOpen },
   generating: { label: 'Generating…', className: 'bg-amber-50 text-amber-600', icon: Loader2, spin: true },
   complete: { label: 'Complete', className: 'bg-green-50 text-green-700', icon: CheckCircle2 },
   published: { label: 'Published', className: 'bg-purple-50 text-purple-700', icon: Globe },
@@ -37,50 +41,67 @@ export default async function ArticlesPage() {
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Articles</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--cream)' }}>Articles</h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>
             AI-generated SEO articles grounded in your brand profile and keyword research.
           </p>
         </div>
-        <Link
-          href="/articles/new"
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New Article
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/articles/import"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors border hover:bg-[rgba(184,115,51,0.08)]"
+            style={{ borderColor: 'rgba(184,115,51,0.25)', color: 'var(--copper)' }}
+          >
+            <Upload className="w-4 h-4" />
+            Import Article
+          </Link>
+          <Link
+            href="/articles/new"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            style={{ background: 'var(--copper)', color: '#F7F3EC' }}
+          >
+            <Plus className="w-4 h-4" />
+            New Article
+          </Link>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <QuickWrite />
       </div>
 
       {list.length === 0 ? (
-        <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center">
-          <div className="inline-flex p-3 bg-indigo-50 rounded-xl mb-4">
-            <FileText className="w-6 h-6 text-indigo-500" />
+        <div className="border-2 border-dashed rounded-2xl p-12 text-center" style={{ borderColor: 'var(--border)' }}>
+          <div className="inline-flex p-3 rounded-xl mb-4" style={{ background: 'rgba(184,115,51,0.08)' }}>
+            <FileText className="w-6 h-6" style={{ color: 'var(--copper-lt)' }} />
           </div>
-          <h3 className="text-base font-semibold text-gray-700 mb-2">No articles yet</h3>
-          <p className="text-sm text-gray-500 max-w-sm mx-auto mb-5">
+          <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--cream-dim)' }}>No articles yet</h3>
+          <p className="text-sm max-w-sm mx-auto mb-5" style={{ color: 'var(--cream-dim)' }}>
             Select keywords from a research project, generate a brief, then produce a full SEO-optimized draft — all in your brand voice.
           </p>
           <Link
             href="/articles/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            style={{ background: 'var(--copper)', color: '#F7F3EC' }}
           >
-            <Plus className="w-4 h-4" />
-            Create your first article
+            <Sparkles className="w-4 h-4" />
+            Generate your first article →
           </Link>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="border rounded-xl overflow-hidden" style={{ background: 'var(--ink)', borderColor: 'var(--border)' }}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Article</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Words</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Scores</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Created</th>
+              <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--ink-card)' }}>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Article</th>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Status</th>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Words</th>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Scores</th>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Created</th>
+                <th className="text-right px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
               {list.map((article) => {
                 const statusCfg = STATUS_CONFIG[article.status] ?? STATUS_CONFIG.draft
                 const StatusIcon = statusCfg.icon
@@ -88,40 +109,53 @@ export default async function ArticlesPage() {
                 const scores = article.scores as any
 
                 return (
-                  <tr key={article.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={article.id}
+                    className="transition-colors hover:bg-[var(--ink-card)]"
+                    style={{ borderColor: 'var(--border)' }}
+                  >
                     <td className="px-4 py-3">
                       <Link href={`/articles/${article.id}`} className="group">
-                        <div className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                        <div className="font-medium group-hover:text-[var(--copper)] transition-colors line-clamp-1" style={{ color: 'var(--cream)' }}>
                           {article.title ?? article.target_keyword ?? 'Untitled draft'}
                         </div>
                         {article.target_keyword && article.title && (
-                          <div className="text-xs text-gray-400 mt-0.5">{article.target_keyword}</div>
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--cream-faint)' }}>{article.target_keyword}</div>
                         )}
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.className}`}>
-                        <StatusIcon className={`w-3 h-3 ${statusCfg.spin ? 'animate-spin' : ''}`} />
-                        {statusCfg.label}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.className}`}>
+                          <StatusIcon className={`w-3 h-3 ${statusCfg.spin ? 'animate-spin' : ''}`} />
+                          {statusCfg.label}
+                        </span>
+                        <PublishButton articleId={article.id} initialStatus={article.status} />
+                      </div>
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-gray-500 text-xs">
+                    <td className="px-4 py-3 tabular-nums text-xs" style={{ color: 'var(--cream-dim)' }}>
                       {article.word_count ? article.word_count.toLocaleString() : '—'}
                     </td>
                     <td className="px-4 py-3">
                       {scores ? (
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-gray-400">SEO</span>
+                          <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>SEO</span>
                           <ScorePill score={scores.seo?.score ?? 0} />
-                          <span className="text-xs text-gray-400">AEO</span>
+                          <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>AEO</span>
                           <ScorePill score={scores.aeo?.score ?? 0} />
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-300">Not scored</span>
+                        <span className="text-xs" style={{ color: 'var(--cream-dim)' }}>Not scored</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-400">
+                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--cream-faint)' }}>
                       {new Date(article.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <DuplicateArticleButton articleId={article.id} />
+                        <DeleteArticleButton articleId={article.id} />
+                      </div>
                     </td>
                   </tr>
                 )
