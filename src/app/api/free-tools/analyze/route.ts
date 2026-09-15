@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 import { AUDIT_STEPS, AuditError, runAudit } from '@/lib/geo-audit'
+import { consumeRun, identityFor } from '@/lib/geo-audit/rate-limit'
 
 /**
  * Shared NDJSON streaming endpoint for the free GEO and AO analyzers.
@@ -21,6 +22,19 @@ export async function POST(request: Request) {
   if (!url || !url.trim()) return json({ error: 'url is required' }, 400)
   if (type !== 'geo' && type !== 'ao') return json({ error: 'type must be "geo" or "ao"' }, 400)
 
+  // Rate limit before doing any paid work. Presented as a budget, not a wall:
+  // the remaining count rides on every response so the UI can show it up front.
+  const budget = await consumeRun(identityFor(request.headers), { tool: type })
+  if (!budget.allowed) {
+    return json(
+      {
+        error: `You've used all ${budget.limit} free runs for today. Your next run is available after ${new Date(budget.resetsAt).toUTCString()}.`,
+        rateLimit: budget,
+      },
+      429,
+    )
+  }
+
   const encoder = new TextEncoder()
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -33,7 +47,7 @@ export async function POST(request: Request) {
           now: new Date(),
           onProgress: (message, step) => send({ type: 'progress', message, step, total: AUDIT_STEPS }),
         })
-        send({ type: 'result', ...report })
+        send({ type: 'result', ...report, rateLimit: budget })
       } catch (err) {
         send({
           type: 'error',

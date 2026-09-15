@@ -7,13 +7,15 @@
  */
 
 import { crawlKeyPages, findKeyPages, pageForRole, type KeyPageResult } from './crawl'
+import { assessAccess, type AccessReport } from './access'
+import { fetchLlmsTxt, fetchRobotsTxt } from './robots'
 import { extractPage, truncate, type ExtractedPage } from './extract'
 import { fetchPage, normaliseUrl, type FetchOptions } from './fetch'
 import { narrate, type NarrateOutput } from './narrate'
 import { scoreAo } from './score-ao'
-import { scoreGeo } from './score-geo'
+import { scoreCrawlerAccess, scoreGeo } from './score-geo'
 import { computeTotals, findScoreInconsistencies } from './scoring'
-import type { AuditReport, Factor, InspectedPage } from './types'
+import type { AuditReport, ChainOfCustody, Factor, InspectedPage } from './types'
 
 export * from './types'
 export { extractPage } from './extract'
@@ -75,6 +77,48 @@ export async function runAudit(
   onProgress('Reading the page content…', 2, AUDIT_STEPS)
   const home = extractPage(fetched.html, fetched.finalUrl)
 
+  // ── 2a. Crawler access. Two small same-origin fetches, run in parallel. ─────
+  onProgress('Checking crawler access…', 3, AUDIT_STEPS)
+  const [robotsResult, llmsResult] = await Promise.all([
+    fetchRobotsTxt(fetched.finalUrl, { fetchImpl: fetchOptions.fetchImpl, userAgent: fetched.userAgent }),
+    fetchLlmsTxt(fetched.finalUrl, { fetchImpl: fetchOptions.fetchImpl }),
+  ])
+
+  const access = assessAccess({
+    robots: robotsResult,
+    llmsTxt: llmsResult,
+    requestedUrl: url,
+    finalUrl: fetched.finalUrl,
+    httpStatus: fetched.status,
+    headers: fetched.headers,
+    metaRobots: home.metaRobots,
+    canonical: home.canonical || null,
+    jsOnlySuspected: fetched.jsOnlySuspected,
+  })
+
+  if (robotsResult.state === 'unknown' && robotsResult.note) notes.push(robotsResult.note)
+
+  const couldNotFetch = [...fetched.couldNotFetch]
+  if (robotsResult.state === 'unknown') {
+    couldNotFetch.push({ url: robotsResult.url, reason: robotsResult.note ?? 'robots.txt unreadable' })
+  }
+
+  const truncations = fetched.truncation ? [fetched.truncation] : []
+  if (fetched.truncation) notes.push(fetched.truncation.disclosure)
+
+  const chainOfCustody: ChainOfCustody = {
+    fetchedAt: now.toISOString(),
+    userAgent: fetched.userAgent,
+    renderMode: fetched.renderMode,
+    renderedBy: fetched.renderedBy,
+    requestedUrl: url,
+    finalUrl: fetched.finalUrl,
+    httpStatus: fetched.status,
+    elapsedMs: fetched.elapsedMs,
+    couldNotFetch,
+    truncations,
+  }
+
   pagesInspected.push({
     url,
     finalUrl: fetched.finalUrl,
@@ -86,7 +130,20 @@ export async function runAudit(
   })
 
   if (!home.hasMeaningfulContent) {
-    return incompleteReport({ type, url, finalUrl: fetched.finalUrl, now, home, pagesInspected, notes, fetchNote: fetched.note })
+    // Access is still fully assessable here, and on a JS-only page it is the
+    // most useful part of the report — so it is passed through, not discarded.
+    return incompleteReport({
+      type,
+      url,
+      finalUrl: fetched.finalUrl,
+      now,
+      home,
+      pagesInspected,
+      notes,
+      fetchNote: fetched.note,
+      chainOfCustody,
+      access,
+    })
   }
 
   // ── 3. Follow the internal links sitewide claims depend on ──────────────────
@@ -115,7 +172,7 @@ export async function runAudit(
   }
 
   // ── 4. Score deterministically, then write prose about the result ──────────
-  const scoreInput = { home, keyPages, now }
+  const scoreInput = { home, keyPages, now, access }
   const factors = type === 'geo' ? scoreGeo(scoreInput) : scoreAo(scoreInput)
   const totals = computeTotals(factors)
 
@@ -141,11 +198,16 @@ export async function runAudit(
     if (narration.usedFallback) {
       notes.push('Recommendations were generated without the language model; wording is plainer than usual.')
     }
+    if (narration.truncation) {
+      chainOfCustody.truncations.push(narration.truncation)
+      notes.push(narration.truncation.disclosure)
+    }
   } else {
     const { fallbackNarration } = await import('./narrate')
     narration = {
       ...fallbackNarration({ type, url: fetched.finalUrl, factors, alreadyPresent: [], scoreWithheld: totals.scoreWithheld }),
       usedFallback: true,
+      truncation: null,
     }
   }
 
@@ -168,6 +230,8 @@ export async function runAudit(
     incomplete: totals.scoreWithheld || factors.some((f) => !f.scored) || pagesInspected.some((p) => !p.ok),
     pagesInspected,
     notes,
+    chainOfCustody,
+    access,
   }
 }
 
@@ -184,16 +248,20 @@ function incompleteReport(args: {
   pagesInspected: InspectedPage[]
   notes: string[]
   fetchNote?: string
+  chainOfCustody: ChainOfCustody
+  access: AccessReport
 }): AuditReport {
-  const { type, url, finalUrl, now, home, pagesInspected, notes, fetchNote } = args
+  const { type, url, finalUrl, now, home, pagesInspected, notes, fetchNote, chainOfCustody, access } = args
 
-  const reason =
-    fetchNote ??
-    `Only ${home.wordCount} words of readable text could be extracted from this page. Its content is most likely rendered by JavaScript, which this audit does not execute.`
+  const reason = access.jsOnlyContent
+    ? `Only ${home.wordCount} words of readable text are present in the raw HTML, so this page's content appears only after JavaScript runs. AI crawlers such as GPTBot and PerplexityBot do not execute JavaScript, so they cannot see this content either.`
+    : (fetchNote ??
+      `Only ${home.wordCount} words of readable text could be extracted from this page.`)
 
   const names =
     type === 'geo'
       ? ([
+          ['crawler-access', 'AI crawler access', 15],
           ['schema', 'Schema markup', 15],
           ['author', 'Author/entity signals', 15],
           ['direct-answers', 'Direct answer content', 20],
@@ -211,6 +279,11 @@ function incompleteReport(args: {
           ['related-coverage', 'Related question coverage', 10],
         ] as const)
 
+  // Crawler access does not depend on page content, so it is genuinely
+  // assessable even here — and on a JS-only page it is the headline finding.
+  // Everything content-dependent stays unverified.
+  const accessFactor = type === 'geo' ? scoreCrawlerAccess({ home, keyPages: [], now, access }) : null
+
   const factors: Factor[] = names.map(([id, name, maxScore]) => ({
     id,
     name,
@@ -223,6 +296,11 @@ function incompleteReport(args: {
     detail: reason,
     evidence: [],
   }))
+
+  if (accessFactor) {
+    const i = factors.findIndex((f) => f.id === accessFactor.id)
+    if (i !== -1) factors[i] = accessFactor
+  }
 
   const totals = computeTotals(factors)
 
@@ -243,8 +321,10 @@ function incompleteReport(args: {
     url,
     finalUrl,
     analyzedAt: now.toISOString(),
-    rawScore: 0,
-    assessedMaxScore: 0,
+    // Taken from computeTotals, not hardcoded: crawler access can be scored
+    // here even when every content factor is unverified.
+    rawScore: totals.rawScore,
+    assessedMaxScore: totals.assessedMaxScore,
     totalMaxScore: totals.totalMaxScore,
     scoreWithheld: true,
     withheldReason: reason,
@@ -252,6 +332,8 @@ function incompleteReport(args: {
     incomplete: true,
     pagesInspected,
     notes,
+    chainOfCustody,
+    access,
   }
 }
 

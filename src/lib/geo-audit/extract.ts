@@ -43,6 +43,28 @@ export interface StructuredDataNode {
   source: 'json-ld' | 'microdata'
 }
 
+/**
+ * A JSON-LD `<script>` block kept verbatim with its position in the source.
+ *
+ * Retained so the evidence pane can show the user's own markup line-numbered,
+ * and so a *syntax error* is reported as a syntax error rather than silently
+ * becoming "no structured data found" — which is a materially different and
+ * much less useful finding.
+ */
+export interface JsonLdBlock {
+  /** Verbatim inner text of the script tag. */
+  raw: string
+  /** 1-based line of the opening `<script>` tag. */
+  startLine: number
+  /** 1-based line of the closing `</script>` tag. */
+  endLine: number
+  valid: boolean
+  /** Parser message when `valid` is false. */
+  error?: string
+  /** Types found in this block, empty when invalid. */
+  types: string[]
+}
+
 export interface Testimonial {
   quote: string
   attribution: string
@@ -66,6 +88,10 @@ export interface ExtractedPage {
   tables: TableBlock[]
   structuredData: StructuredDataNode[]
   structuredDataTypes: string[]
+  /** Raw JSON-LD blocks with line numbers and syntax errors, for the evidence pane. */
+  jsonLdBlocks: JsonLdBlock[]
+  /** Content of `<meta name="robots">`, needed for the access assessment. */
+  metaRobots: string | null
   dates: ExtractedDate[]
   emails: string[]
   phones: string[]
@@ -101,6 +127,9 @@ export function extractPage(html: string, pageUrl: string): ExtractedPage {
   const metaDescription = attr($, 'meta[name="description"]', 'content')
   const lang = $('html').attr('lang')?.trim() ?? ''
   const canonical = attr($, 'link[rel="canonical"]', 'href')
+
+  // Read from the raw source so we keep byte offsets for the evidence pane.
+  const jsonLdBlocks = locateJsonLdBlocks(html)
 
   // Structured data must be read before we strip <script> tags.
   const structuredData = [...extractJsonLd($), ...extractMicrodata($)]
@@ -197,6 +226,8 @@ export function extractPage(html: string, pageUrl: string): ExtractedPage {
     tables,
     structuredData,
     structuredDataTypes,
+    jsonLdBlocks,
+    metaRobots: attr($, 'meta[name="robots"]', 'content') || null,
     dates,
     emails,
     phones,
@@ -306,6 +337,62 @@ function extractMainText($: Cheerio): string {
   body.find('nav,header,footer,aside,[role="navigation"],[role="banner"],[role="contentinfo"]').remove()
   const t = normalise(body.text())
   return countWords(t) >= MIN_MEANINGFUL_WORDS ? t : ''
+}
+
+/**
+ * Locate JSON-LD blocks in the raw source, keeping verbatim text and line
+ * numbers. Done with a scan over the source rather than through the DOM because
+ * the DOM discards positions, and a finding that cannot point at a line number
+ * cannot reach the top of the specificity ladder.
+ */
+export function locateJsonLdBlocks(html: string): JsonLdBlock[] {
+  const blocks: JsonLdBlock[] = []
+  if (!html) return blocks
+
+  const pattern = /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script\s*>/gi
+  let match: RegExpExecArray | null
+
+  while ((match = pattern.exec(html)) !== null) {
+    const raw = match[1]
+    const startLine = lineAt(html, match.index)
+    const endLine = startLine + raw.split('\n').length - 1
+
+    const trimmed = raw.trim()
+    if (!trimmed) {
+      blocks.push({ raw, startLine, endLine, valid: false, error: 'The block is empty.', types: [] })
+      continue
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      blocks.push({
+        raw,
+        startLine,
+        endLine,
+        valid: true,
+        types: unique(flattenJsonLd(parsed).flatMap(typesOf)),
+      })
+    } catch (err) {
+      blocks.push({
+        raw,
+        startLine,
+        endLine,
+        valid: false,
+        error: err instanceof Error ? err.message : String(err),
+        types: [],
+      })
+    }
+  }
+
+  return blocks
+}
+
+function lineAt(text: string, index: number): number {
+  let line = 1
+  for (let i = 0; i < index && i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) line++
+  }
+  return line
 }
 
 function extractJsonLd($: Cheerio): StructuredDataNode[] {

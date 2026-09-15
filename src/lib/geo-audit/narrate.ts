@@ -13,6 +13,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { truncate } from './extract'
+import { capModelInput, type Truncation } from './limits'
 import type { Factor, Recommendation } from './types'
 
 export interface NarrateInput {
@@ -29,6 +30,8 @@ export interface NarrateOutput {
   quickWins: string[]
   /** True when the model was unavailable and the fallback wording was used. */
   usedFallback: boolean
+  /** Set when the findings summary was capped before being sent to the model. */
+  truncation: Truncation | null
 }
 
 const SYSTEM_PROMPT = `You write the prose for a website content-readiness report. The analysis is already complete: factors have been scored in code from evidence extracted from the page. You are writing recommendations only.
@@ -54,7 +57,12 @@ export async function narrate(
   const apiKey = process.env.ANTHROPIC_API_KEY
   const client = opts.client ?? (apiKey ? new Anthropic({ apiKey }) : null)
 
-  if (!client) return { ...fallbackNarration(input), usedFallback: true }
+  if (!client) return { ...fallbackNarration(input), usedFallback: true, truncation: null }
+
+  // Hard spend guard. The model never sees raw HTML, only findings and evidence
+  // snippets, but an adversarial page can still inflate those — so the payload
+  // is capped and any cut is disclosed in the report rather than hidden.
+  const { text: userMessage, truncation } = capModelInput(buildUserMessage(input))
 
   try {
     const res = await client.messages.create(
@@ -62,7 +70,7 @@ export async function narrate(
         model: opts.model ?? 'claude-haiku-4-5-20251001',
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: buildUserMessage(input) }],
+        messages: [{ role: 'user', content: userMessage }],
       },
       { timeout: opts.timeoutMs ?? 20_000 },
     )
@@ -72,14 +80,14 @@ export async function narrate(
     const normalised = normaliseNarration(parsed)
 
     if (normalised.recommendations.length === 0) {
-      return { ...fallbackNarration(input), usedFallback: true }
+      return { ...fallbackNarration(input), usedFallback: true, truncation }
     }
     if (normalised.quickWins.length === 0) {
       normalised.quickWins = fallbackNarration(input).quickWins
     }
-    return { ...normalised, usedFallback: false }
+    return { ...normalised, usedFallback: false, truncation }
   } catch {
-    return { ...fallbackNarration(input), usedFallback: true }
+    return { ...fallbackNarration(input), usedFallback: true, truncation }
   }
 }
 
@@ -145,8 +153,7 @@ function parseJson(text: string): unknown {
 /**
  * Strips the claims the prompt forbids, in case the model produces them anyway.
  * Belt and braces: a wrong number in a lead-gen report is worse than blander copy.
- */
-/**
+ *
  * An impact line states what a change addresses — it never needs a number, so
  * any digit is treated as a predicted gain and the line is dropped. That is
  * blunt on purpose: the previous version shipped impacts like "Could add 12-15

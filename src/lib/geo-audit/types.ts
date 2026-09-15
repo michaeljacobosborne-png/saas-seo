@@ -11,6 +11,8 @@
  *    text or markup snippet.
  */
 
+import type { AccessReport } from './access'
+
 export type FactorState = 'present' | 'absent' | 'unverified'
 
 /** Legacy-compatible status values. `unverified` is new; older UIs fall back. */
@@ -81,6 +83,36 @@ export interface InspectedPage {
 
 export type Confidence = 'high' | 'partial' | 'low'
 
+/**
+ * Provenance header shown on every report.
+ *
+ * The point is reproducibility: a reader should be able to tell exactly what we
+ * fetched, as whom, when, and what we failed to get. `couldNotFetch` is the item
+ * almost no tool builds, and it is what turns a mystifying "your schema is
+ * missing" into "we were blocked from loading the script that injects it".
+ */
+export interface ChainOfCustody {
+  fetchedAt: string
+  /** The exact User-Agent string sent. */
+  userAgent: string
+  /** Raw HTML only on free runs; rendering is an entitled capability. */
+  renderMode: 'raw' | 'rendered'
+  renderedBy?: string
+  requestedUrl: string
+  finalUrl: string
+  httpStatus: number | null
+  elapsedMs: number
+  /** Resources we could not load, itemised. */
+  couldNotFetch: { url: string; reason: string }[]
+  /** Every truncation applied, disclosed rather than silent. */
+  truncations: {
+    subject: string
+    originalBytes: number
+    keptBytes: number
+    disclosure: string
+  }[]
+}
+
 export interface AuditReport {
   // ── Legacy-compatible surface (stored in audit_results.result JSONB) ───────
   /**
@@ -121,6 +153,11 @@ export interface AuditReport {
   pagesInspected: InspectedPage[]
   /** Operator-facing notes: render fallback used, pages that failed, etc. */
   notes: string[]
+
+  /** Provenance for this run. Always present. */
+  chainOfCustody: ChainOfCustody
+  /** Crawler access, robots.txt, llms.txt and indexing directives. */
+  access: AccessReport
 }
 
 // ── Score thresholds — the single source of truth for labels ────────────────

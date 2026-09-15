@@ -60,7 +60,8 @@ describe('runAudit — real page, GEO', () => {
 
     expectInternallyConsistent(report)
     expect(report.scoreWithheld).toBe(false)
-    expect(report.breakdown).toHaveLength(7)
+    // 7 content factors + AI crawler access.
+    expect(report.breakdown).toHaveLength(8)
     expect(report.rawScore).toBe(report.breakdown.reduce((s, f) => s + f.score, 0))
   })
 
@@ -187,14 +188,19 @@ describe('runAudit — incomplete extraction', () => {
     expectInternallyConsistent(report)
   })
 
-  it('marks every factor unable-to-assess rather than missing', async () => {
+  it('marks every content factor unable-to-assess rather than missing', async () => {
     const report = await runAudit('https://example.com/', 'geo', {
       ...BASE_OPTIONS,
       fetchImpl: stubFetch({ 'https://example.com/': SHELL }),
     })
 
-    expect(report.breakdown).toHaveLength(7)
-    for (const f of report.breakdown) {
+    expect(report.breakdown).toHaveLength(8)
+
+    // Crawler access does not depend on page content, so it is still assessed —
+    // and on a JS-only shell it is the most useful finding in the report.
+    const content = report.breakdown.filter((f) => f.id !== 'crawler-access')
+    expect(content).toHaveLength(7)
+    for (const f of content) {
       expect(f.state).toBe('unverified')
       expect(f.scored).toBe(false)
       expect(f.status).toBe('unverified')
@@ -202,6 +208,10 @@ describe('runAudit — incomplete extraction', () => {
       // The critical distinction: not "missing", which would read as a real fault.
       expect(f.status).not.toBe('missing')
     }
+
+    // The score is still withheld: one scored factor out of 115 points is far
+    // below the threshold at which a total means anything.
+    expect(report.scoreWithheld).toBe(true)
   })
 
   it('applies the same handling to the AO analyzer', async () => {
@@ -242,7 +252,8 @@ describe('runAudit — failed scraping', () => {
 
     const error = await runAudit('https://nope.invalid/', 'geo', { ...BASE_OPTIONS, fetchImpl: boom }).catch((e) => e)
     expect(error).toBeInstanceOf(AuditError)
-    expect(String(error.message)).toMatch(/could not reach/i)
+    // The fetch layer now names the actual failure rather than saying 'could not reach'.
+    expect(String(error.message)).toMatch(/could not be resolved/i)
   })
 
   it('does not produce a report object at all when the fetch fails', async () => {
@@ -287,6 +298,106 @@ describe('runAudit — recommendations stay factual', () => {
     for (const rec of report.recommendations) {
       expect(rec.impact).not.toMatch(/\d+\s*%|\bby \d+|guarantee/i)
     }
+  })
+})
+
+describe('runAudit — chain of custody and access', () => {
+  const ROBOTS = 'User-agent: *\nDisallow: /admin\n\nUser-agent: GPTBot\nDisallow: /\n'
+
+  function stubWithRobots() {
+    return (async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      if (url.endsWith('/robots.txt')) {
+        return new Response(ROBOTS, { status: 200, headers: { 'content-type': 'text/plain' } })
+      }
+      if (url.endsWith('/llms.txt')) return new Response('', { status: 404 })
+      if (url === COMMA_URL) {
+        return new Response(COMMA_HTML, { status: 200, headers: { 'content-type': 'text/html' } })
+      }
+      return new Response('Not found', { status: 404, headers: { 'content-type': 'text/html' } })
+    }) as typeof fetch
+  }
+
+  it('records provenance for the run', async () => {
+    const report = await runAudit(COMMA_URL, 'geo', { ...BASE_OPTIONS, crawl: false, fetchImpl: stubWithRobots() })
+
+    expect(report.chainOfCustody.fetchedAt).toBe(NOW.toISOString())
+    expect(report.chainOfCustody.userAgent).toMatch(/BylineAuditBot/)
+    expect(report.chainOfCustody.renderMode).toBe('raw')
+    expect(report.chainOfCustody.finalUrl).toBe(COMMA_URL)
+    expect(report.chainOfCustody.httpStatus).toBe(200)
+  })
+
+  it('never renders on a free run, even when the page is a JS shell', async () => {
+    const renderSpy = { called: false }
+    const report = await runAudit('https://example.com/', 'geo', {
+      ...BASE_OPTIONS,
+      fetchImpl: (async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+        if (url.endsWith('/robots.txt') || url.endsWith('/llms.txt')) return new Response('', { status: 404 })
+        return new Response('<html><body><div id="root"></div><script>go()</script></body></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        })
+      }) as typeof fetch,
+      renderFallback: {
+        name: 'spy',
+        isConfigured: () => true,
+        render: async () => {
+          renderSpy.called = true
+          return { html: '<html><body><p>rendered</p></body></html>', finalUrl: 'https://example.com/' }
+        },
+      },
+    })
+
+    // The entitlement gate, not the content, is what decides. A free run has a
+    // hard ceiling of zero paid fetches.
+    expect(renderSpy.called).toBe(false)
+    expect(report.chainOfCustody.renderMode).toBe('raw')
+    // And the JS-only condition surfaces as a finding rather than being hidden.
+    expect(report.access.jsOnlyContent).toBe(true)
+    expect(report.withheldReason).toMatch(/do not execute JavaScript/i)
+  })
+
+  it('scores AI search crawler access but not training crawler access', async () => {
+    const report = await runAudit(COMMA_URL, 'geo', { ...BASE_OPTIONS, crawl: false, fetchImpl: stubWithRobots() })
+
+    const gptbot = report.access.crawlers.find((c) => c.token === 'GPTBot')!
+    expect(gptbot.verdict).toBe('disallowed')
+    expect(gptbot.scored).toBe(false)
+
+    // GPTBot is blocked, but no AI *search* crawler is, so the factor is clean.
+    const factor = report.breakdown.find((f) => f.id === 'crawler-access')!
+    expect(factor.detail).not.toMatch(/GPTBot/)
+    expect(factor.status).toBe('good')
+  })
+
+  it('reports llms.txt without scoring it', async () => {
+    const report = await runAudit(COMMA_URL, 'geo', { ...BASE_OPTIONS, crawl: false, fetchImpl: stubWithRobots() })
+    expect(report.access.llmsTxt.present).toBe(false)
+    expect(report.access.llmsTxt.copy).toMatch(/does not affect your score/i)
+
+    const factor = report.breakdown.find((f) => f.id === 'crawler-access')!
+    expect(factor.detail).not.toMatch(/llms\.txt/i)
+  })
+
+  it('marks crawler access unverified when robots.txt is unreadable', async () => {
+    const report = await runAudit(COMMA_URL, 'geo', {
+      ...BASE_OPTIONS,
+      crawl: false,
+      fetchImpl: (async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+        if (url.endsWith('/robots.txt')) return new Response('', { status: 503 })
+        if (url.endsWith('/llms.txt')) return new Response('', { status: 404 })
+        return new Response(COMMA_HTML, { status: 200, headers: { 'content-type': 'text/html' } })
+      }) as typeof fetch,
+    })
+
+    const factor = report.breakdown.find((f) => f.id === 'crawler-access')!
+    expect(factor.scored).toBe(false)
+    expect(factor.status).toBe('unverified')
+    expect(report.chainOfCustody.couldNotFetch.some((c) => c.url.endsWith('/robots.txt'))).toBe(true)
+    expectInternallyConsistent(report)
   })
 })
 

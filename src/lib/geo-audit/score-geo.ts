@@ -12,6 +12,7 @@
 import { assessFreshness } from './dates'
 import { countWords, truncate, type ExtractedPage } from './extract'
 import { pageForRole, type KeyPageResult } from './crawl'
+import { summariseAccess, type AccessReport } from './access'
 import { FactorBuilder } from './scoring'
 import type { Evidence, Factor } from './types'
 
@@ -19,6 +20,8 @@ export interface ScoreInput {
   home: ExtractedPage
   keyPages: KeyPageResult[]
   now: Date
+  /** Absent when access was not assessed (tests, or a run that skipped it). */
+  access?: AccessReport | null
 }
 
 const ev = (url: string, kind: Evidence['kind'], snippet: string): Evidence => ({
@@ -31,6 +34,7 @@ const QUESTION_WORDS = /^(what|why|how|when|where|who|which|can|do|does|is|are|s
 
 export function scoreGeo(input: ScoreInput): Factor[] {
   return [
+    scoreCrawlerAccess(input),
     scoreSchema(input),
     scoreAuthorEntity(input),
     scoreDirectAnswers(input),
@@ -39,6 +43,74 @@ export function scoreGeo(input: ScoreInput): Factor[] {
     scoreBrandClarity(input),
     scoreFreshness(input),
   ]
+}
+
+// ── 0. AI crawler access (15) ─────────────────────────────────────────────────
+// Only AI *search* crawlers are scored. Training crawlers and user-triggered
+// fetchers are reported in `report.access` and deliberately excluded here.
+
+export function scoreCrawlerAccess({ access }: ScoreInput): Factor {
+  const f = new FactorBuilder('crawler-access', 'AI crawler access', 15)
+
+  if (!access) {
+    f.unverified('Crawler access was not assessed on this run.')
+    return f.build()
+  }
+
+  const s = summariseAccess(access)
+  const scoredTotal = s.searchAllowed.length + s.searchBlocked.length
+
+  // Every scored crawler unknown means robots.txt itself was unreadable. That is
+  // genuinely unassessable and must not be scored as either allowed or blocked.
+  if (scoredTotal === 0) {
+    f.unverified(
+      access.robots.note ??
+        'robots.txt could not be read, so AI crawler access could not be determined.',
+    )
+    return f.build()
+  }
+
+  const ratio = s.searchAllowed.length / scoredTotal
+  const awarded = Math.round(ratio * 9)
+  if (s.searchBlocked.length === 0) {
+    f.award(9, `All ${scoredTotal} AI search crawlers are permitted by robots.txt.`, ev(access.robots.url || access.finalUrl, 'text', s.searchAllowed.map((c) => c.token).join(', ')))
+  } else {
+    f.award(
+      awarded,
+      `${s.searchBlocked.length} of ${scoredTotal} AI search crawlers are blocked by robots.txt (${s.searchBlocked.map((c) => c.token).join(', ')}). ${s.searchBlocked[0].reason}`,
+      ev(access.robots.url || access.finalUrl, 'text', s.searchBlocked.map((c) => `${c.token}: ${c.reason}`).join(' | ')),
+    )
+  }
+
+  if (s.searchUnknown.length) {
+    f.miss(`${s.searchUnknown.length} crawler(s) could not be checked and are excluded from this score.`)
+  }
+
+  // Indexing directives are a harder block than robots.txt: robots stops the
+  // fetch, noindex stops the page being used even when it was fetched.
+  if (access.directives.noindex) {
+    f.miss(
+      `The page carries a noindex directive via ${access.directives.noindexSource === 'meta' ? 'its robots meta tag' : 'the X-Robots-Tag response header'}, which asks every engine to leave it out of results entirely.`,
+    )
+    f.note(ev(access.finalUrl, 'meta', access.directives.metaRobots ?? access.directives.xRobotsTag ?? 'noindex'))
+  } else {
+    f.award(3, 'No noindex directive blocks the page from being used.')
+  }
+
+  if (access.jsOnlyContent) {
+    f.miss(
+      'The raw HTML contains almost no readable text, so this content appears only after JavaScript runs. AI crawlers such as GPTBot and PerplexityBot do not execute JavaScript, so they cannot see it.',
+    )
+  } else {
+    f.award(3, 'The page content is present in the raw HTML, so crawlers that do not run JavaScript can read it.')
+  }
+
+  if (access.canonicalMismatch) {
+    f.miss(`The canonical URL points elsewhere (${access.canonical}), so engines may credit that URL instead of this one.`)
+    f.note(ev(access.finalUrl, 'meta', `canonical: ${access.canonical}`))
+  }
+
+  return f.build()
 }
 
 // ── 1. Schema markup (15) ──────────────────────────────────────────────────────

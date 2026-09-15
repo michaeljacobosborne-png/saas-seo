@@ -140,6 +140,50 @@ describe('extractPage — thin and broken input', () => {
   })
 })
 
+describe('extractPage — JSON-LD evidence layer', () => {
+  it('records each block with its line numbers', () => {
+    const html = ['<html>', '<head>', '<script type="application/ld+json">', '{"@type":"Organization","name":"X"}', '</script>', '</head>', '<body><p>hi</p></body>', '</html>'].join('\n')
+    const page = extractPage(html, 'https://example.com/')
+
+    expect(page.jsonLdBlocks).toHaveLength(1)
+    expect(page.jsonLdBlocks[0].startLine).toBe(3)
+    expect(page.jsonLdBlocks[0].valid).toBe(true)
+    expect(page.jsonLdBlocks[0].types).toEqual(['Organization'])
+    expect(page.jsonLdBlocks[0].raw).toContain('"name":"X"')
+  })
+
+  it('reports a syntax error as a syntax error, not as missing markup', () => {
+    // The distinction matters: "your JSON-LD has a trailing comma on line 4" is
+    // actionable; "no structured data found" sends the user to write markup they
+    // have already written.
+    const html = '<html><head>\n<script type="application/ld+json">\n{ "@type": "Organization", }\n</script>\n</head><body><p>hi</p></body></html>'
+    const page = extractPage(html, 'https://example.com/')
+
+    expect(page.jsonLdBlocks).toHaveLength(1)
+    expect(page.jsonLdBlocks[0].valid).toBe(false)
+    expect(page.jsonLdBlocks[0].error).toBeTruthy()
+    expect(page.jsonLdBlocks[0].startLine).toBe(2)
+    // The parsed view still reports nothing, which is correct — but the block is
+    // retained so the report can say why.
+    expect(page.structuredDataTypes).toEqual([])
+  })
+
+  it('finds every block on the real fixture with usable line numbers', () => {
+    const page = extractPage(COMMA_HTML, COMMA_URL)
+    expect(page.jsonLdBlocks.length).toBeGreaterThan(0)
+    for (const b of page.jsonLdBlocks) {
+      expect(b.startLine).toBeGreaterThan(0)
+      expect(b.endLine).toBeGreaterThanOrEqual(b.startLine)
+    }
+    expect(page.jsonLdBlocks.some((b) => b.types.includes('Organization'))).toBe(true)
+  })
+
+  it('reads the robots meta tag', () => {
+    const html = '<html><head><meta name="robots" content="noindex, nofollow"></head><body><p>hi</p></body></html>'
+    expect(extractPage(html, 'https://example.com/').metaRobots).toBe('noindex, nofollow')
+  })
+})
+
 describe('extractPage — invisible characters', () => {
   it('strips icon-font and zero-width codepoints from extracted text', () => {
     // Page builders inject Private Use Area glyphs (icon fonts) and zero-width
