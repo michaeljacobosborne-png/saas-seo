@@ -61,8 +61,18 @@ describe('runAudit — real page, GEO', () => {
     expectInternallyConsistent(report)
     expect(report.scoreWithheld).toBe(false)
     // 7 content factors + AI crawler access.
-    expect(report.breakdown).toHaveLength(8)
+    // Phase B: breakdown is the flattened retrievability checks, 3 per group.
+    expect(report.breakdown).toHaveLength(12)
+    expect(report.retrievability.groups.map((g) => g.id)).toEqual([
+      'access',
+      'parseability',
+      'chunkability',
+      'extractability',
+    ])
     expect(report.rawScore).toBe(report.breakdown.reduce((s, f) => s + f.score, 0))
+    // The legacy `score` mirrors Retrievability and never blends in Citability.
+    expect(report.score).toBe(report.retrievability.score)
+    expect(report.citability.signals).toHaveLength(6)
   })
 
   it('detects the content the previous engine reported as missing', async () => {
@@ -72,18 +82,20 @@ describe('runAudit — real page, GEO', () => {
       fetchImpl: stubFetch({ [COMMA_URL]: COMMA_HTML }),
     })
 
-    const structure = report.breakdown.find((f) => f.id === 'structure')!
+    const structure = report.breakdown.find((f) => f.id === 'chunk-hierarchy')!
     expect(structure.state).toBe('present')
     // Previously: "actual content structure not visible in provided HTML".
     expect(structure.detail).toMatch(/H2 sections/)
     expect(structure.detail).toMatch(/numbered sequence/)
     expect(structure.evidence.length).toBeGreaterThan(0)
 
-    const brand = report.breakdown.find((f) => f.id === 'brand')!
-    expect(brand.evidence.map((e) => e.snippet).join(' ')).toContain('connect@commadigitalconsultancy.com')
+    // Contact details are a citability signal now, not a retrievability check.
+    const entity = report.citability.signals.find((x) => x.id === 'entity-resolution')!
+    expect(entity.evidence.map((e) => e.snippet).join(' ')).toContain('connect@commadigitalconsultancy.com')
 
-    const claims = report.breakdown.find((f) => f.id === 'citable-claims')!
-    expect(claims.detail).toMatch(/client feedback/i)
+    // The attributed testimonial is first-hand evidence — a citability signal.
+    const evidence = report.citability.signals.find((x) => x.id === 'original-evidence')!
+    expect(evidence.detail).toMatch(/client feedback/i)
   })
 
   it('treats January and April dates as past when run in September of the same year', async () => {
@@ -93,11 +105,11 @@ describe('runAudit — real page, GEO', () => {
       fetchImpl: stubFetch({ [COMMA_URL]: COMMA_HTML }),
     })
 
-    const freshness = report.breakdown.find((f) => f.id === 'freshness')!
+    const freshness = report.citability.signals.find((x) => x.id === 'freshness-provenance')!
     expect(freshness.detail).not.toMatch(/future/i)
     expect(freshness.detail).toContain('2026-04-12')
-    expect(freshness.score).toBeLessThanOrEqual(freshness.maxScore)
-    expect(freshness.status).toBe(deriveStatus(freshness.score, freshness.maxScore))
+    expect(freshness.band).not.toBe('unverified')
+    expect(freshness.evidence.length).toBeGreaterThan(0)
   })
 
   it('grounds every scored factor in evidence naming the URL inspected', async () => {
@@ -107,13 +119,21 @@ describe('runAudit — real page, GEO', () => {
       fetchImpl: stubFetch({ [COMMA_URL]: COMMA_HTML }),
     })
 
-    const present = report.breakdown.filter((f) => f.state === 'present')
-    expect(present.length).toBeGreaterThan(0)
-    for (const f of present) {
-      expect(f.evidence.length).toBeGreaterThan(0)
+    // A purely negative finding ("no noindex directive") has no artefact to
+    // quote, so the rule is: evidence must be URL-attributed wherever it exists,
+    // and most checks must carry some.
+    const withEvidence = report.breakdown.filter((f) => f.evidence.length > 0)
+    expect(withEvidence.length).toBeGreaterThanOrEqual(7)
+    for (const f of report.breakdown) {
       for (const e of f.evidence) {
         expect(e.url).toMatch(/^https?:\/\//)
         expect(e.snippet.length).toBeGreaterThan(0)
+      }
+    }
+    // Every positively-banded citability signal must point at something.
+    for (const sig of report.citability.signals) {
+      if (sig.band === 'strong' || sig.band === 'adequate') {
+        expect(sig.evidence.length).toBeGreaterThan(0)
       }
     }
   })
@@ -139,7 +159,7 @@ describe('runAudit — following internal links before making sitewide claims', 
       }),
     })
 
-    const author = report.breakdown.find((f) => f.id === 'author')!
+    const author = report.citability.signals.find((x) => x.id === 'named-authorship')!
     expect(author.detail).toMatch(/About page is published/)
     expect(report.pagesInspected.map((p) => p.url)).toContain('https://commadigitalconsultancy.com/about-us/')
   })
@@ -152,7 +172,7 @@ describe('runAudit — following internal links before making sitewide claims', 
       fetchImpl: stubFetch({ [COMMA_URL]: COMMA_HTML }),
     })
 
-    const author = report.breakdown.find((f) => f.id === 'author')!
+    const author = report.citability.signals.find((x) => x.id === 'named-authorship')!
     expect(author.detail).toMatch(/could not be fetched/)
     expect(author.detail).not.toMatch(/No About or team page/)
     expect(report.notes.join(' ')).toMatch(/Could not inspect the about page/)
@@ -166,7 +186,7 @@ describe('runAudit — following internal links before making sitewide claims', 
       fetchImpl: stubFetch({ 'https://example.com/': html }),
     })
 
-    const author = report.breakdown.find((f) => f.id === 'author')!
+    const author = report.citability.signals.find((x) => x.id === 'named-authorship')!
     expect(author.detail).toMatch(/No About or team page was linked/)
   })
 })
@@ -194,23 +214,31 @@ describe('runAudit — incomplete extraction', () => {
       fetchImpl: stubFetch({ 'https://example.com/': SHELL }),
     })
 
-    expect(report.breakdown).toHaveLength(8)
+    expect(report.breakdown).toHaveLength(12)
 
-    // Crawler access does not depend on page content, so it is still assessed —
-    // and on a JS-only shell it is the most useful finding in the report.
-    const content = report.breakdown.filter((f) => f.id !== 'crawler-access')
-    expect(content).toHaveLength(7)
-    for (const f of content) {
+    // Access and Parseability describe the RAW HTML, so they stay assessable on
+    // a JS-only shell — and there they are the most useful findings in the
+    // report. Only the content-dependent groups go unverified.
+    const contentGroups = report.retrievability.groups.filter(
+      (g) => g.id === 'chunkability' || g.id === 'extractability',
+    )
+    const contentChecks = contentGroups.flatMap((g) => g.checks)
+    expect(contentChecks).toHaveLength(6)
+    for (const f of contentChecks) {
       expect(f.state).toBe('unverified')
       expect(f.scored).toBe(false)
       expect(f.status).toBe('unverified')
       expect(f.label).toBe('Unable to assess')
       // The critical distinction: not "missing", which would read as a real fault.
       expect(f.status).not.toBe('missing')
+      expect(f.detail).toMatch(/not a fault in the page/i)
     }
 
-    // The score is still withheld: one scored factor out of 115 points is far
-    // below the threshold at which a total means anything.
+    // Access is still scored, because robots.txt does not depend on page content.
+    const access = report.retrievability.groups.find((g) => g.id === 'access')!
+    expect(access.scored).toBe(true)
+
+    // The overall score is still withheld — too little was assessable to mean anything.
     expect(report.scoreWithheld).toBe(true)
   })
 
@@ -220,9 +248,13 @@ describe('runAudit — incomplete extraction', () => {
       fetchImpl: stubFetch({ 'https://example.com/': SHELL }),
     })
 
-    expect(report.breakdown).toHaveLength(6)
+    // AO runs the same core, so it degrades identically.
+    expect(report.breakdown).toHaveLength(12)
     expect(report.scoreWithheld).toBe(true)
-    expect(report.breakdown.every((f) => f.state === 'unverified')).toBe(true)
+    const contentChecks = report.retrievability.groups
+      .filter((g) => g.id === 'chunkability' || g.id === 'extractability')
+      .flatMap((g) => g.checks)
+    expect(contentChecks.every((f) => f.state === 'unverified')).toBe(true)
   })
 })
 
@@ -266,7 +298,7 @@ describe('runAudit — failed scraping', () => {
 })
 
 describe('runAudit — AO on a real page', () => {
-  it('scores the six AO factors consistently', async () => {
+  it('scores AO through the same shared core', async () => {
     const report = await runAudit(COMMA_URL, 'ao', {
       ...BASE_OPTIONS,
       crawl: false,
@@ -274,16 +306,25 @@ describe('runAudit — AO on a real page', () => {
     })
 
     expectInternallyConsistent(report)
-    expect(report.breakdown).toHaveLength(6)
+    expect(report.breakdown).toHaveLength(12)
     expect(report.tool).toBe('ao')
 
     // Previously reported as "No H2/H3 headings detected in provided HTML".
-    const headings = report.breakdown.find((f) => f.id === 'question-headings')!
-    expect(headings.detail).not.toMatch(/no H2 or H3 headings/i)
+    const hierarchy = report.breakdown.find((f) => f.id === 'chunk-hierarchy')!
+    expect(hierarchy.detail).toMatch(/H2 sections/)
+    expect(hierarchy.state).toBe('present')
 
-    const scannable = report.breakdown.find((f) => f.id === 'scannable')!
-    expect(scannable.detail).not.toMatch(/only contains head metadata/i)
-    expect(scannable.state).toBe('present')
+    const questions = report.breakdown.find((f) => f.id === 'extract-questions')!
+    expect(questions.detail).not.toMatch(/only contains head metadata/i)
+
+    // GEO and AO must produce identical numbers — the tool only changes framing.
+    const geo = await runAudit(COMMA_URL, 'geo', {
+      ...BASE_OPTIONS,
+      crawl: false,
+      fetchImpl: stubFetch({ [COMMA_URL]: COMMA_HTML }),
+    })
+    expect(report.retrievability.score).toBe(geo.retrievability.score)
+    expect(report.citability.band).toBe(geo.citability.band)
   })
 })
 
@@ -367,7 +408,7 @@ describe('runAudit — chain of custody and access', () => {
     expect(gptbot.scored).toBe(false)
 
     // GPTBot is blocked, but no AI *search* crawler is, so the factor is clean.
-    const factor = report.breakdown.find((f) => f.id === 'crawler-access')!
+    const factor = report.breakdown.find((f) => f.id === 'access-crawlers')!
     expect(factor.detail).not.toMatch(/GPTBot/)
     expect(factor.status).toBe('good')
   })
@@ -377,7 +418,7 @@ describe('runAudit — chain of custody and access', () => {
     expect(report.access.llmsTxt.present).toBe(false)
     expect(report.access.llmsTxt.copy).toMatch(/does not affect your score/i)
 
-    const factor = report.breakdown.find((f) => f.id === 'crawler-access')!
+    const factor = report.breakdown.find((f) => f.id === 'access-crawlers')!
     expect(factor.detail).not.toMatch(/llms\.txt/i)
   })
 
@@ -393,7 +434,7 @@ describe('runAudit — chain of custody and access', () => {
       }) as typeof fetch,
     })
 
-    const factor = report.breakdown.find((f) => f.id === 'crawler-access')!
+    const factor = report.breakdown.find((f) => f.id === 'access-crawlers')!
     expect(factor.scored).toBe(false)
     expect(factor.status).toBe('unverified')
     expect(report.chainOfCustody.couldNotFetch.some((c) => c.url.endsWith('/robots.txt'))).toBe(true)

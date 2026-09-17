@@ -12,9 +12,12 @@ import { fetchLlmsTxt, fetchRobotsTxt } from './robots'
 import { extractPage, truncate, type ExtractedPage } from './extract'
 import { fetchPage, normaliseUrl, type FetchOptions } from './fetch'
 import { narrate, type NarrateOutput } from './narrate'
-import { scoreAo } from './score-ao'
-import { scoreCrawlerAccess, scoreGeo } from './score-geo'
-import { computeTotals, findScoreInconsistencies } from './scoring'
+// Phase B superseded the per-tool factor lists (score-geo / score-ao) with one
+// shared core. Those modules remain only for their helper exports.
+import { scoreRetrievability } from './score-retrievability'
+import { assessCitability } from './assess-citability'
+import { diagnoseGap } from './gap'
+import { computeTotals, findBandInconsistencies, findScoreInconsistencies } from './scoring'
 import type { AuditReport, ChainOfCustody, Factor, InspectedPage } from './types'
 
 export * from './types'
@@ -172,11 +175,22 @@ export async function runAudit(
   }
 
   // ── 4. Score deterministically, then write prose about the result ──────────
-  const scoreInput = { home, keyPages, now, access }
-  const factors = type === 'geo' ? scoreGeo(scoreInput) : scoreAo(scoreInput)
-  const totals = computeTotals(factors)
+  //
+  // One scoring core for both tools. GEO and AO differ only in how the report is
+  // presented and what the prose emphasises — never in how the numbers are
+  // produced, because two scoring systems is two systems to keep honest.
+  const retrievability = scoreRetrievability({ home, access, now })
+  const citability = assessCitability({ home, keyPages, now })
+  const gap = diagnoseGap(retrievability, citability)
 
-  const problems = findScoreInconsistencies(factors, totals)
+  // `breakdown` is the flattened retrievability checks, so it sums to the score
+  // the report publishes. Legacy renderers iterate this unchanged.
+  const factors = retrievability.groups.flatMap((g) => g.checks)
+
+  const problems = [
+    ...findScoreInconsistencies(factors, retrievability),
+    ...findBandInconsistencies(citability.signals, citability.band),
+  ]
   if (problems.length) {
     // A scoring bug must never reach a prospect as a confident number.
     notes.push(...problems.map((p) => `Score consistency problem: ${p}`))
@@ -193,7 +207,7 @@ export async function runAudit(
       url: fetched.finalUrl,
       factors,
       alreadyPresent: summarisePresent(home, keyPages),
-      scoreWithheld: totals.scoreWithheld,
+      scoreWithheld: retrievability.scoreWithheld,
     })
     if (narration.usedFallback) {
       notes.push('Recommendations were generated without the language model; wording is plainer than usual.')
@@ -205,15 +219,18 @@ export async function runAudit(
   } else {
     const { fallbackNarration } = await import('./narrate')
     narration = {
-      ...fallbackNarration({ type, url: fetched.finalUrl, factors, alreadyPresent: [], scoreWithheld: totals.scoreWithheld }),
+      ...fallbackNarration({ type, url: fetched.finalUrl, factors, alreadyPresent: [], scoreWithheld: retrievability.scoreWithheld }),
       usedFallback: true,
       truncation: null,
     }
   }
 
   return {
-    score: totals.score,
-    grade: totals.grade,
+    // Legacy surface. /report/[token] and the stored audit_results rows key off
+    // score + grade + breakdown, so `score` mirrors Retrievability and old
+    // renderers keep working unchanged. Citability is never blended into it.
+    score: retrievability.scoreWithheld ? 0 : retrievability.score,
+    grade: retrievability.grade,
     breakdown: factors,
     recommendations: narration.recommendations,
     quickWins: narration.quickWins,
@@ -221,17 +238,24 @@ export async function runAudit(
     url,
     finalUrl: fetched.finalUrl,
     analyzedAt: now.toISOString(),
-    rawScore: totals.rawScore,
-    assessedMaxScore: totals.assessedMaxScore,
-    totalMaxScore: totals.totalMaxScore,
-    scoreWithheld: totals.scoreWithheld,
-    withheldReason: totals.withheldReason,
-    confidence: totals.confidence,
-    incomplete: totals.scoreWithheld || factors.some((f) => !f.scored) || pagesInspected.some((p) => !p.ok),
+    rawScore: retrievability.rawScore,
+    assessedMaxScore: retrievability.assessedMaxScore,
+    totalMaxScore: retrievability.totalMaxScore,
+    scoreWithheld: retrievability.scoreWithheld,
+    withheldReason: retrievability.withheldReason,
+    confidence: retrievability.confidence,
+    incomplete:
+      retrievability.scoreWithheld ||
+      retrievability.groups.some((g) => !g.scored) ||
+      citability.signals.some((s) => s.band === 'unverified') ||
+      pagesInspected.some((p) => !p.ok),
     pagesInspected,
     notes,
     chainOfCustody,
     access,
+    retrievability,
+    citability,
+    gap,
   }
 }
 
@@ -258,51 +282,13 @@ function incompleteReport(args: {
     : (fetchNote ??
       `Only ${home.wordCount} words of readable text could be extracted from this page.`)
 
-  const names =
-    type === 'geo'
-      ? ([
-          ['crawler-access', 'AI crawler access', 15],
-          ['schema', 'Schema markup', 15],
-          ['author', 'Author/entity signals', 15],
-          ['direct-answers', 'Direct answer content', 20],
-          ['citable-claims', 'Factual citable claims', 15],
-          ['structure', 'Content structure', 15],
-          ['brand', 'Brand/entity clarity', 10],
-          ['freshness', 'Freshness signals', 10],
-        ] as const)
-      : ([
-          ['question-headings', 'Question-based headings', 20],
-          ['snippet-format', 'Featured snippet format', 20],
-          ['faq', 'FAQ/Q&A sections', 15],
-          ['scannable', 'Scannable structure', 20],
-          ['conversational', 'Conversational language', 15],
-          ['related-coverage', 'Related question coverage', 10],
-        ] as const)
-
-  // Crawler access does not depend on page content, so it is genuinely
-  // assessable even here — and on a JS-only page it is the headline finding.
-  // Everything content-dependent stays unverified.
-  const accessFactor = type === 'geo' ? scoreCrawlerAccess({ home, keyPages: [], now, access }) : null
-
-  const factors: Factor[] = names.map(([id, name, maxScore]) => ({
-    id,
-    name,
-    state: 'unverified',
-    score: 0,
-    maxScore,
-    scored: false,
-    status: 'unverified',
-    label: 'Unable to assess',
-    detail: reason,
-    evidence: [],
-  }))
-
-  if (accessFactor) {
-    const i = factors.findIndex((f) => f.id === accessFactor.id)
-    if (i !== -1) factors[i] = accessFactor
-  }
-
-  const totals = computeTotals(factors)
+  // Same scoring core as a normal run. Access and Parseability describe the raw
+  // HTML and stay assessable here; the content-dependent groups are marked
+  // unverified rather than scored zero.
+  const retrievability = scoreRetrievability({ home, access, now, contentReadable: false })
+  const citability = assessCitability({ home, keyPages: [], now })
+  const gap = diagnoseGap(retrievability, citability)
+  const factors = retrievability.groups.flatMap((g) => g.checks)
 
   return {
     score: 0,
@@ -312,7 +298,7 @@ function incompleteReport(args: {
       {
         priority: 'high',
         title: 'This page could not be read well enough to audit',
-        description: `${reason} Re-run the audit against a page that serves its content in HTML, or make the key content server-rendered so search engines and AI crawlers can read it without running scripts.`,
+        description: `${reason} Re-run against a page that serves its content in HTML, or make the key content server-rendered so crawlers can read it without running scripts.`,
         impact: 'Content a crawler cannot read cannot be quoted by anything.',
       },
     ],
@@ -321,11 +307,9 @@ function incompleteReport(args: {
     url,
     finalUrl,
     analyzedAt: now.toISOString(),
-    // Taken from computeTotals, not hardcoded: crawler access can be scored
-    // here even when every content factor is unverified.
-    rawScore: totals.rawScore,
-    assessedMaxScore: totals.assessedMaxScore,
-    totalMaxScore: totals.totalMaxScore,
+    rawScore: retrievability.rawScore,
+    assessedMaxScore: retrievability.assessedMaxScore,
+    totalMaxScore: retrievability.totalMaxScore,
     scoreWithheld: true,
     withheldReason: reason,
     confidence: 'low',
@@ -334,6 +318,9 @@ function incompleteReport(args: {
     notes,
     chainOfCustody,
     access,
+    retrievability: { ...retrievability, scoreWithheld: true, withheldReason: reason },
+    citability,
+    gap,
   }
 }
 

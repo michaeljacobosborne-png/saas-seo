@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { assessAccess, summariseAccess, type AccessInput } from './access'
 import { parseRobotsTxt, type RobotsFetchResult } from './robots'
 import { capModelInput, MAX_FETCH_BYTES, MAX_MODEL_INPUT_CHARS, truncationDisclosure } from './limits'
+import { fetchPage } from './fetch'
 
 function robots(text: string): RobotsFetchResult {
   return {
@@ -166,5 +167,88 @@ describe('cost guards', () => {
     const { text, truncation } = capModelInput('short findings summary')
     expect(truncation).toBeNull()
     expect(text).toBe('short findings summary')
+  })
+})
+
+describe('fetchPage — transient connection failures', () => {
+  function socketError(code: string): Error {
+    const e = new Error('fetch failed')
+    ;(e as unknown as { cause: { code: string } }).cause = { code }
+    return e
+  }
+
+  it('retries once when the connection pool hands back a dead socket', async () => {
+    // UND_ERR_SOCKET is what Node throws when a pooled keep-alive socket was
+    // already closed by the server. Reproduced live: 2 failures in 24 concurrent
+    // requests to a healthy site.
+    let calls = 0
+    const flaky = (async () => {
+      calls++
+      if (calls === 1) throw socketError('UND_ERR_SOCKET')
+      return new Response('<html><body><main><p>' + 'word '.repeat(80) + '</p></main></body></html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      })
+    }) as typeof fetch
+
+    const r = await fetchPage('https://x.test/', { fetchImpl: flaky })
+    expect(calls).toBe(2)
+    expect(r.ok).toBe(true)
+  })
+
+  it('retries an ECONNRESET', async () => {
+    let calls = 0
+    const flaky = (async () => {
+      calls++
+      if (calls === 1) throw socketError('ECONNRESET')
+      return new Response('<html><body><p>ok</p></body></html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      })
+    }) as typeof fetch
+
+    const r = await fetchPage('https://x.test/', { fetchImpl: flaky })
+    expect(calls).toBe(2)
+    expect(r.ok).toBe(true)
+  })
+
+  it('gives up after one retry rather than looping', async () => {
+    let calls = 0
+    const dead = (async () => {
+      calls++
+      throw socketError('ECONNRESET')
+    }) as typeof fetch
+
+    const r = await fetchPage('https://x.test/', { fetchImpl: dead })
+    // 2 for the original host, 2 more for the www. fallback.
+    expect(calls).toBe(4)
+    expect(r.ok).toBe(false)
+  })
+
+  it('does not retry a genuine HTTP error', async () => {
+    let calls = 0
+    const notFound = (async () => {
+      calls++
+      return new Response('', { status: 404, headers: { 'content-type': 'text/html' } })
+    }) as typeof fetch
+
+    const r = await fetchPage('https://x.test/', { fetchImpl: notFound })
+    // One per host (original + www.), no retries.
+    expect(calls).toBe(2)
+    expect(r.ok).toBe(false)
+    expect(r.note).toMatch(/not found/i)
+  })
+
+  it('does not retry a timeout', async () => {
+    let calls = 0
+    const slow = (async () => {
+      calls++
+      const e = new Error('The operation was aborted due to timeout')
+      throw e
+    }) as typeof fetch
+
+    const r = await fetchPage('https://x.test/', { fetchImpl: slow })
+    expect(calls).toBe(2)
+    expect(r.note).toMatch(/did not respond in time/i)
   })
 })

@@ -4,11 +4,14 @@
  */
 
 import {
+  BAND_RANK,
   GOOD_RATIO,
   GRADE_THRESHOLDS,
   MIN_ASSESSED_SHARE,
   NEEDS_WORK_RATIO,
   STATUS_LABELS,
+  type Band,
+  type CitabilitySignal,
   type Confidence,
   type Evidence,
   type Factor,
@@ -91,6 +94,87 @@ export class FactorBuilder {
       evidence: this.evidence,
     }
   }
+}
+
+/**
+ * Builder for a banded citability signal.
+ *
+ * Deliberately has no `award(points)` — bands are assigned from what was found,
+ * not accumulated arithmetically. That is the whole reason citability is banded:
+ * there is no defensible sum that turns "has a named author" and "coined a term"
+ * into a single number.
+ */
+export class SignalBuilder {
+  private evidence: Evidence[] = []
+  private details: string[] = []
+  private assigned: Band | null = null
+  private unverifiedReason: string | null = null
+
+  constructor(
+    readonly id: string,
+    readonly name: string,
+  ) {}
+
+  found(band: Exclude<Band, 'unverified' | 'absent'>, detail: string, evidence?: Evidence | Evidence[]): this {
+    // Keep the strongest band claimed, so ordering of checks cannot change it.
+    if (!this.assigned || BAND_RANK[band] > BAND_RANK[this.assigned]) this.assigned = band
+    if (detail) this.details.push(detail)
+    if (evidence) this.evidence.push(...(Array.isArray(evidence) ? evidence : [evidence]))
+    return this
+  }
+
+  missing(detail: string): this {
+    if (detail) this.details.push(detail)
+    return this
+  }
+
+  unverified(reason: string): this {
+    this.unverifiedReason = reason
+    return this
+  }
+
+  build(): CitabilitySignal {
+    if (this.unverifiedReason) {
+      return {
+        id: this.id,
+        name: this.name,
+        band: 'unverified',
+        state: 'unverified',
+        detail: this.unverifiedReason,
+        evidence: this.evidence,
+      }
+    }
+    const band: Band = this.assigned ?? 'absent'
+    return {
+      id: this.id,
+      name: this.name,
+      band,
+      state: band === 'absent' ? 'absent' : 'present',
+      detail: this.details.join(' ').trim(),
+      evidence: this.evidence,
+    }
+  }
+}
+
+/** Roll individual signals up into one overall band. */
+export function overallBand(signals: CitabilitySignal[]): Band {
+  const scored = signals.filter((s) => s.band !== 'unverified')
+  if (scored.length === 0) return 'unverified'
+
+  const strong = scored.filter((s) => s.band === 'strong').length
+  const adequatePlus = scored.filter((s) => s.band === 'strong' || s.band === 'adequate').length
+  const absent = scored.filter((s) => s.band === 'absent').length
+
+  if (strong >= 3 && absent <= 1) return 'strong'
+  if (adequatePlus >= 3) return 'adequate'
+  if (adequatePlus >= 1) return 'weak'
+  return 'absent'
+}
+
+export function bandCounts(signals: CitabilitySignal[]): Record<Band, number> {
+  const counts: Record<Band, number> = { strong: 0, adequate: 0, weak: 0, absent: 0, unverified: 0 }
+  for (const s of signals) counts[s.band]++
+  return counts
 }
 
 export function clamp(n: number, min: number, max: number): number {
@@ -231,6 +315,64 @@ export function findScoreInconsistencies(factors: Factor[], totals: Totals): str
     if (totals.grade !== expectedGrade) {
       problems.push(`grade "${totals.grade}" contradicts score ${totals.score} (expected "${expectedGrade}")`)
     }
+  }
+
+  return problems
+}
+
+/**
+ * Band-vs-evidence consistency.
+ *
+ * The failure this prevents is a signal claiming `strong` with nothing to show
+ * for it — which is how a heuristic quietly turns into an assertion. Every
+ * positive band must be able to point at something; every `absent` must not.
+ */
+export function findBandInconsistencies(signals: CitabilitySignal[], overall: Band): string[] {
+  const problems: string[] = []
+
+  for (const s of signals) {
+    if (s.band === 'strong' || s.band === 'adequate') {
+      if (s.evidence.length === 0) {
+        problems.push(`${s.name}: band "${s.band}" with no supporting evidence`)
+      }
+      if (s.state !== 'present') {
+        problems.push(`${s.name}: band "${s.band}" but state is "${s.state}"`)
+      }
+    }
+
+    if (s.band === 'absent') {
+      if (s.evidence.length > 0) {
+        problems.push(`${s.name}: band "absent" but ${s.evidence.length} evidence item(s) attached`)
+      }
+      if (s.state !== 'absent') {
+        problems.push(`${s.name}: band "absent" but state is "${s.state}"`)
+      }
+    }
+
+    if (s.band === 'unverified' && s.state !== 'unverified') {
+      problems.push(`${s.name}: band "unverified" but state is "${s.state}"`)
+    }
+
+    if (!s.detail.trim()) {
+      problems.push(`${s.name}: no detail recorded — every signal must say what it looked for`)
+    }
+
+    for (const e of s.evidence) {
+      if (!/^https?:\/\//.test(e.url)) {
+        problems.push(`${s.name}: evidence is not attributed to an inspected URL ("${e.url}")`)
+      }
+    }
+  }
+
+  const expected = overallBand(signals)
+  if (overall !== expected) {
+    problems.push(`overall band "${overall}" does not match the signal distribution (expected "${expected}")`)
+  }
+
+  // An overall band must never outrank every individual signal.
+  const best = signals.reduce((acc, s) => Math.max(acc, BAND_RANK[s.band]), -1)
+  if (BAND_RANK[overall] > best) {
+    problems.push(`overall band "${overall}" is stronger than any individual signal`)
   }
 
   return problems

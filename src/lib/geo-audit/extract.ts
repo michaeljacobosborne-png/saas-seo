@@ -70,6 +70,22 @@ export interface Testimonial {
   attribution: string
 }
 
+/**
+ * A section of the page: a heading plus the prose that follows it, up to the
+ * next heading of the same or higher level.
+ *
+ * This is what makes *proximity* measurable. "Is the brand name near the claim?"
+ * is a question about a block, not about the page — a brand name in the nav and
+ * a claim in the body are not near each other in any sense an engine cares about.
+ */
+export interface ContentBlock {
+  index: number
+  headingText: string | null
+  headingLevel: number | null
+  text: string
+  wordCount: number
+}
+
 export interface ExtractedPage {
   url: string
   title: string
@@ -99,6 +115,8 @@ export interface ExtractedPage {
   boldTerms: string[]
   images: { alt: string; src: string }[]
   testimonials: Testimonial[]
+  /** Heading-delimited sections, for proximity and (later) passage analysis. */
+  blocks: ContentBlock[]
   /** Numbers appearing in the prose, e.g. "156%", "3 steps", "2,400 users". */
   statistics: string[]
   /** Outbound links that look like citations to third-party sources. */
@@ -235,6 +253,7 @@ export function extractPage(html: string, pageUrl: string): ExtractedPage {
     boldTerms,
     images,
     testimonials: extractTestimonials($, cheerio.load(html)),
+    blocks: extractBlocks($),
     statistics: extractStatistics(paragraphs.length ? paragraphs : [mainText]),
     outboundCitations: links.filter(
       (l) => !l.internal && l.absolute.startsWith('http') && !SOCIAL_HOSTS.some((h) => hostOf(l.absolute).endsWith(h)),
@@ -283,6 +302,71 @@ function hostOf(url: string): string {
   } catch {
     return ''
   }
+}
+
+/**
+ * Split the page into heading-delimited blocks.
+ *
+ * Walks the content region in document order, opening a new block at each
+ * heading and accumulating the prose that follows. Text appearing before the
+ * first heading becomes an unheaded lead block, because that is usually the
+ * most quotable passage on a marketing page.
+ *
+ * Must run AFTER boilerplate removal so nav and script text cannot leak in.
+ */
+function extractBlocks($: Cheerio): ContentBlock[] {
+  const root = pickContentRoot($)
+  if (!root) return []
+
+  const blocks: ContentBlock[] = []
+  let current: { headingText: string | null; headingLevel: number | null; parts: string[] } = {
+    headingText: null,
+    headingLevel: null,
+    parts: [],
+  }
+
+  const flush = () => {
+    const text = normalise(current.parts.join(' '))
+    if (text || current.headingText) {
+      blocks.push({
+        index: blocks.length,
+        headingText: current.headingText,
+        headingLevel: current.headingLevel,
+        text,
+        wordCount: countWords(text),
+      })
+    }
+  }
+
+  root.find('h1,h2,h3,h4,h5,h6,p,li,blockquote,td,figcaption').each((_, el) => {
+    const tag = (el as Element).tagName.toLowerCase()
+    const text = normalise($(el).text())
+    if (!text) return
+
+    if (/^h[1-6]$/.test(tag)) {
+      flush()
+      current = { headingText: text, headingLevel: Number(tag.slice(1)), parts: [] }
+    } else {
+      current.parts.push(text)
+    }
+  })
+  flush()
+
+  // Drop empty shells left by headings with no prose beneath them.
+  return blocks.filter((b) => b.wordCount > 0 || b.headingText)
+}
+
+function pickContentRoot($: Cheerio): cheerio.Cheerio<AnyNode> | null {
+  for (const selector of ['main', 'article', '[role="main"]', '#content', '.entry-content']) {
+    const node = $(selector).first()
+    if (node.length && countWords(normalise(node.text())) >= MIN_MEANINGFUL_WORDS) return node
+  }
+  // Fall back to the body with site chrome removed, so a brand name sitting in
+  // the nav or footer cannot be mistaken for one sitting beside a claim.
+  const body = $('body').clone()
+  if (!body.length) return null
+  body.find('nav,header,footer,aside,[role="navigation"],[role="banner"],[role="contentinfo"]').remove()
+  return body
 }
 
 function extractLinks($: Cheerio, pageUrl: string): PageLink[] {

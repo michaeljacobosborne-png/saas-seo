@@ -158,6 +158,17 @@ export interface AuditReport {
   chainOfCustody: ChainOfCustody
   /** Crawler access, robots.txt, llms.txt and indexing directives. */
   access: AccessReport
+
+  // ── Phase B ────────────────────────────────────────────────────────────────
+  /**
+   * Deterministic, rule-derived. `score` above mirrors `retrievability.score`
+   * so stored reports keep rendering in the legacy /report/[token] view.
+   */
+  retrievability: Retrievability
+  /** Heuristic, banded. Never blended with retrievability into one number. */
+  citability: Citability
+  /** The distance between the two, and what it means. */
+  gap: Gap
 }
 
 // ── Score thresholds — the single source of truth for labels ────────────────
@@ -180,6 +191,108 @@ export const NEEDS_WORK_RATIO = 0.4
  * rather than present a misleading one.
  */
 export const MIN_ASSESSED_SHARE = 0.6
+
+// ── Phase B: the two-score model ───────────────────────────────────────────────
+
+/**
+ * Citability is judgement, not rule, so it is banded rather than scored.
+ *
+ * A 0-100 integer would be false precision: there is no defensible arithmetic
+ * that makes "named author" worth 7 points and "coined term" worth 4. Bands say
+ * what we can actually defend.
+ */
+export type Band = 'strong' | 'adequate' | 'weak' | 'absent' | 'unverified'
+
+export const BAND_LABELS: Record<Band, string> = {
+  strong: 'Strong',
+  adequate: 'Adequate',
+  weak: 'Weak',
+  absent: 'Absent',
+  unverified: 'Unable to assess',
+}
+
+/** Ordering used to roll individual signals up into an overall band. */
+export const BAND_RANK: Record<Band, number> = {
+  strong: 3,
+  adequate: 2,
+  weak: 1,
+  absent: 0,
+  unverified: -1,
+}
+
+export interface CitabilitySignal {
+  id: string
+  name: string
+  band: Band
+  state: FactorState
+  /** What was looked for, and what was or was not found. */
+  detail: string
+  evidence: Evidence[]
+}
+
+export interface Citability {
+  /** Roll-up of the six signals. */
+  band: Band
+  label: string
+  signals: CitabilitySignal[]
+  counts: Record<Band, number>
+}
+
+export type RetrievabilityGroupId = 'access' | 'parseability' | 'chunkability' | 'extractability'
+
+export interface RetrievabilityGroup {
+  id: RetrievabilityGroupId
+  name: string
+  /** Points awarded across this group's checks. */
+  score: number
+  maxScore: number
+  /** Points lost — what the UI shows inline, per the deduction presentation. */
+  deduction: number
+  scored: boolean
+  status: FactorStatus
+  label: string
+  /** The individual checks, each carrying its own evidence. */
+  checks: Factor[]
+}
+
+export interface Retrievability {
+  /** 0-100, normalised over the groups we could assess. */
+  score: number
+  grade: string
+  rawScore: number
+  assessedMaxScore: number
+  totalMaxScore: number
+  scoreWithheld: boolean
+  withheldReason?: string
+  confidence: Confidence
+  groups: RetrievabilityGroup[]
+}
+
+export type GapQuadrant =
+  | 'high-retrievable-low-citable'
+  | 'low-retrievable-high-citable'
+  | 'low-both'
+  | 'high-both'
+  | 'indeterminate'
+
+/**
+ * The headline artefact: two scores and the distance between them.
+ *
+ * Wording rule, enforced by test: this may state that content **carries no
+ * attribution anchors**. It may NOT state that the site *is being* retrieved
+ * without attribution — that is an inference about engine behaviour we cannot
+ * observe from a page fetch.
+ */
+export interface Gap {
+  quadrant: GapQuadrant
+  headline: string
+  diagnosis: string
+  /** What to do first, given the quadrant. */
+  nextStep: string
+}
+
+/** Retrievability at or above this is "high" for quadrant purposes. */
+export const HIGH_RETRIEVABILITY = 70
 
 export const STATUS_LABELS: Record<FactorStatus, string> = {
   good: 'Good',

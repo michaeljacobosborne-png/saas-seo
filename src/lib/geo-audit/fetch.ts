@@ -196,11 +196,35 @@ function capHtml(text: string): { html: string; truncation: Truncation | null } 
   }
 }
 
+/**
+ * Connection-level failures that are worth one retry.
+ *
+ * These are not "the site is down" — they are a socket dying between us and a
+ * healthy server. `UND_ERR_SOCKET` in particular is Node's connection pool
+ * handing back a keep-alive socket the server had already closed, which shows up
+ * as an instant failure (single-digit milliseconds) under concurrent requests to
+ * the same host. The engine fetches the page, robots.txt, llms.txt and up to
+ * three linked pages, so it hits that pattern on every run.
+ *
+ * Reproduced against a live site: 12 sequential requests all succeeded, but the
+ * concurrent pattern failed 2 of 24. A single retry clears it.
+ */
+const TRANSIENT_NETWORK_ERROR =
+  /ECONNRESET|UND_ERR_SOCKET|socket hang up|ECONNABORTED|EPIPE|other side closed|terminated/i
+
+function isTransient(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const cause = (err as { cause?: { code?: string; message?: string } }).cause
+  const text = `${err.message} ${cause?.code ?? ''} ${cause?.message ?? ''}`
+  return TRANSIENT_NETWORK_ERROR.test(text)
+}
+
 async function tryFetch(
   url: string,
   timeoutMs: number,
   fetchImpl: typeof fetch,
   userAgent: string,
+  attempt = 0,
 ): Promise<FetchedPage> {
   const started = Date.now()
   try {
@@ -264,6 +288,13 @@ async function tryFetch(
         : undefined,
     }
   } catch (err) {
+    // One retry on a dropped socket, with a short backoff so a fresh connection
+    // is opened rather than another dead pooled one.
+    if (attempt === 0 && isTransient(err)) {
+      await new Promise((r) => setTimeout(r, 250))
+      return tryFetch(url, timeoutMs, fetchImpl, userAgent, 1)
+    }
+
     const message = err instanceof Error ? err.message : String(err)
     return {
       ...emptyResult(url, userAgent, describeNetworkError(message)),
