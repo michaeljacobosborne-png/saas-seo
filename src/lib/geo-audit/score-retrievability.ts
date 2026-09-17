@@ -183,15 +183,29 @@ function scoreAccess({ home, access }: RetrievabilityInput): Factor[] {
   }
 
   if (access.httpStatus === 200) {
-    reachable.award(4, `The page returns HTTP ${access.httpStatus}.`)
+    reachable.award(2, `The page returns HTTP ${access.httpStatus}.`)
   } else {
     reachable.miss(`The page returned HTTP ${access.httpStatus ?? 'unknown'}.`)
   }
+
   if (access.canonicalMismatch) {
     reachable.miss(`The canonical URL points elsewhere (${access.canonical}), so engines may credit that URL instead.`)
     reachable.note(ev(access.finalUrl, 'meta', `canonical: ${access.canonical}`))
+  } else if (home.canonical) {
+    reachable.award(2, 'A canonical URL is declared and matches the page analysed.')
   } else {
-    reachable.award(2, home.canonical ? 'The canonical URL matches the page analysed.' : 'No conflicting canonical URL.')
+    reachable.miss('No canonical URL is declared, so duplicate or parameterised versions of this page compete with it.')
+  }
+
+  // A sitemap declared in robots.txt is how a crawler finds the rest of the
+  // site without guessing. Cheap to add, genuinely checkable, and most sites
+  // that care have one.
+  if (access.robots.sitemaps.length) {
+    reachable.award(2, `robots.txt declares ${access.robots.sitemaps.length} sitemap(s), so crawlers can discover the rest of the site.`, ev(access.robots.url, 'link', access.robots.sitemaps[0]))
+  } else if (access.robots.state === 'present') {
+    reachable.miss('robots.txt declares no Sitemap, so crawlers have to discover pages by following links alone.')
+  } else if (access.robots.state === 'missing') {
+    reachable.miss('No robots.txt is published, so no sitemap is declared to crawlers.')
   }
 
   return [crawlers.build(), indexing.build(), reachable.build()]
@@ -204,37 +218,74 @@ function scoreParseability({ home, access }: RetrievabilityInput): Factor[] {
   const structured = new FactorBuilder('parse-structured-data', 'Structured data validity', 8)
   const cleanliness = new FactorBuilder('parse-dom', 'Markup cleanliness', 5)
 
+  // Thresholds are printed alongside the measured value, so every verdict here
+  // is falsifiable against the user's own page.
   if (access?.jsOnlyContent) {
     serverText.miss(
       'The raw HTML contains almost no readable text, so this content appears only after JavaScript runs. AI crawlers such as GPTBot and PerplexityBot do not execute JavaScript and cannot see it.',
     )
+  } else if (home.wordCount >= 1200) {
+    serverText.award(9, `${home.wordCount} words of content are present in the raw HTML (target: 1,200+), with no JavaScript required.`, ev(home.url, 'text', truncate(home.mainText, 200)))
   } else if (home.wordCount >= 600) {
-    serverText.award(12, `${home.wordCount} words of content are present in the raw HTML, with no JavaScript required.`, ev(home.url, 'text', truncate(home.mainText, 200)))
+    serverText.award(6, `${home.wordCount} words are present in the raw HTML. That reads as a complete page, but pages that get quoted usually carry 1,200+ words of substance.`)
   } else if (home.wordCount >= 200) {
-    serverText.award(8, `${home.wordCount} words are present in the raw HTML — readable, but thin for a page meant to be quoted.`)
+    serverText.award(3, `${home.wordCount} words are present in the raw HTML — readable, but thin for a page meant to be quoted (target: 1,200+).`)
   } else {
-    serverText.award(3, `Only ${home.wordCount} words are present in the raw HTML.`)
+    serverText.award(1, `Only ${home.wordCount} words are present in the raw HTML (target: 1,200+).`)
+  }
+
+  // Text-to-markup ratio: content buried in a megabyte of div soup is harder to
+  // extract cleanly even when the word count looks healthy.
+  const ratio = home.wordCount > 0 && home.bodyText.length > 0 ? home.mainText.length / home.bodyText.length : 0
+  if (ratio >= 0.6) {
+    serverText.award(3, `${Math.round(ratio * 100)}% of the body text sits in the main content region (target: 60%+), so the page is mostly content rather than chrome.`)
+  } else if (ratio >= 0.35) {
+    serverText.award(1, `${Math.round(ratio * 100)}% of the body text sits in the main content region (target: 60%+); the rest is navigation, footer or boilerplate.`)
+  } else if (ratio > 0) {
+    serverText.miss(`Only ${Math.round(ratio * 100)}% of the body text sits in an identifiable main content region (target: 60%+).`)
   }
 
   const blocks = home.jsonLdBlocks
   const invalid = blocks.filter((b) => !b.valid)
+  const types = home.structuredDataTypes
+  const hasEntity = types.some((t) => /^(Organization|LocalBusiness|OnlineBusiness|Person|ProfessionalService|Corporation)$/i.test(t))
+  const hasContentType = types.some((t) =>
+    /^(Article|BlogPosting|NewsArticle|FAQPage|HowTo|Product|Service|Review|Course|Event|BreadcrumbList)$/i.test(t),
+  )
+
   if (blocks.length === 0) {
     structured.miss('No JSON-LD structured data was found.')
-  } else if (invalid.length === 0) {
-    structured.award(8, `${blocks.length} JSON-LD block(s) parse cleanly (${home.structuredDataTypes.join(', ')}).`, ev(home.url, 'jsonld', home.structuredDataTypes.join(', ')))
-  } else {
+  } else if (invalid.length > 0) {
     structured.award(
-      Math.round(((blocks.length - invalid.length) / blocks.length) * 8),
+      Math.round(((blocks.length - invalid.length) / blocks.length) * 4),
       `${invalid.length} of ${blocks.length} JSON-LD block(s) contain a syntax error and are ignored by every consumer. First error at line ${invalid[0].startLine}: ${invalid[0].error}`,
       ev(home.url, 'jsonld', `line ${invalid[0].startLine}: ${invalid[0].error ?? 'parse error'}`),
     )
+  } else {
+    // Valid markup is the floor, not the bar. Full marks need markup that
+    // actually describes both the publisher and the content.
+    structured.award(3, `${blocks.length} JSON-LD block(s) parse cleanly (${types.join(', ')}).`, ev(home.url, 'jsonld', types.join(', ')))
+    if (hasEntity) {
+      structured.award(3, 'An entity type identifies who publishes the page.')
+    } else {
+      structured.miss('No Organization, LocalBusiness or Person type is declared, so the markup does not say who publishes this.')
+    }
+    if (hasContentType) {
+      structured.award(2, 'A content-level type describes what is on the page.')
+    } else {
+      structured.miss('No content-level type (Article, FAQPage, Service and similar) describes what is on the page.')
+    }
   }
 
+  // Semantic landmarks are what let a parser find the content region at all.
+  const hasLandmark = /<(main|article)\b/i.test(home.mainText) || home.blocks.length > 0
   const h = home.headings.length
-  if (h > 0 && home.paragraphs.length > 0) {
-    cleanliness.award(5, `The document exposes ${h} real heading elements and ${home.paragraphs.length} paragraph elements.`)
+  if (h >= 5 && home.paragraphs.length >= 5 && hasLandmark) {
+    cleanliness.award(5, `The document exposes ${h} real heading elements and ${home.paragraphs.length} paragraph elements inside an identifiable content region.`)
+  } else if (h > 0 && home.paragraphs.length > 0) {
+    cleanliness.award(3, `The document exposes ${h} heading and ${home.paragraphs.length} paragraph elements (target: 5+ of each inside a main or article region).`)
   } else if (h > 0 || home.paragraphs.length > 0) {
-    cleanliness.award(2, 'The document uses some semantic elements, but either headings or paragraphs are missing.')
+    cleanliness.award(1, 'The document uses some semantic elements, but either headings or paragraphs are missing.')
   } else {
     cleanliness.miss('No semantic heading or paragraph elements were found — the text is not structurally marked up.')
   }
@@ -254,22 +305,31 @@ function scoreChunkability({ home }: RetrievabilityInput): Factor[] {
   const h3s = home.headings.filter((x) => x.level === 3)
 
   if (h1s.length === 1) {
-    hierarchy.award(4, `A single H1 states the page topic ("${truncate(h1s[0].text, 80)}").`, ev(home.url, 'heading', h1s[0].text))
+    hierarchy.award(3, `A single H1 states the page topic ("${truncate(h1s[0].text, 80)}").`, ev(home.url, 'heading', h1s[0].text))
   } else if (h1s.length === 0) {
     hierarchy.miss('The page has no H1 element.')
   } else {
     hierarchy.award(1, `The page has ${h1s.length} H1 elements; exactly one makes the topic unambiguous.`)
   }
 
-  if (h2s.length >= 4) {
-    hierarchy.award(4, `${h2s.length} H2 sections divide the page into distinct topics.`, ev(home.url, 'heading', h2s.slice(0, 4).map((x) => x.text).join(' | ')))
+  if (h2s.length >= 6) {
+    hierarchy.award(4, `${h2s.length} H2 sections divide the page into distinct topics (target: 6+).`, ev(home.url, 'heading', h2s.slice(0, 4).map((x) => x.text).join(' | ')))
+  } else if (h2s.length >= 3) {
+    hierarchy.award(2, `${h2s.length} H2 sections are present (target: 6+ for a page meant to be chunked).`, ev(home.url, 'heading', h2s.map((x) => x.text).join(' | ')))
   } else if (h2s.length >= 1) {
-    hierarchy.award(2, `${h2s.length} H2 section(s) are present.`)
+    hierarchy.award(1, `${h2s.length} H2 section(s) are present (target: 6+).`)
   } else {
     hierarchy.miss('No H2 elements divide the page into sections.')
   }
 
-  if (h3s.length >= 3) hierarchy.award(2, `${h3s.length} H3 subsections add a second level of detail.`)
+  // A second heading level is what lets a long section be chunked further.
+  if (h3s.length >= 6) {
+    hierarchy.award(2, `${h3s.length} H3 subsections add a second level of detail (target: 6+).`)
+  } else if (h3s.length >= 3) {
+    hierarchy.award(1, `${h3s.length} H3 subsections are present (target: 6+).`)
+  } else {
+    hierarchy.miss(`Only ${h3s.length} H3 subsections (target: 6+), so longer sections cannot be split further.`)
+  }
 
   if (!hasSkippedLevels(home.headings)) {
     hierarchy.award(2, 'Heading levels descend in order without skipping a level.')
@@ -288,25 +348,32 @@ function scoreChunkability({ home }: RetrievabilityInput): Factor[] {
     )
   }
 
-  const substantive = home.blocks.filter((b) => b.headingText && b.wordCount >= 20)
-  if (substantive.length >= 5) {
-    sections.award(8, `${substantive.length} sections pair a heading with enough prose to stand alone when quoted.`, ev(home.url, 'text', `${substantive[0].headingText}: ${truncate(substantive[0].text, 160)}`))
-  } else if (substantive.length >= 2) {
-    sections.award(4, `${substantive.length} sections pair a heading with substantive prose.`)
+  // A section only stands alone if it has a heading AND enough prose beneath it
+  // to make sense once lifted away from the page. 40 words is about two
+  // sentences — below that the heading is doing the work, not the passage.
+  const substantive = home.blocks.filter((b) => b.headingText && b.wordCount >= 40)
+  if (substantive.length >= 8) {
+    sections.award(8, `${substantive.length} sections pair a heading with 40+ words of prose (target: 8+), so each can stand alone when quoted.`, ev(home.url, 'text', `${substantive[0].headingText}: ${truncate(substantive[0].text, 160)}`))
+  } else if (substantive.length >= 4) {
+    sections.award(5, `${substantive.length} sections pair a heading with 40+ words of prose (target: 8+).`, ev(home.url, 'text', `${substantive[0].headingText}: ${truncate(substantive[0].text, 160)}`))
+  } else if (substantive.length >= 1) {
+    sections.award(2, `${substantive.length} section(s) pair a heading with 40+ words of prose (target: 8+). The rest are too thin to quote on their own.`)
   } else {
-    sections.miss('Few sections pair a heading with enough prose to stand alone when lifted out of the page.')
+    sections.miss('No section pairs a heading with enough prose to stand alone when lifted out of the page (target: 8+ sections of 40+ words).')
   }
 
-  const quotable = home.blocks.filter((b) => b.wordCount >= 20 && b.wordCount <= 180)
+  const quotable = home.blocks.filter((b) => b.wordCount >= 40 && b.wordCount <= 180)
   const share = home.blocks.length ? quotable.length / home.blocks.length : 0
-  if (share >= 0.5) {
-    lengths.award(5, `${Math.round(share * 100)}% of sections are in the 20–180 word range that quotes cleanly.`)
-  } else if (share >= 0.25) {
-    lengths.award(3, `${Math.round(share * 100)}% of sections are in the range that quotes cleanly; the rest are very short or very long.`)
-  } else if (home.blocks.length === 0) {
+  if (home.blocks.length === 0) {
     lengths.unverified('No content blocks could be identified, so block length could not be assessed.')
+  } else if (share >= 0.65) {
+    lengths.award(5, `${Math.round(share * 100)}% of sections are in the 40–180 word range that quotes cleanly (target: 65%+).`)
+  } else if (share >= 0.4) {
+    lengths.award(3, `${Math.round(share * 100)}% of sections are in the 40–180 word range (target: 65%+); the rest are very short or very long.`)
+  } else if (share > 0) {
+    lengths.award(1, `Only ${Math.round(share * 100)}% of sections are in the 40–180 word range (target: 65%+).`)
   } else {
-    lengths.miss('Most sections are either too short to be useful or too long to quote whole.')
+    lengths.miss('No section falls in the 40–180 word range that quotes cleanly.')
   }
 
   return [hierarchy.build(), sections.build(), lengths.build()]

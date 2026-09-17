@@ -13,8 +13,19 @@
 
 import { BAND_RANK, HIGH_RETRIEVABILITY, type Band, type Citability, type Gap, type Retrievability } from './types'
 
-/** Bands at or above this count as "high citability" for quadrant purposes. */
-const HIGH_CITABILITY_RANK = BAND_RANK.adequate
+/**
+ * Bands at or above this count as "high citability" for quadrant purposes.
+ *
+ * Set at `strong`, not `adequate`, deliberately. "Adequate" means some
+ * attribution signals are present — an Organization entity here, a date there.
+ * That is not the same as content an engine would struggle to use *without*
+ * naming you, which is what the high-citability half of the diagnosis claims.
+ * Treating "adequate" as high would push most sites into the high/high quadrant,
+ * which is both the least actionable verdict and the least honest one.
+ *
+ * This is a product judgement, not a measurement. One constant to change.
+ */
+const HIGH_CITABILITY_RANK = BAND_RANK.strong
 
 export function diagnoseGap(retrievability: Retrievability, citability: Citability): Gap {
   if (retrievability.scoreWithheld || citability.band === 'unverified') {
