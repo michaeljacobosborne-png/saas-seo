@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import { sendMetaCapiEvent } from '@/lib/meta-capi'
 import { sendRedditCapiEvent } from '@/lib/reddit-capi'
+import { promotedColumns } from '@/lib/geo-audit/promoted-columns'
 
 function extractDomain(rawUrl: string): string {
   const raw = (rawUrl ?? '').trim()
@@ -205,6 +206,10 @@ export async function POST(request: Request) {
           source,
           url: (body.url ?? '').trim() || null,
           user_id: userId,
+          // Promoted out of `result` so the peer benchmark and the monthly
+          // re-run delta can aggregate without querying a JSONB path. A
+          // withheld score writes NULL, never 0.
+          ...promotedColumns(body.result),
         })
         .select('id, share_token')
         .single()
