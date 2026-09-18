@@ -17,7 +17,7 @@
  * produce the same number.
  */
 
-import { assessFreshness } from './dates'
+
 import { countWords, truncate, type ExtractedPage } from './extract'
 import { summariseAccess, type AccessReport } from './access'
 import { FactorBuilder, clamp, computeTotals, deriveStatus } from './scoring'

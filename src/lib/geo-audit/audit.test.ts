@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { AuditError, runAudit } from './index'
-import { findScoreInconsistencies, computeTotals, deriveStatus } from './scoring'
+import { computeTotals, findScoreInconsistencies } from './scoring'
 import type { AuditReport } from './types'
 
 const COMMA_HTML = readFileSync(join(__dirname, '__fixtures__', 'comma-home.html'), 'utf8')
