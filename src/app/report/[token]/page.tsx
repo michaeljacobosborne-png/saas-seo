@@ -22,8 +22,26 @@ type GeoFactor = {
   name: string
   score: number
   maxScore: number
-  status: 'good' | 'needs-work' | 'missing'
+  status: 'good' | 'needs-work' | 'missing' | 'unverified'
+  /** False when the factor could not be assessed; excluded from the total. */
+  scored?: boolean
+  label?: string
   detail: string
+  evidence?: { url: string; kind: string; snippet: string }[]
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  good: 'Good',
+  'needs-work': 'Needs work',
+  missing: 'Not on this page',
+  unverified: 'Unable to assess',
+}
+
+const STATUS_COLORS: Record<string, { bg: string; fg: string; bar: string }> = {
+  good: { bg: '#dcfce7', fg: '#166534', bar: '#16a34a' },
+  'needs-work': { bg: '#fef3c7', fg: '#92400e', bar: '#d97706' },
+  missing: { bg: '#fee2e2', fg: '#991b1b', bar: '#dc2626' },
+  unverified: { bg: '#F7F3EC', fg: '#57534E', bar: '#E7E0D6' },
 }
 
 type GeoRecommendation = {
@@ -33,12 +51,35 @@ type GeoRecommendation = {
   impact: string
 }
 
+type Band = 'strong' | 'adequate' | 'weak' | 'absent' | 'unverified'
+
 type GeoAuditResult = {
   score: number
   grade: string
   breakdown: GeoFactor[]
   recommendations: GeoRecommendation[]
   quickWins: string[]
+  scoreWithheld?: boolean
+  withheldReason?: string
+  rawScore?: number
+  assessedMaxScore?: number
+  pagesInspected?: { url: string; ok: boolean }[]
+  /** Phase B. Absent on reports stored before the two-score model shipped. */
+  retrievability?: {
+    score: number
+    scoreWithheld: boolean
+    groups: { id: string; name: string; score: number; maxScore: number; deduction: number; scored: boolean; label: string }[]
+  }
+  citability?: { band: Band; label: string; signals: { id: string; name: string; band: Band; detail: string }[] }
+  gap?: { quadrant: string; headline: string; diagnosis: string; nextStep: string }
+}
+
+const BAND_COLOR: Record<Band, string> = {
+  strong: '#16a34a',
+  adequate: '#B87333',
+  weak: '#d97706',
+  absent: '#dc2626',
+  unverified: '#998876',
 }
 
 function isGeoResult(r: unknown): r is GeoAuditResult {
@@ -91,26 +132,92 @@ function GeoReport({ result, domain, auditDate }: { result: GeoAuditResult; doma
         </p>
 
         {/* Score */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, background: '#fff', border: '1px solid #E7E0D6', borderRadius: 16, padding: '24px' }}>
-          <div style={{
-            width: 88, height: 88, borderRadius: '50%', border: `4px solid ${scoreColor}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <span style={{ fontSize: 28, fontWeight: 700, color: scoreColor }}>{result.score}</span>
-          </div>
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 10, background: gradeColor, marginBottom: 4 }}>
-              <span style={{ fontSize: 20, fontWeight: 700, color: gradeTextColor }}>{result.grade}</span>
+        {result.scoreWithheld ? (
+          <div style={{ background: '#fff', border: '1px solid #E7E0D6', borderRadius: 16, padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 12 }}>
+              <div style={{
+                width: 88, height: 88, borderRadius: '50%', border: '4px solid #E7E0D6',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <span style={{ fontSize: 28, fontWeight: 700, color: '#998876' }}>—</span>
+              </div>
+              <div>
+                <p style={{ fontSize: 15, fontWeight: 600, color: '#1C1917', margin: 0 }}>No score published</p>
+                <p style={{ fontSize: 13, color: '#998876', margin: '4px 0 0' }}>
+                  A score is only published when enough of the page could be read to stand behind it.
+                </p>
+              </div>
             </div>
-            <p style={{ fontSize: 14, color: '#57534E', margin: 0 }}>GEO Score — out of 100</p>
-            <p style={{ fontSize: 12, color: '#998876', margin: '2px 0 0' }}>
-              {result.score >= 70 ? 'Well-positioned for AI citation' : result.score >= 40 ? 'Room for improvement' : 'Significant gaps to address'}
-            </p>
+            {result.withheldReason && (
+              <p style={{ fontSize: 14, color: '#57534E', background: '#F7F3EC', border: '1px solid #E7E0D6', borderRadius: 12, padding: '12px 16px', margin: 0 }}>
+                {result.withheldReason}
+              </p>
+            )}
           </div>
-        </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20, background: '#fff', border: '1px solid #E7E0D6', borderRadius: 16, padding: '24px' }}>
+            <div style={{
+              width: 88, height: 88, borderRadius: '50%', border: `4px solid ${scoreColor}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 28, fontWeight: 700, color: scoreColor }}>{result.score}</span>
+            </div>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 10, background: gradeColor, marginBottom: 4 }}>
+                <span style={{ fontSize: 20, fontWeight: 700, color: gradeTextColor }}>{result.grade}</span>
+              </div>
+              <p style={{ fontSize: 14, color: '#57534E', margin: 0 }}>Content readiness score — out of 100</p>
+              <p style={{ fontSize: 12, color: '#998876', margin: '2px 0 0' }}>
+                {result.score >= 70 ? 'Few structural obstacles found' : result.score >= 40 ? 'Room for improvement' : 'Significant gaps to address'}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 7-Factor Breakdown */}
+      {/* Two scores and the gap — Phase B reports only. */}
+      {result.retrievability && result.citability && result.gap && (
+        <section style={{ marginBottom: 40 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 16 }}>
+            <div style={{ background: '#fff', border: '1px solid #E7E0D6', borderRadius: 12, padding: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#998876', margin: '0 0 8px' }}>Retrievable</p>
+              <p style={{ fontSize: 30, fontWeight: 700, margin: 0, color: result.retrievability.scoreWithheld ? '#998876' : scoreColor }}>
+                {result.retrievability.scoreWithheld ? '—' : result.retrievability.score}
+                {!result.retrievability.scoreWithheld && <span style={{ fontSize: 15, fontWeight: 400, color: '#998876' }}>/100</span>}
+              </p>
+              <p style={{ fontSize: 12, color: '#57534E', margin: '6px 0 0' }}>Can an engine reach, parse and lift an answer from this page.</p>
+            </div>
+            <div style={{ background: '#fff', border: '1px solid #E7E0D6', borderRadius: 12, padding: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#998876', margin: '0 0 8px' }}>Citable</p>
+              <p style={{ fontSize: 30, fontWeight: 700, margin: 0, color: BAND_COLOR[result.citability.band] ?? '#998876' }}>
+                {result.citability.label}
+              </p>
+              <p style={{ fontSize: 12, color: '#57534E', margin: '6px 0 0' }}>If an engine lifts this content, does anything in it force attribution back to you.</p>
+            </div>
+          </div>
+
+          <div style={{ background: '#1C1917', borderRadius: 12, padding: 20, color: '#F7F3EC' }}>
+            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#A89070', margin: '0 0 8px' }}>The gap</p>
+            <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px' }}>{result.gap.headline}</h3>
+            <p style={{ fontSize: 14, color: '#D8CFC2', lineHeight: 1.6, margin: '0 0 10px' }}>{result.gap.diagnosis}</p>
+            <p style={{ fontSize: 14, margin: 0 }}><strong>Where to start: </strong>{result.gap.nextStep}</p>
+          </div>
+
+          {result.citability.signals.length > 0 && (
+            <div style={{ background: '#fff', border: '1px solid #E7E0D6', borderRadius: 12, padding: '16px 20px', marginTop: 16 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 600, color: '#998876', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 12px' }}>Attribution signals</h3>
+              {result.citability.signals.map((s) => (
+                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: '1px solid #F7F3EC' }}>
+                  <span style={{ fontSize: 13, color: '#1C1917' }}>{s.name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: BAND_COLOR[s.band] ?? '#998876', flexShrink: 0 }}>{s.band}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Factor breakdown */}
       {result.breakdown.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <h2 style={{ ...playfair, fontSize: 22, fontWeight: 700, color: '#1C1917', marginBottom: 16 }}>
@@ -118,30 +225,52 @@ function GeoReport({ result, domain, auditDate }: { result: GeoAuditResult; doma
           </h2>
           <div style={{ background: '#fff', border: '1px solid #E7E0D6', borderRadius: 16, padding: '20px 24px' }}>
             {result.breakdown.map((factor, i) => {
-              const pct = Math.round((factor.score / factor.maxScore) * 100)
-              const barColor = factor.status === 'good' ? '#16a34a' : factor.status === 'needs-work' ? '#d97706' : '#dc2626'
+              const unscored = factor.scored === false || factor.status === 'unverified'
+              const colors = STATUS_COLORS[factor.status] ?? STATUS_COLORS.unverified
+              const pct = unscored || !factor.maxScore ? 0 : Math.round((factor.score / factor.maxScore) * 100)
               const badgeStyle: React.CSSProperties = {
                 fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999, flexShrink: 0,
-                background: factor.status === 'good' ? '#dcfce7' : factor.status === 'needs-work' ? '#fef3c7' : '#fee2e2',
-                color: factor.status === 'good' ? '#166534' : factor.status === 'needs-work' ? '#92400e' : '#991b1b',
+                background: colors.bg,
+                color: colors.fg,
               }
               return (
                 <div key={i} style={{ paddingBottom: i < result.breakdown.length - 1 ? 16 : 0, marginBottom: i < result.breakdown.length - 1 ? 16 : 0, borderBottom: i < result.breakdown.length - 1 ? '1px solid #F7F3EC' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
                     <span style={{ fontSize: 14, fontWeight: 500, color: '#1C1917' }}>{factor.name}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, color: '#998876' }}>{factor.score}/{factor.maxScore}</span>
-                      <span style={badgeStyle}>{factor.status === 'good' ? 'Good' : factor.status === 'needs-work' ? 'Needs work' : 'Missing'}</span>
+                      <span style={{ fontSize: 12, color: '#998876' }}>
+                        {unscored ? '—' : `${factor.score}/${factor.maxScore}`}
+                      </span>
+                      <span style={badgeStyle}>
+                        {factor.label ?? STATUS_LABEL[factor.status] ?? factor.status}
+                      </span>
                     </div>
                   </div>
                   <div style={{ height: 6, background: '#F7F3EC', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: 4, background: barColor, width: `${pct}%` }} />
+                    {!unscored && <div style={{ height: '100%', borderRadius: 4, background: colors.bar, width: `${pct}%` }} />}
                   </div>
-                  {factor.detail && <p style={{ fontSize: 12, color: '#57534E', margin: '4px 0 0' }}>{factor.detail}</p>}
+                  {factor.detail && <p style={{ fontSize: 12, color: '#57534E', margin: '6px 0 0', lineHeight: 1.5 }}>{factor.detail}</p>}
+                  {factor.evidence && factor.evidence.length > 0 && (
+                    <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: '0 0 0 12px', borderLeft: '2px solid #E7E0D6' }}>
+                      {factor.evidence.slice(0, 3).map((e, j) => (
+                        <li key={j} style={{ fontSize: 11, color: '#57534E', marginBottom: 4, wordBreak: 'break-word' }}>
+                          <span style={{ color: '#998876', textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 10 }}>{e.kind}</span>
+                          {' '}{e.snippet}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )
             })}
           </div>
+          <p style={{ fontSize: 12, color: '#998876', margin: '12px 0 0', lineHeight: 1.6 }}>
+            {result.pagesInspected?.filter((p) => p.ok).length
+              ? `Pages inspected: ${result.pagesInspected.filter((p) => p.ok).map((p) => p.url).join(', ')}. `
+              : ''}
+            This is a heuristic assessment of how ready the published content is to be read and quoted —
+            not a measurement of how often AI tools currently cite this site.
+          </p>
         </section>
       )}
 

@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { promotedColumns } from '@/lib/geo-audit/promoted-columns'
 
 function extractDomain(rawUrl: string): string {
   const raw = (rawUrl ?? '').trim()
@@ -54,6 +55,9 @@ export async function POST(request: Request) {
       url: (body.url ?? '').trim() || null,
       user_id: user.id,
       tool,
+      // Same promotion as the public lead path — dashboard saves must feed the
+      // benchmark too, or the sample is silently biased toward anonymous runs.
+      ...promotedColumns(body.result),
     })
     .select('id, share_token')
     .single()
