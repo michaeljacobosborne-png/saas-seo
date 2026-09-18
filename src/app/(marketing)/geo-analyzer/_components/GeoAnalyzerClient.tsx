@@ -15,8 +15,11 @@ import NavLinks from '../../../_components/NavLinks'
 import { rdt } from '@/lib/reddit-pixel'
 
 import {
+  CitabilitySignals,
   FactorBreakdown,
+  RetrievabilityGroups,
   ScoreHeader,
+  TwoScorePanel,
   toAnalysisResult,
   type AnalysisResult,
   type Recommendation,
@@ -293,19 +296,46 @@ export default function GeoAnalyzerClient() {
           {/* Results */}
           {status === 'done' && result && (
             <div className="space-y-6 mb-8">
-              {/* Score + Grade */}
-              <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
-                <ScoreHeader result={result} scoreLabel="Content readiness score" />
+              {/* Two scores and the gap between them — the headline artefact. */}
+              {result.retrievability && result.citability && result.gap ? (
+                <>
+                  <TwoScorePanel result={result} />
 
-                {/* Factor breakdown */}
-                <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-4">
-                  Factor Breakdown
-                </h2>
-                <FactorBreakdown
-                  result={result}
-                  note="This is an assessment of how ready your published content is to be quoted — not a measurement of how often AI tools currently cite you."
-                />
-              </div>
+                  <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
+                    <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-1">
+                      Retrievability
+                    </h2>
+                    <p className="text-xs text-[#998876] mb-4">
+                      Rule-derived. Access 30 · Parseability 25 · Chunkability 25 · Extractability 20.
+                      Every check prints its threshold beside the measured value.
+                    </p>
+                    <RetrievabilityGroups result={result} />
+                  </div>
+
+                  <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
+                    <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-1">
+                      Citability
+                    </h2>
+                    <p className="text-xs text-[#998876] mb-4">
+                      Six attribution signals, banded rather than scored — there is no honest
+                      arithmetic that turns a named author into points.
+                    </p>
+                    <CitabilitySignals result={result} />
+                  </div>
+                </>
+              ) : (
+                /* Reports stored before the two-score model still render. */
+                <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
+                  <ScoreHeader result={result} scoreLabel="Content readiness score" />
+                  <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-4">
+                    Factor Breakdown
+                  </h2>
+                  <FactorBreakdown
+                    result={result}
+                    note="This is an assessment of how ready your published content is to be quoted — not a measurement of how often AI tools currently cite you."
+                  />
+                </div>
+              )}
 
               {/* Quick Wins */}
               {result.quickWins.length > 0 && (

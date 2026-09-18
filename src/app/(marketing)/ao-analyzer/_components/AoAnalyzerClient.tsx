@@ -15,8 +15,11 @@ import NavLinks from '../../../_components/NavLinks'
 import { rdt } from '@/lib/reddit-pixel'
 
 import {
+  CitabilitySignals,
   FactorBreakdown,
+  RetrievabilityGroups,
   ScoreHeader,
+  TwoScorePanel,
   toAnalysisResult,
   type AnalysisResult,
   type Recommendation,
@@ -318,19 +321,46 @@ export default function AoAnalyzerClient() {
           {/* Results */}
           {status === 'done' && result && (
             <div className="space-y-6 mb-8">
-              {/* Score + Grade */}
-              <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
-                <ScoreHeader result={result} scoreLabel="Answer readiness score" />
+              {/* Same engine as the GEO analyzer; AO leads on extractability. */}
+              {result.retrievability && result.citability && result.gap ? (
+                <>
+                  <TwoScorePanel result={result} />
 
-                {/* Factor breakdown */}
-                <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-4">
-                  Factor Breakdown
-                </h2>
-                <FactorBreakdown
-                  result={result}
-                  note="This is an assessment of how ready your published content is to be quoted in an answer — not a measurement of how often AI tools or featured snippets currently surface it."
-                />
-              </div>
+                  <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
+                    <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-1">
+                      Can an answer be lifted from this page?
+                    </h2>
+                    <p className="text-xs text-[#998876] mb-4">
+                      Extractability and Chunkability decide whether a clean answer can be pulled out.
+                      Access and Parseability decide whether anything gets read at all.
+                    </p>
+                    <RetrievabilityGroups result={result} />
+                  </div>
+
+                  <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
+                    <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-1">
+                      Would the answer be credited to you?
+                    </h2>
+                    <p className="text-xs text-[#998876] mb-4">
+                      Six attribution signals, banded rather than scored. A clean answer with no
+                      attribution anchors is lifted without naming you.
+                    </p>
+                    <CitabilitySignals result={result} />
+                  </div>
+                </>
+              ) : (
+                /* Reports stored before the two-score model still render. */
+                <div className="bg-white border border-[#E7E0D6] rounded-2xl p-6">
+                  <ScoreHeader result={result} scoreLabel="Answer readiness score" />
+                  <h2 className="text-xs font-semibold text-[#998876] uppercase tracking-wide mb-4">
+                    Factor Breakdown
+                  </h2>
+                  <FactorBreakdown
+                    result={result}
+                    note="This is an assessment of how ready your published content is to be quoted in an answer — not a measurement of how often AI tools or featured snippets currently surface it."
+                  />
+                </div>
+              )}
 
               {/* Quick Wins */}
               {result.quickWins.length > 0 && (
