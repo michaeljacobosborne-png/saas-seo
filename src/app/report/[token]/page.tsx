@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
+import { TwoScoreSection } from '@/components/audit/TwoScoreSection'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -175,47 +176,7 @@ function GeoReport({ result, domain, auditDate }: { result: GeoAuditResult; doma
         )}
       </div>
 
-      {/* Two scores and the gap — Phase B reports only. */}
-      {result.retrievability && result.citability && result.gap && (
-        <section style={{ marginBottom: 40 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 16 }}>
-            <div style={{ background: '#fff', border: '1px solid #E7E0D6', borderRadius: 12, padding: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#998876', margin: '0 0 8px' }}>Retrievable</p>
-              <p style={{ fontSize: 30, fontWeight: 700, margin: 0, color: result.retrievability.scoreWithheld ? '#998876' : scoreColor }}>
-                {result.retrievability.scoreWithheld ? '—' : result.retrievability.score}
-                {!result.retrievability.scoreWithheld && <span style={{ fontSize: 15, fontWeight: 400, color: '#998876' }}>/100</span>}
-              </p>
-              <p style={{ fontSize: 12, color: '#57534E', margin: '6px 0 0' }}>Can an engine reach, parse and lift an answer from this page.</p>
-            </div>
-            <div style={{ background: '#fff', border: '1px solid #E7E0D6', borderRadius: 12, padding: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#998876', margin: '0 0 8px' }}>Citable</p>
-              <p style={{ fontSize: 30, fontWeight: 700, margin: 0, color: BAND_COLOR[result.citability.band] ?? '#998876' }}>
-                {result.citability.label}
-              </p>
-              <p style={{ fontSize: 12, color: '#57534E', margin: '6px 0 0' }}>If an engine lifts this content, does anything in it force attribution back to you.</p>
-            </div>
-          </div>
-
-          <div style={{ background: '#1C1917', borderRadius: 12, padding: 20, color: '#F7F3EC' }}>
-            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#A89070', margin: '0 0 8px' }}>The gap</p>
-            <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px' }}>{result.gap.headline}</h3>
-            <p style={{ fontSize: 14, color: '#D8CFC2', lineHeight: 1.6, margin: '0 0 10px' }}>{result.gap.diagnosis}</p>
-            <p style={{ fontSize: 14, margin: 0 }}><strong>Where to start: </strong>{result.gap.nextStep}</p>
-          </div>
-
-          {result.citability.signals.length > 0 && (
-            <div style={{ background: '#fff', border: '1px solid #E7E0D6', borderRadius: 12, padding: '16px 20px', marginTop: 16 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: '#998876', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 12px' }}>Attribution signals</h3>
-              {result.citability.signals.map((s) => (
-                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: '1px solid #F7F3EC' }}>
-                  <span style={{ fontSize: 13, color: '#1C1917' }}>{s.name}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: BAND_COLOR[s.band] ?? '#998876', flexShrink: 0 }}>{s.band}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+      <TwoScoreSection result={result} />
 
       {/* Factor breakdown */}
       {result.breakdown.length > 0 && (

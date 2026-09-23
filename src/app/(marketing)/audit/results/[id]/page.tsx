@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
+import { TwoScoreSection, type TwoScoreData } from '@/components/audit/TwoScoreSection'
 import type { Metadata } from 'next'
 
 interface Factor {
@@ -33,6 +34,10 @@ interface AuditResult {
   rawScore?: number
   assessedMaxScore?: number
   pagesInspected?: { url: string; ok: boolean }[]
+  /** Phase B. Absent on rows stored before the two-score model shipped. */
+  retrievability?: TwoScoreData['retrievability']
+  citability?: TwoScoreData['citability']
+  gap?: TwoScoreData['gap']
 }
 
 interface AuditRecord {
@@ -96,16 +101,27 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
           <span className="text-sm text-[#998876]">GEO Analysis Report</span>
         </div>
 
-        {/* Score card */}
-        <div className="bg-white rounded-2xl border border-[rgba(184,115,51,0.15)] p-8 mb-6">
+        {/* Title */}
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#1c1917] mb-2" style={{ fontFamily: 'var(--font-playfair, Georgia, serif)' }}>
             GEO Score for <span style={{ color: '#B87333' }}>{record.domain || 'your site'}</span>
           </h1>
-          <p className="text-sm text-[#998876] mb-6">
+          <p className="text-sm text-[#998876]">
             Analyzed {new Date(record.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
+        </div>
 
-          {result.scoreWithheld ? (
+        {/*
+          The two-score panel. This is the page the results email links to, so a
+          lead clicking through from the email is exactly who needs the Gap.
+          Renders nothing for pre-Phase-B rows, which then fall through to the
+          legacy score card below.
+        */}
+        <TwoScoreSection result={result} />
+
+        {/* Score card — legacy single-score layout, and the factor breakdown. */}
+        <div className="bg-white rounded-2xl border border-[rgba(184,115,51,0.15)] p-8 mb-6">
+          {result.retrievability ? null : result.scoreWithheld ? (
             <div className="mb-6">
               <div className="flex items-center gap-6 mb-3">
                 <div className="w-24 h-24 rounded-full flex items-center justify-center border-4 border-[#E7E0D6] shrink-0">
