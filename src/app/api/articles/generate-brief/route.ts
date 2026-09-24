@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkArticleLimit, logUsageEvent } from '@/lib/usage'
+import { interpretSeedQuery, BrandContext } from '@/lib/keyword-intent'
+import { getKeywordIdeas } from '@/lib/dataforseo'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -9,16 +12,37 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { allowed, used, limit } = await checkArticleLimit(user.id, supabase)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Article limit reached', used, limit, upgradeUrl: '/pricing' },
+      { status: 403 }
+    )
+  }
+
   const body = await request.json() as {
     articleId: string
-    keywordProjectId: string
-    selectedKeywords: string[]
+    // Standard path: keywords from a completed research project
+    keywordProjectId?: string
+    selectedKeywords?: string[]
+    // Quick-write path: skip keyword research, derive seeds from topic directly
+    directTopic?: string
     brandProfileId: string
   }
-  const { articleId, keywordProjectId, selectedKeywords, brandProfileId } = body
+  const { articleId, keywordProjectId, selectedKeywords, directTopic, brandProfileId } = body
 
-  if (!articleId || !keywordProjectId || !selectedKeywords?.length || !brandProfileId) {
+  if (!articleId || !brandProfileId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+
+  const isDirectMode = !!directTopic
+  const isProjectMode = !!keywordProjectId && selectedKeywords?.length
+
+  if (!isDirectMode && !isProjectMode) {
+    return NextResponse.json(
+      { error: 'Provide either directTopic or keywordProjectId + selectedKeywords' },
+      { status: 400 }
+    )
   }
 
   // Verify article ownership
@@ -36,25 +60,80 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: brand } = await (supabase as any)
     .from('brand_profiles')
-    .select('brand_name, industry, target_audience, brand_voice, tone_notes, competitors, primary_keywords')
+    .select('brand_name, industry, target_audience, brand_voice, tone_notes, competitors, primary_keywords, content_goals, expertise_notes, signature_angles, avoid_topics, avoid_phrases')
     .eq('id', brandProfileId)
     .eq('user_id', user.id)
     .single()
 
   if (!brand) return NextResponse.json({ error: 'Brand profile not found' }, { status: 404 })
 
-  // Fetch keyword data from DataForSEO pipeline
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: kwRows } = await (supabase as any)
-    .from('keywords')
-    .select('keyword, avg_monthly_searches, keyword_difficulty, cpc, competition, cluster')
-    .eq('project_id', keywordProjectId)
-    .in('keyword', selectedKeywords)
+  // Build keyword lines for the brief prompt
+  let kwLines = ''
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const kwLines = (kwRows as any[] ?? []).map((k: any) =>
-    `- "${k.keyword}" | volume: ${k.avg_monthly_searches ?? '?'} | difficulty: ${k.keyword_difficulty ?? '?'} | cluster: ${k.cluster ?? 'unknown'}`
-  ).join('\n')
+  if (isDirectMode) {
+    // Quick-write path: interpret the topic → clean seeds → DataForSEO keyword ideas
+    const brandCtx: BrandContext = {
+      brand_name: brand.brand_name,
+      industry: brand.industry,
+      target_audience: brand.target_audience,
+      tone_notes: brand.tone_notes,
+      content_goals: brand.content_goals,
+      expertise_notes: brand.expertise_notes,
+      signature_angles: brand.signature_angles,
+      competitors: brand.competitors,
+      primary_keywords: brand.primary_keywords,
+    }
+
+    const seeds = await interpretSeedQuery(directTopic!, brandCtx)
+
+    let ideas: { keyword: string; search_volume: number | null; keyword_difficulty: number | null }[] = []
+    try {
+      const rawIdeas = await getKeywordIdeas(seeds, 'United States', 'English', 30)
+      // Keep the seed keywords first if DataForSEO didn't return them
+      const seedSet = new Set(seeds.map(s => s.toLowerCase()))
+      const topIdeas = rawIdeas
+        .sort((a, b) => {
+          // Sort: seed keywords first, then by relevance (volume * 1 - difficulty * 0.5)
+          const aIsSeed = seedSet.has(a.keyword.toLowerCase()) ? 1 : 0
+          const bIsSeed = seedSet.has(b.keyword.toLowerCase()) ? 1 : 0
+          if (aIsSeed !== bIsSeed) return bIsSeed - aIsSeed
+          const aScore = (a.search_volume ?? 0) - (a.keyword_difficulty ?? 50) * 0.5
+          const bScore = (b.search_volume ?? 0) - (b.keyword_difficulty ?? 50) * 0.5
+          return bScore - aScore
+        })
+        .slice(0, 20)
+      ideas = topIdeas
+    } catch {
+      // DataForSEO unavailable — use the interpreted seeds as bare keywords
+      ideas = seeds.map(s => ({ keyword: s, search_volume: null, keyword_difficulty: null }))
+    }
+
+    kwLines = ideas.map(k =>
+      `- "${k.keyword}" | volume: ${k.search_volume ?? '?'} | difficulty: ${k.keyword_difficulty ?? '?'}`
+    ).join('\n')
+  } else {
+    // Standard path: fetch from the project's keyword rows
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: kwRows } = await (supabase as any)
+      .from('keywords')
+      .select('keyword, avg_monthly_searches, keyword_difficulty, cpc, competition, cluster')
+      .eq('project_id', keywordProjectId)
+      .in('keyword', selectedKeywords!)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    kwLines = (kwRows as any[] ?? []).map((k: any) =>
+      `- "${k.keyword}" | volume: ${k.avg_monthly_searches ?? '?'} | difficulty: ${k.keyword_difficulty ?? '?'} | cluster: ${k.cluster ?? 'unknown'}`
+    ).join('\n')
+  }
+
+  // Brand avoidance constraints. avoid_topics/competitors are text[], avoid_phrases
+  // is text — normalize all three to a comma-joined string so a string OR array
+  // column produces the same prompt output (and never throws on .join).
+  const asConstraintList = (v: unknown): string =>
+    Array.isArray(v) ? v.filter(Boolean).join(', ') : typeof v === 'string' ? v.trim() : ''
+  const avoidTopicsStr = asConstraintList(brand.avoid_topics)
+  const avoidPhrasesStr = asConstraintList(brand.avoid_phrases)
+  const competitorsStr = asConstraintList(brand.competitors)
 
   const prompt = `You are an SEO content strategist for ${brand.brand_name}${brand.industry ? `, a ${brand.industry} company` : ''}, targeting ${brand.target_audience ?? 'their ideal audience'}.
 
@@ -62,8 +141,13 @@ Brand voice: ${brand.brand_voice ?? 'professional'}
 Tone notes: ${brand.tone_notes ?? 'none'}
 Competitors: ${(brand.competitors as string[])?.join(', ') || 'none'}
 Brand keywords: ${(brand.primary_keywords as string[])?.join(', ') || 'none'}
+${brand.expertise_notes ? `\nExpertise: ${brand.expertise_notes}` : ''}
+${brand.signature_angles ? `Content angles: ${brand.signature_angles}` : ''}
+${avoidTopicsStr ? `NEVER write about or reference: ${avoidTopicsStr}` : ''}
+${avoidPhrasesStr ? `NEVER use these phrases or terms: ${avoidPhrasesStr}` : ''}
+${competitorsStr ? `COMPETITOR NAMES — do not name these brands in the article unless the brand explicitly permits comparisons: ${competitorsStr}` : ''}
 
-Selected keywords (from DataForSEO research):
+${isDirectMode ? `Article topic: "${directTopic}"\n` : ''}Keywords for this article:
 ${kwLines}
 
 Generate a comprehensive SEO content brief. Return JSON only, no markdown:
@@ -74,7 +158,12 @@ Generate a comprehensive SEO content brief. Return JSON only, no markdown:
   "meta_description": "155 chars max, includes target keyword, strong hook",
   "url_slug": "clean-keyword-rich-slug",
   "outline": [
-    {"heading": "Section heading", "heading_level": "H2", "notes": "what to cover, specific angle, data to include", "word_count_target": 250}
+    {
+      "heading": "H2 heading — must make a claim or imply a verdict, NOT just label a topic. BAD: 'Factors to Consider'. GOOD: 'The Factor That Actually Determines Which One to Buy'. BAD: 'Types of X'. GOOD: 'Only Two Types of X Are Worth Your Time'.",
+      "heading_level": "H2",
+      "notes": "State the argument this section will make. One sentence: what does this section conclude? Then: what evidence or examples support it? What does the reader believe at the end of this section that they didn't believe at the start?",
+      "word_count_target": 250
+    }
   ],
   "word_count_target": 2100,
   "tone_notes": "specific writing guidance combining brand voice and keyword intent",
@@ -82,9 +171,14 @@ Generate a comprehensive SEO content brief. Return JSON only, no markdown:
   "serp_intent": "informational"
 }
 
-Rules: outline must include an FAQ section (H2) with 3-5 H3 questions and a Key Takeaways H2. Total outline word_count_targets should sum to word_count_target.`
+Rules: outline must include an FAQ section (H2) with 3-5 H3 questions and a Key Takeaways H2. Total outline word_count_targets should sum to word_count_target.
+
+If serp_intent is "commercial" or "comparison", the outline MUST include a section titled something like "What We Found After Testing" or "Our Evaluation: How We Ranked These" — framed as original research or testing, even if based on secondary sources. This framing transforms perceived authority.
+
+OUTLINE RULE: Every H2 heading must pass this test — could this heading appear on a Wikipedia article or a generic AI article? If yes, rewrite it as a specific claim, verdict, or surprising finding. Generic topic headings are forbidden.`
 
   let brief: Record<string, unknown>
+  let briefUsage: { input: number; output: number } | null = null
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -93,6 +187,9 @@ Rules: outline must include an FAQ section (H2) with 3-5 H3 questions and a Key 
       temperature: 0.3,
       max_tokens: 1400,
     })
+    briefUsage = completion.usage
+      ? { input: completion.usage.prompt_tokens, output: completion.usage.completion_tokens }
+      : null
     brief = JSON.parse(completion.choices[0].message.content ?? '{}')
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -108,12 +205,27 @@ Rules: outline must include an FAQ section (H2) with 3-5 H3 questions and a Key 
       target_keyword: brief.target_keyword as string ?? null,
       title: (brief.h1_options as string[])?.[0] ?? null,
       supporting_keywords: brief.secondary_keywords ?? [],
+      // Persist the brief's meta description to the dedicated column so the
+      // article detail page pre-fills it (instead of showing an empty 0/160).
+      meta_description: (brief.meta_description as string) ?? null,
     })
     .eq('id', articleId)
     .eq('user_id', user.id)
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
+  }
+
+  // Cost tracking — log the GPT-4o brief generation after the response is sent.
+  if (briefUsage) {
+    const usage = briefUsage
+    after(() => logUsageEvent({
+      userId: user.id,
+      feature: 'brief_gen',
+      model: 'gpt-4o',
+      inputTokens: usage.input,
+      outputTokens: usage.output,
+    }))
   }
 
   return NextResponse.json({ brief })

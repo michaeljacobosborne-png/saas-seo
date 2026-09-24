@@ -1,5 +1,19 @@
 export type BrandVoice = 'professional' | 'friendly' | 'authoritative' | 'conversational' | 'witty' | 'inspirational'
 
+export interface Subscription {
+  id: string
+  user_id: string
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  plan: 'starter' | 'pro' | 'agency'
+  billing_interval: 'monthly' | 'annual'
+  status: 'active' | 'cancelled' | 'past_due' | 'trialing'
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface BrandProfile {
   id: string
   user_id: string
@@ -11,6 +25,9 @@ export interface BrandProfile {
   tone_notes: string | null
   competitors: string[]
   primary_keywords: string[]
+  avoid_topics: string | null
+  tone_examples: string | null
+  content_goals: string | null
   created_at: string
   updated_at: string
 }
@@ -21,7 +38,24 @@ export interface KeywordProject {
   brand_profile_id: string | null
   name: string
   seed_topic: string | null
+  folder: string | null
   status: 'pending' | 'researching' | 'complete' | 'error'
+  research_brief: Record<string, unknown> | null
+  last_researched_at: string | null
+  created_at: string
+}
+
+export interface SavedKeyword {
+  id: string
+  user_id: string
+  keyword: string
+  volume: number | null
+  difficulty: number | null
+  cpc: number | null
+  intent: string | null
+  folder: string
+  has_article: boolean
+  article_id: string | null
   created_at: string
 }
 
@@ -62,7 +96,9 @@ export interface Article {
   supporting_keywords: string[]
   brief: Record<string, unknown> | null
   content: string | null
+  meta_description: string | null
   word_count: number | null
+  target_word_count: number | null
   status: 'draft' | 'brief_ready' | 'generating' | 'complete' | 'published'
   scores: ArticleScores | null
   published_url: string | null
@@ -82,8 +118,14 @@ export type Database = {
       }
       keyword_projects: {
         Row: KeywordProject
-        Insert: Omit<KeywordProject, 'id' | 'created_at'>
+        Insert: Omit<KeywordProject, 'id' | 'created_at'> & { research_brief?: Record<string, unknown> | null }
         Update: Partial<Omit<KeywordProject, 'id' | 'created_at'>>
+        Relationships: []
+      }
+      saved_keywords: {
+        Row: SavedKeyword
+        Insert: Omit<SavedKeyword, 'id' | 'created_at'>
+        Update: Partial<Omit<SavedKeyword, 'id' | 'created_at'>>
         Relationships: []
       }
       keywords: {

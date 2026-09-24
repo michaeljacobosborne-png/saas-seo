@@ -1,10 +1,14 @@
 import type { NextConfig } from 'next'
-import path from 'path'
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: path.resolve(__dirname),
+  images: {
+    remotePatterns: [
+      // Sanity-hosted blog images served from the asset CDN.
+      { protocol: 'https', hostname: 'cdn.sanity.io' },
+    ],
   },
 }
 
 export default nextConfig
+
+
