@@ -145,14 +145,43 @@ const USER_AGENTS: Record<string, string> = {
 const BASELINE_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
-/** The five the product probes by default: two retrieval, three training. */
+/**
+ * What we probe by default: every AI crawler that is an actual fetcher, plus the
+ * three training crawlers worth reporting on.
+ *
+ * Deliberately excluded: `Google-Extended` and `Applebot-Extended`. Those are
+ * robots.txt *control tokens*, not user-agents — no process identifies itself
+ * that way, and the fetching is done by Googlebot and Applebot. Probing them
+ * would mean sending a UA nothing uses and reporting the answer as if it were
+ * about Gemini or Apple Intelligence, which would be fabricated evidence. They
+ * stay robots.txt-only, and `PROBEABLE` is what tells the scorer so.
+ */
 export const DEFAULT_PROBE_TOKENS = [
   'OAI-SearchBot',
+  'Claude-SearchBot',
   'PerplexityBot',
   'ClaudeBot',
   'GPTBot',
   'CCBot',
 ] as const
+
+/**
+ * Tokens that correspond to a real fetching user-agent. Anything outside this
+ * set can only ever be assessed from robots.txt, and the scorer must fall back
+ * to the declaration for it rather than dropping it from the assessment.
+ */
+export const PROBEABLE: ReadonlySet<string> = new Set([
+  'OAI-SearchBot',
+  'Claude-SearchBot',
+  'PerplexityBot',
+  'ChatGPT-User',
+  'Claude-User',
+  'Perplexity-User',
+  'GPTBot',
+  'ClaudeBot',
+  'CCBot',
+  'Bytespider',
+])
 
 // ── Edge / bot-management fingerprints ────────────────────────────────────────
 
@@ -513,6 +542,47 @@ export async function probeCrawlerAccess(
     baselineFailed,
     caveats: buildCaveats(baselineFailed, probes),
   }
+}
+
+/**
+ * Fill in `robotsVerdict` and `divergence` after the fact.
+ *
+ * The probe runs concurrently with the robots.txt fetch so neither waits on the
+ * other, which means robots.txt is not parsed yet when the probe returns. This
+ * applies it afterwards, so we get the divergence finding without paying for a
+ * second round trip.
+ */
+export function crossReferenceRobots(
+  report: CrawlerAccessReport,
+  robots: ParsedRobots | null,
+): CrawlerAccessReport {
+  if (!robots) return report
+
+  const path = (() => {
+    try {
+      return new URL(report.url).pathname || '/'
+    } catch {
+      return '/'
+    }
+  })()
+
+  const probes = report.probes.map((p) => {
+    const robotsVerdict: CrawlerProbe['robotsVerdict'] =
+      isAllowed(robots, p.token, path).verdict === 'allowed' ? 'allowed' : 'disallowed'
+
+    let divergence: CrawlerProbe['divergence'] = null
+    if (p.attributable) {
+      if (robotsVerdict === 'allowed' && !p.contentServed && isPolicyBlock(p.blockKind)) {
+        divergence = 'robots-allows-origin-blocks'
+      } else if (robotsVerdict === 'disallowed' && p.contentServed) {
+        divergence = 'robots-blocks-origin-serves'
+      }
+    }
+
+    return { ...p, robotsVerdict, divergence }
+  })
+
+  return { ...report, probes, caveats: buildCaveats(report.baselineFailed, probes) }
 }
 
 /** A refusal that reflects a decision, as opposed to an outage or a rate limit. */

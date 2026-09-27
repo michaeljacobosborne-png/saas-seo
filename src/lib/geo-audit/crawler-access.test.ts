@@ -235,7 +235,7 @@ describe('summarise — the taxonomy is respected', () => {
     )
     const s = summarise(r)
 
-    expect(s.retrievalAllowed.map((p) => p.token).sort()).toEqual(['OAI-SearchBot', 'PerplexityBot'])
+    expect(s.retrievalAllowed.map((p) => p.token).sort()).toEqual(['Claude-SearchBot', 'OAI-SearchBot', 'PerplexityBot'])
     expect(s.trainingBlocked.map((p) => p.token).sort()).toEqual(['CCBot', 'ClaudeBot', 'GPTBot'])
     expect(s.retrievalBlocked).toHaveLength(0)
     // Training blocked while retrieval is served is a legitimate editorial
@@ -245,13 +245,13 @@ describe('summarise — the taxonomy is respected', () => {
 
   it('flags the costly asymmetry: retrieval blocked, training allowed', async () => {
     const r = await run((ua) =>
-      /OAI-SearchBot|PerplexityBot/.test(ua)
+      /OAI-SearchBot|PerplexityBot|Claude-SearchBot/.test(ua)
         ? { status: 403, headers: { 'cf-ray': 'x' } }
         : { status: 200, body: PAGE },
     )
     const s = summarise(r)
     expect(s.asymmetry).toBe('retrieval-blocked-training-allowed')
-    expect(s.retrievalBlocked).toHaveLength(2)
+    expect(s.retrievalBlocked).toHaveLength(3)
     expect(s.trainingAllowed).toHaveLength(3)
   })
 })
@@ -403,7 +403,12 @@ describe('Access group integration', () => {
 
   it('lets an edge block override a permissive robots.txt', async () => {
     const probe = await run(
-      (ua) => (/OAI-SearchBot|PerplexityBot/.test(ua) ? { status: 403, headers: { 'cf-ray': 'x' } } : { status: 200, body: PAGE }),
+      // Every probeable retrieval crawler refused, so the check floors at 0
+      // even though robots.txt permits all of them.
+      (ua) =>
+        /OAI-SearchBot|PerplexityBot|Claude-SearchBot/.test(ua)
+          ? { status: 403, headers: { 'cf-ray': 'x' } }
+          : { status: 200, body: PAGE },
       'User-agent: *\nDisallow:\n',
     )
     const r = scoreRetrievability({

@@ -171,29 +171,55 @@ function buildGroup(id: RetrievabilityGroupId, checks: Factor[]): Retrievability
 function foldProbeIntoCrawlers(
   probe: CrawlerAccessReport,
   robotsBlockedTokens: Set<string>,
+  /** Every retrieval crawler robots.txt gave a verdict on, probed or not. */
+  robotsAssessedTokens: Set<string>,
 ): { score: number; detail: string; evidence: Evidence[] } | null {
   if (probe.baselineFailed) return null
 
   const s = summariseCrawlerProbe(probe)
   const retrieval = probe.probes.filter((p) => p.class === 'ai-search' && p.attributable)
-  const assessable = retrieval.filter(
+  const probed = retrieval.filter(
     (p) => p.blockKind !== 'network-error' && p.blockKind !== 'rate-limited',
   )
-  if (assessable.length === 0) return null
+  if (probed.length === 0) return null
 
-  const blocked = assessable.filter((p) => isPolicyBlock(p.blockKind) || robotsBlockedTokens.has(p.token))
-  const allowed = assessable.filter((p) => !blocked.includes(p))
+  const blocked = probed.filter((p) => isPolicyBlock(p.blockKind) || robotsBlockedTokens.has(p.token))
+  const allowed = probed.filter((p) => !blocked.includes(p))
 
-  const evidence: Evidence[] = assessable.map((p) =>
+  const evidence: Evidence[] = probed.map((p) =>
     ev(probe.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`),
   )
 
-  if (blocked.length === 0) {
+  // Crawlers robots.txt assessed that we could not probe — Google-Extended and
+  // Applebot-Extended are control tokens with no fetcher. They keep their
+  // robots.txt verdict, so folding in the probe never silently assesses fewer
+  // crawlers than the declaration-only path did. Dropping them would change the
+  // denominator and make probed and unprobed runs incomparable.
+  const probedTokens = new Set(probed.map((p) => p.token))
+  const declarationOnly = [...robotsAssessedTokens].filter((t) => !probedTokens.has(t))
+  const declarationBlocked = declarationOnly.filter((t) => robotsBlockedTokens.has(t))
+
+  const total = probed.length + declarationOnly.length
+  const okCount = allowed.length + (declarationOnly.length - declarationBlocked.length)
+  const blockedCount = blocked.length + declarationBlocked.length
+
+  if (declarationOnly.length) {
+    evidence.push(
+      ev(
+        probe.url,
+        'text',
+        `${declarationOnly.join(', ')} assessed from robots.txt only — ${declarationOnly.length === 1 ? 'it is a' : 'these are'} robots.txt control token${declarationOnly.length === 1 ? '' : 's'} with no fetching user-agent to test.`,
+      ),
+    )
+  }
+
+  if (blockedCount === 0) {
     return {
       score: 14,
       detail:
-        `All ${assessable.length} AI search crawlers were served the page when requested with their own ` +
-        `user-agent, and robots.txt permits them. Checked ${probe.checkedAt}.`,
+        `All ${total} AI search crawlers are permitted: ${probed.length} were served the page when requested ` +
+        `with their own user-agent${declarationOnly.length ? `, and ${declarationOnly.length} permitted by robots.txt` : ''}. ` +
+        `Checked ${probe.checkedAt}.`,
       evidence,
     }
   }
@@ -202,7 +228,7 @@ function foldProbeIntoCrawlers(
   const lead = divergent.length
     ? `robots.txt permits ${divergent.map((p) => p.token).join(', ')}, but the origin refused ${divergent.length === 1 ? 'it' : 'them'} anyway` +
       `${divergent[0].edgeVendor ? ` (${divergent[0].edgeVendor})` : ''}. A permissive robots.txt does not help when the edge turns the request away.`
-    : `${blocked.length} of ${assessable.length} AI search crawlers could not fetch this page.`
+    : `${blockedCount} of ${total} AI search crawlers cannot reach this page.`
 
   const asym =
     s.asymmetry === 'retrieval-blocked-training-allowed'
@@ -210,7 +236,7 @@ function foldProbeIntoCrawlers(
       : ''
 
   return {
-    score: Math.round((allowed.length / assessable.length) * 14),
+    score: Math.round((okCount / total) * 14),
     detail: `${lead}${asym} This records what the origin served to each user-agent, not whether any AI system has retrieved or cited the page.`,
     evidence,
   }
@@ -257,9 +283,21 @@ function scoreAccess({ home, access, crawlerAccess }: RetrievabilityInput): Fact
   const scoredTotal = s.searchAllowed.length + s.searchBlocked.length
 
   // Live probe first when we have one: enforcement outranks declaration.
-  const folded = crawlerAccess
-    ? foldProbeIntoCrawlers(crawlerAccess, new Set(s.searchBlocked.map((c) => c.token)))
-    : null
+  //
+  // But only when robots.txt was actually readable. An unreadable robots.txt
+  // (5xx, timeout) is indeterminate, and per RFC 9309 a compliant crawler treats
+  // an unavailable robots.txt as disallow-all — so observing that the origin
+  // *would* serve us proves nothing about whether a crawler will ask. Awarding
+  // marks there would turn a real risk into a pass.
+  const robotsReadable = access.robots.state !== 'unknown'
+  const folded =
+    crawlerAccess && robotsReadable
+      ? foldProbeIntoCrawlers(
+          crawlerAccess,
+          new Set(s.searchBlocked.map((c) => c.token)),
+          new Set([...s.searchAllowed, ...s.searchBlocked].map((c) => c.token)),
+        )
+      : null
 
   if (folded) {
     crawlers.award(folded.score, folded.detail, ...folded.evidence)
@@ -287,6 +325,27 @@ function scoreAccess({ home, access, crawlerAccess }: RetrievabilityInput): Fact
   // unknowns through its caveats, and adding this there would double-count.
   if (!folded && s.searchUnknown.length) {
     crawlers.miss(`${s.searchUnknown.length} crawler(s) could not be checked and are excluded from this score.`)
+  }
+
+  // Probe ran but did not feed the score (unreadable robots.txt, or nothing
+  // attributable). The observation is still worth showing — it just cannot earn
+  // marks — so it rides along as evidence rather than being discarded.
+  if (crawlerAccess && !folded && !crawlerAccess.baselineFailed) {
+    const rows = crawlerAccess.probes.filter((p) => p.class === 'ai-search' && p.attributable)
+    if (rows.length) {
+      crawlers.note(
+        ev(
+          crawlerAccess.url,
+          'text',
+          !robotsReadable
+            ? `robots.txt was unreadable, so crawler permission is indeterminate and not scored. Separately, the origin served ${rows.filter((p) => p.contentServed).length} of ${rows.length} AI search crawlers when asked directly.`
+            : `Live probe: ${rows.filter((p) => p.contentServed).length} of ${rows.length} AI search crawlers were served.`,
+        ),
+      )
+      for (const p of rows) {
+        crawlers.note(ev(crawlerAccess.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`))
+      }
+    }
   }
 
   if (access.directives.noindex) {

@@ -9,6 +9,7 @@
 import { crawlKeyPages, findKeyPages, pageForRole, type KeyPageResult } from './crawl'
 import { assessAccess, type AccessReport } from './access'
 import { fetchLlmsTxt, fetchRobotsTxt } from './robots'
+import { probeCrawlerAccess, crossReferenceRobots } from './crawler-access'
 import { extractPage, truncate, type ExtractedPage } from './extract'
 import { fetchPage, normaliseUrl, type FetchOptions } from './fetch'
 import { narrate, type NarrateOutput } from './narrate'
@@ -80,11 +81,24 @@ export async function runAudit(
   onProgress('Reading the page content…', 2, AUDIT_STEPS)
   const home = extractPage(fetched.html, fetched.finalUrl)
 
-  // ── 2a. Crawler access. Two small same-origin fetches, run in parallel. ─────
+  // ── 2a. Crawler access. robots.txt, llms.txt and the live probe together. ───
+  //
+  // The probe issues one request per crawler plus a baseline, all concurrent and
+  // in the same Promise.all as the two text files, so it adds no wall-clock
+  // beyond the slowest branch. No LLM cost. It is what turns "robots.txt permits
+  // these crawlers" into "the origin actually served them", which is the finding
+  // most site owners cannot get anywhere else.
   onProgress('Checking crawler access…', 3, AUDIT_STEPS)
-  const [robotsResult, llmsResult] = await Promise.all([
+  const [robotsResult, llmsResult, crawlerAccess] = await Promise.all([
     fetchRobotsTxt(fetched.finalUrl, { fetchImpl: fetchOptions.fetchImpl, userAgent: fetched.userAgent }),
     fetchLlmsTxt(fetched.finalUrl, { fetchImpl: fetchOptions.fetchImpl }),
+    // Never let a probe failure fail the audit: it is one input among many, and
+    // an audit without it is still a valid audit that scores on robots.txt alone.
+    probeCrawlerAccess(fetched.finalUrl, {
+      fetchImpl: fetchOptions.fetchImpl,
+      robots: null, // cross-referenced below, once robots.txt has parsed
+      now,
+    }).catch(() => null),
   ])
 
   const access = assessAccess({
@@ -98,6 +112,10 @@ export async function runAudit(
     canonical: home.canonical || null,
     jsOnlySuspected: fetched.jsOnlySuspected,
   })
+
+  // Apply robots.txt to the probe now that it has parsed, so the divergence
+  // finding survives having run the two concurrently.
+  const probe = crawlerAccess ? crossReferenceRobots(crawlerAccess, robotsResult.parsed ?? null) : null
 
   if (robotsResult.state === 'unknown' && robotsResult.note) notes.push(robotsResult.note)
 
@@ -179,7 +197,7 @@ export async function runAudit(
   // One scoring core for both tools. GEO and AO differ only in how the report is
   // presented and what the prose emphasises — never in how the numbers are
   // produced, because two scoring systems is two systems to keep honest.
-  const retrievability = scoreRetrievability({ home, access, now })
+  const retrievability = scoreRetrievability({ home, access, now, crawlerAccess: probe })
   const citability = assessCitability({ home, keyPages, now })
   const gap = diagnoseGap(retrievability, citability)
 

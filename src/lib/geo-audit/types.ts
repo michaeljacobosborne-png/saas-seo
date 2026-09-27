@@ -31,6 +31,12 @@ export type EvidenceKind =
   | 'contact'
   | 'social'
   | 'image'
+  /**
+   * An HTTP response observation — status plus the header the verdict rests on.
+   * Distinct from `meta`, which is markup inside the page: this is evidence
+   * about what the server did, not about what the document contains.
+   */
+  | 'header'
 
 export interface Evidence {
   /** The URL actually inspected to produce this evidence. */
