@@ -20,6 +20,11 @@
 
 import { countWords, truncate, type ExtractedPage } from './extract'
 import { summariseAccess, type AccessReport } from './access'
+import {
+  isPolicyBlock,
+  summarise as summariseCrawlerProbe,
+  type CrawlerAccessReport,
+} from './crawler-access'
 import { FactorBuilder, clamp, computeTotals, deriveStatus } from './scoring'
 import {
   STATUS_LABELS,
@@ -43,6 +48,16 @@ export interface RetrievabilityInput {
    * is a statement about what we could read, not about the page.
    */
   contentReadable?: boolean
+  /**
+   * Live crawler probe results, when the run performed one.
+   *
+   * robots.txt is a declaration; this is enforcement. When present it decides
+   * `access-crawlers`, because a 403 at the edge stops a crawler whatever
+   * robots.txt permits — which is the case Cloudflare's 2025 default created and
+   * most site owners cannot see. Absent, scoring is exactly as before, so scores
+   * from runs without a probe stay comparable.
+   */
+  crawlerAccess?: CrawlerAccessReport | null
 }
 
 const ev = (url: string, kind: Evidence['kind'], snippet: string): Evidence => ({
@@ -137,7 +152,122 @@ function buildGroup(id: RetrievabilityGroupId, checks: Factor[]): Retrievability
 
 // ── Access (30) ───────────────────────────────────────────────────────────────
 
-function scoreAccess({ home, access }: RetrievabilityInput): Factor[] {
+/**
+ * Fold the live probe into the crawler check.
+ *
+ * A retrieval crawler counts as blocked when robots.txt disallows it **or** the
+ * origin attributably refused it. Enforcement outranks declaration: a
+ * permissive robots.txt plus a 403 is still a crawler that cannot fetch the
+ * page, and that divergence is the whole reason the probe exists.
+ *
+ * Only `ai-search` crawlers reach the score. Training crawlers are reported by
+ * `reportTrainingProbe` and never scored — blocking them is a legitimate
+ * editorial choice, and scoring it would push publishers against their own
+ * interest.
+ *
+ * Returns null when there is nothing attributable to say, so the caller falls
+ * back to the robots.txt-only path rather than scoring on absent evidence.
+ */
+function foldProbeIntoCrawlers(
+  probe: CrawlerAccessReport,
+  robotsBlockedTokens: Set<string>,
+  /** Every retrieval crawler robots.txt gave a verdict on, probed or not. */
+  robotsAssessedTokens: Set<string>,
+): { score: number; detail: string; evidence: Evidence[] } | null {
+  if (probe.baselineFailed) return null
+
+  const s = summariseCrawlerProbe(probe)
+  const retrieval = probe.probes.filter((p) => p.class === 'ai-search' && p.attributable)
+  const probed = retrieval.filter(
+    (p) => p.blockKind !== 'network-error' && p.blockKind !== 'rate-limited',
+  )
+  if (probed.length === 0) return null
+
+  const blocked = probed.filter((p) => isPolicyBlock(p.blockKind) || robotsBlockedTokens.has(p.token))
+  const allowed = probed.filter((p) => !blocked.includes(p))
+
+  const evidence: Evidence[] = probed.map((p) =>
+    ev(probe.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`),
+  )
+
+  // Crawlers robots.txt assessed that we could not probe — Google-Extended and
+  // Applebot-Extended are control tokens with no fetcher. They keep their
+  // robots.txt verdict, so folding in the probe never silently assesses fewer
+  // crawlers than the declaration-only path did. Dropping them would change the
+  // denominator and make probed and unprobed runs incomparable.
+  const probedTokens = new Set(probed.map((p) => p.token))
+  const declarationOnly = [...robotsAssessedTokens].filter((t) => !probedTokens.has(t))
+  const declarationBlocked = declarationOnly.filter((t) => robotsBlockedTokens.has(t))
+
+  const total = probed.length + declarationOnly.length
+  const okCount = allowed.length + (declarationOnly.length - declarationBlocked.length)
+  const blockedCount = blocked.length + declarationBlocked.length
+
+  if (declarationOnly.length) {
+    evidence.push(
+      ev(
+        probe.url,
+        'text',
+        `${declarationOnly.join(', ')} assessed from robots.txt only — ${declarationOnly.length === 1 ? 'it is a' : 'these are'} robots.txt control token${declarationOnly.length === 1 ? '' : 's'} with no fetching user-agent to test.`,
+      ),
+    )
+  }
+
+  if (blockedCount === 0) {
+    return {
+      score: 14,
+      detail:
+        `All ${total} AI search crawlers are permitted: ${probed.length} were served the page when requested ` +
+        `with their own user-agent${declarationOnly.length ? `, and ${declarationOnly.length} permitted by robots.txt` : ''}. ` +
+        `Checked ${probe.checkedAt}.`,
+      evidence,
+    }
+  }
+
+  const divergent = blocked.filter((p) => p.divergence === 'robots-allows-origin-blocks')
+  const lead = divergent.length
+    ? `robots.txt permits ${divergent.map((p) => p.token).join(', ')}, but the origin refused ${divergent.length === 1 ? 'it' : 'them'} anyway` +
+      `${divergent[0].edgeVendor ? ` (${divergent[0].edgeVendor})` : ''}. A permissive robots.txt does not help when the edge turns the request away.`
+    : `${blockedCount} of ${total} AI search crawlers cannot reach this page.`
+
+  const asym =
+    s.asymmetry === 'retrieval-blocked-training-allowed'
+      ? ' Training crawlers were served while retrieval crawlers were not, which is the opposite of what most publishers intend.'
+      : ''
+
+  return {
+    score: Math.round((okCount / total) * 14),
+    detail: `${lead}${asym} This records what the origin served to each user-agent, not whether any AI system has retrieved or cited the page.`,
+    evidence,
+  }
+}
+
+/**
+ * Training and user-triggered probe results, reported and never scored, so the
+ * user can see the whole picture without a legitimate editorial choice being
+ * counted against them.
+ */
+function reportTrainingProbe(probe: CrawlerAccessReport): Factor | null {
+  if (probe.baselineFailed) return null
+  const rows = probe.probes.filter((p) => p.class !== 'ai-search' && p.attributable)
+  if (rows.length === 0) return null
+
+  const b = new FactorBuilder('access-training-crawlers', 'Training crawler access', 0)
+  const blocked = rows.filter((p) => isPolicyBlock(p.blockKind))
+  const served = rows.filter((p) => p.contentServed)
+
+  b.unverified(
+    blocked.length === 0
+      ? `All ${rows.length} training crawlers were served the page. Reported for completeness — this is not scored, because allowing or blocking training crawlers is an editorial choice with no bearing on AI search visibility.`
+      : `${blocked.map((p) => p.token).join(', ')} ${blocked.length === 1 ? 'was' : 'were'} refused; ${served.length} of ${rows.length} were served. Not scored: blocking training crawlers is a legitimate choice and does not remove a page from AI search.`,
+  )
+  for (const p of rows) {
+    b.note(ev(probe.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`))
+  }
+  return b.build()
+}
+
+function scoreAccess({ home, access, crawlerAccess }: RetrievabilityInput): Factor[] {
   const crawlers = new FactorBuilder('access-crawlers', 'AI crawler access', 14)
   const indexing = new FactorBuilder('access-indexing', 'Indexing directives', 10)
   const reachable = new FactorBuilder('access-reachable', 'Fetch and canonical', 6)
@@ -152,7 +282,29 @@ function scoreAccess({ home, access }: RetrievabilityInput): Factor[] {
   const s = summariseAccess(access)
   const scoredTotal = s.searchAllowed.length + s.searchBlocked.length
 
-  if (scoredTotal === 0) {
+  // Live probe first when we have one: enforcement outranks declaration.
+  //
+  // But only when robots.txt was actually readable. An unreadable robots.txt
+  // (5xx, timeout) is indeterminate, and per RFC 9309 a compliant crawler treats
+  // an unavailable robots.txt as disallow-all — so observing that the origin
+  // *would* serve us proves nothing about whether a crawler will ask. Awarding
+  // marks there would turn a real risk into a pass.
+  const robotsReadable = access.robots.state !== 'unknown'
+  const folded =
+    crawlerAccess && robotsReadable
+      ? foldProbeIntoCrawlers(
+          crawlerAccess,
+          new Set(s.searchBlocked.map((c) => c.token)),
+          new Set([...s.searchAllowed, ...s.searchBlocked].map((c) => c.token)),
+        )
+      : null
+
+  if (folded) {
+    crawlers.award(folded.score, folded.detail, ...folded.evidence)
+    if (crawlerAccess) {
+      for (const c of crawlerAccess.caveats) crawlers.note(ev(crawlerAccess.url, 'text', c))
+    }
+  } else if (scoredTotal === 0) {
     crawlers.unverified(
       access.robots.note ?? 'robots.txt could not be read, so AI crawler access could not be determined.',
     )
@@ -169,8 +321,31 @@ function scoreAccess({ home, access }: RetrievabilityInput): Factor[] {
       ev(access.robots.url || access.finalUrl, 'text', s.searchBlocked.map((c) => `${c.token}: ${c.reason}`).join(' | ')),
     )
   }
-  if (s.searchUnknown.length) {
+  // Only meaningful on the robots.txt-only path; the probe reports its own
+  // unknowns through its caveats, and adding this there would double-count.
+  if (!folded && s.searchUnknown.length) {
     crawlers.miss(`${s.searchUnknown.length} crawler(s) could not be checked and are excluded from this score.`)
+  }
+
+  // Probe ran but did not feed the score (unreadable robots.txt, or nothing
+  // attributable). The observation is still worth showing — it just cannot earn
+  // marks — so it rides along as evidence rather than being discarded.
+  if (crawlerAccess && !folded && !crawlerAccess.baselineFailed) {
+    const rows = crawlerAccess.probes.filter((p) => p.class === 'ai-search' && p.attributable)
+    if (rows.length) {
+      crawlers.note(
+        ev(
+          crawlerAccess.url,
+          'text',
+          !robotsReadable
+            ? `robots.txt was unreadable, so crawler permission is indeterminate and not scored. Separately, the origin served ${rows.filter((p) => p.contentServed).length} of ${rows.length} AI search crawlers when asked directly.`
+            : `Live probe: ${rows.filter((p) => p.contentServed).length} of ${rows.length} AI search crawlers were served.`,
+        ),
+      )
+      for (const p of rows) {
+        crawlers.note(ev(crawlerAccess.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`))
+      }
+    }
   }
 
   if (access.directives.noindex) {
@@ -208,7 +383,12 @@ function scoreAccess({ home, access }: RetrievabilityInput): Factor[] {
     reachable.miss('No robots.txt is published, so no sitemap is declared to crawlers.')
   }
 
-  return [crawlers.build(), indexing.build(), reachable.build()]
+  // Training-crawler rows ride along as an unverified (never scored) factor, so
+  // the picture is complete without a legitimate editorial choice costing points.
+  const training = crawlerAccess ? reportTrainingProbe(crawlerAccess) : null
+  const out = [crawlers.build(), indexing.build(), reachable.build()]
+  if (training) out.push(training)
+  return out
 }
 
 // ── Parseability (25) ─────────────────────────────────────────────────────────

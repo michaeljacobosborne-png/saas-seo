@@ -62,7 +62,15 @@ describe('runAudit — real page, GEO', () => {
     expect(report.scoreWithheld).toBe(false)
     // 7 content factors + AI crawler access.
     // Phase B: breakdown is the flattened retrievability checks, 3 per group.
-    expect(report.breakdown).toHaveLength(12)
+    // 12 SCORED factors: 7 content + AI crawler access, 3 per retrievability group.
+    // Asserted as the scored set rather than a raw count, because the live crawler
+    // probe adds reported-never-scored rows that must not change the scale.
+    expect(report.breakdown.filter((f) => f.maxScore > 0)).toHaveLength(12)
+    const trainingRow = report.breakdown.find((f) => f.id === 'access-training-crawlers')
+    if (trainingRow) {
+      expect(trainingRow.scored).toBe(false)
+      expect(trainingRow.maxScore).toBe(0)
+    }
     expect(report.retrievability.groups.map((g) => g.id)).toEqual([
       'access',
       'parseability',
@@ -306,7 +314,15 @@ describe('runAudit — AO on a real page', () => {
     })
 
     expectInternallyConsistent(report)
-    expect(report.breakdown).toHaveLength(12)
+    // 12 SCORED factors: 7 content + AI crawler access, 3 per retrievability group.
+    // Asserted as the scored set rather than a raw count, because the live crawler
+    // probe adds reported-never-scored rows that must not change the scale.
+    expect(report.breakdown.filter((f) => f.maxScore > 0)).toHaveLength(12)
+    const trainingRow = report.breakdown.find((f) => f.id === 'access-training-crawlers')
+    if (trainingRow) {
+      expect(trainingRow.scored).toBe(false)
+      expect(trainingRow.maxScore).toBe(0)
+    }
     expect(report.tool).toBe('ao')
 
     // Previously reported as "No H2/H3 headings detected in provided HTML".
