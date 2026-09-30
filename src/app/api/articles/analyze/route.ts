@@ -4,14 +4,7 @@ export const maxDuration = 30
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { checkArticleLimit } from '@/lib/usage'
-import {
-  computeSEO,
-  computeReadability,
-  computeGEO,
-  computeAEO,
-  buildRankingPrediction,
-  buildTrafficPrediction,
-} from '@/lib/article-scoring'
+import { buildArticleScores } from '@/lib/article-scores'
 import type { ArticleScores } from '@/lib/supabase/types'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -90,33 +83,28 @@ export async function POST(request: Request) {
           url_slug: '',
         }
 
-        const seo = computeSEO(content, brief, targetKeyword ?? '')
-        const readability = computeReadability(content)
-        const geo = computeGEO(content)
-        const aeo = computeAEO(content)
-
-        const ranking_prediction = buildRankingPrediction(null, seo.score)
-        const traffic_prediction = buildTrafficPrediction(null)
-
-        const scores: ArticleScores = {
-          seo,
-          readability,
-          geo,
-          aeo,
-          ranking_prediction,
-          traffic_prediction,
-        }
-
-        // Step 2 — AI analysis
-        send({ type: 'progress', message: 'Running AI analysis…', step: 2, total: 2 })
-
         // Load brand profile (non-fatal if missing)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: brandProfile } = await (supabase as any)
           .from('brand_profiles')
           .select('*')
           .eq('user_id', user.id)
+          .limit(1)
           .maybeSingle()
+
+        const scores: ArticleScores = buildArticleScores({
+          content,
+          brief,
+          targetKeyword: targetKeyword ?? '',
+          articleId: null,
+          title: content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null,
+          brandName: brandProfile?.brand_name ?? null,
+          siteUrl: brandProfile?.website_url ?? null,
+          now: new Date(),
+        })
+
+        // Step 2 — AI analysis
+        send({ type: 'progress', message: 'Running AI analysis…', step: 2, total: 2 })
 
         const brandContext = brandProfile
           ? [
