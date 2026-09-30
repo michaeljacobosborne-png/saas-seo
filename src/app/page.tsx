@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import TestimonialsSection from './_components/TestimonialsSection'
 import NavLinks from './_components/NavLinks'
 import FounderBanner from './_components/FounderBanner'
+import { ORG_ID, SITE_URL, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
 
 export const metadata: Metadata = {
   title: 'Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content',
@@ -61,11 +62,12 @@ const COMPARISON_ROWS = [
   { feature: 'Price', byline: 'From $49', other: 'From $89' },
 ]
 
-const jsonLd = {
-  '@context': 'https://schema.org',
+const jsonLd = graph(organizationNode(), websiteNode(), personNode({ slug: 'michael-osborne' }), {
   '@type': 'SoftwareApplication',
+  '@id': `${SITE_URL}/#software`,
   name: 'Byline',
-  url: 'https://app.bylineseo.com',
+  url: SITE_URL,
+  publisher: { '@id': ORG_ID },
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
   description:
@@ -84,14 +86,14 @@ const jsonLd = {
     'Answer Optimization analysis',
     'Free SEO audit tool',
   ],
-}
+})
 
 export default function HomePage() {
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
     <div className="min-h-full bg-[#1C1917] text-[#F7F3EC]">
 

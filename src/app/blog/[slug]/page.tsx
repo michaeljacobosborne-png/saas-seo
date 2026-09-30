@@ -12,12 +12,21 @@ import { urlFor } from '@/sanity/lib/image'
 import { postSlugsQuery } from '@/sanity/lib/queries'
 import { extractFaqs, readingTime } from '@/sanity/lib/portableText'
 import { PortableTextBody } from '../_components/PortableTextBody'
+import {
+  ORG_ID,
+  SITE_URL,
+  WEBSITE_ID,
+  breadcrumbNode,
+  graph,
+  jsonLdString,
+  organizationNode,
+  personNode,
+  websiteNode,
+} from '@/lib/structured-data'
 
 // ISR: regenerate published articles at most hourly.
 export const revalidate = 3600
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://app.bylineseo.com'
 
 type Category = { _id: string; title: string; slug: string }
 type Author = {
@@ -33,6 +42,7 @@ type Post = {
   slug: string
   excerpt?: string
   publishedAt?: string
+  _updatedAt?: string
   mainImage?: SanityImage & { alt?: string }
   body?: PortableTextBlock[]
   seoTitle?: string
@@ -118,50 +128,54 @@ export default async function BlogPostPage({
     ? urlFor(post.mainImage).width(1200).height(630).fit('crop').url()
     : undefined
 
-  // Article structured data (JSON-LD) for AEO / rich results.
-  const articleJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: post.title,
-    description: post.seoDescription || post.excerpt,
-    image: ogImage ? [ogImage] : undefined,
-    datePublished: post.publishedAt,
-    dateModified: post.publishedAt,
-    author: post.author?.name
-      ? { '@type': 'Person', name: post.author.name }
-      : undefined,
-    publisher: {
-      '@type': 'Organization',
-      name: 'Byline',
+  // One @graph: the post, its author and publisher by @id, the breadcrumb trail,
+  // and FAQPage when the post has a visible FAQ section.
+  const author = personNode(post.author)
+  const jsonLd = graph(
+    {
+      '@type': 'BlogPosting',
+      '@id': `${url}#article`,
+      headline: post.title,
+      description: post.seoDescription || post.excerpt,
+      image: ogImage ? [ogImage] : undefined,
+      datePublished: post.publishedAt,
+      // Last real edit, never earlier than publication.
+      dateModified:
+        post._updatedAt && post.publishedAt && post._updatedAt > post.publishedAt
+          ? post._updatedAt
+          : post.publishedAt,
+      inLanguage: 'en-US',
+      author: author && ('@id' in author ? { '@id': author['@id'] } : author),
+      publisher: { '@id': ORG_ID },
+      isPartOf: { '@id': WEBSITE_ID },
+      mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+      breadcrumb: { '@id': `${url}#breadcrumb` },
     },
-    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
-  }
-
-  const faqJsonLd =
-    faqs.length > 0
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'FAQPage',
-          mainEntity: faqs.map((f) => ({
-            '@type': 'Question',
-            name: f.question,
-            acceptedAnswer: { '@type': 'Answer', text: f.answer },
-          })),
-        }
-      : null
+    author && '@id' in author ? author : null,
+    organizationNode(),
+    websiteNode(),
+    breadcrumbNode(url, [
+      { name: 'Home', url: SITE_URL },
+      { name: 'Blog', url: `${SITE_URL}/blog` },
+      { name: post.title, url },
+    ]),
+    faqs.length > 0 && {
+      '@type': 'FAQPage',
+      '@id': `${url}#faq`,
+      mainEntity: faqs.map((f) => ({
+        '@type': 'Question',
+        name: f.question,
+        acceptedAnswer: { '@type': 'Answer', text: f.answer },
+      })),
+    },
+  )
 
   return (
     <main className="max-w-3xl mx-auto px-6 py-12 sm:py-16">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
-      {faqJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-        />
-      )}
 
       <Link
         href="/blog"

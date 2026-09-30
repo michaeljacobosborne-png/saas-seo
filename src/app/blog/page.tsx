@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Metadata } from 'next'
 import type { Image as SanityImage } from 'sanity'
+
+import { ORG_ID, SITE_URL, WEBSITE_ID, breadcrumbNode, graph, jsonLdString, organizationNode, websiteNode } from '@/lib/structured-data'
 
 import { isSanityConfigured } from '@/sanity/env'
 import { client } from '@/sanity/lib/client'
@@ -42,11 +45,36 @@ async function getPosts(): Promise<PostCard[]> {
   }
 }
 
+export const metadata: Metadata = {
+  alternates: { canonical: `${SITE_URL}/blog` },
+  openGraph: { type: 'website', url: `${SITE_URL}/blog` },
+}
+
 export default async function BlogIndexPage() {
   const posts = await getPosts()
+  const blogUrl = `${SITE_URL}/blog`
+  const jsonLd = graph(
+    {
+      '@type': 'Blog',
+      '@id': `${blogUrl}#blog`,
+      name: 'The Byline Blog',
+      url: blogUrl,
+      publisher: { '@id': ORG_ID },
+      isPartOf: { '@id': WEBSITE_ID },
+      inLanguage: 'en-US',
+      blogPost: posts.map((p) => ({ '@id': `${blogUrl}/${p.slug}#article` })),
+    },
+    organizationNode(),
+    websiteNode(),
+    breadcrumbNode(blogUrl, [
+      { name: 'Home', url: SITE_URL },
+      { name: 'Blog', url: blogUrl },
+    ]),
+  )
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-16">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
       <header className="max-w-2xl mb-14">
         <p className="text-xs uppercase tracking-[0.2em] text-[#B87333] font-medium mb-3">
           The Byline Blog
