@@ -1,7 +1,12 @@
 # Paid-product engine: bringing the real analyzer into the editor
 
-**Status:** specification, not yet approved for build.
-**Branch:** `spec-paid-engine`.
+**Status:** phases 1–2 built and deployed 2026-09-30 (`src/lib/geo-audit/adapt-markdown.ts`,
+`draft-report.ts`, `GET /api/articles/[id]/draft-report`, `scripts/draft-report.ts`). Not yet
+shown in the editor: phase 3 waits on the §7 product decisions. Decided: separate draft-time
+denominator (45); `MIN_ASSESSED_SHARE` stays 0.6. Deviation from §2.2: the adapter renders
+markdown with `marked` (already a dependency, a real GFM parser) and runs the live
+`extractPage()` on the result, which removes adapter/extractor divergence by construction.
+**Branch:** merged to `master`.
 **Author:** written from the code as it stands at master `4a19e20`, not from assumption.
 
 ---
