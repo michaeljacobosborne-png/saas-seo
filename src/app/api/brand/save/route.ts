@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
+import { brandMergers } from '@/lib/brand-merge'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -28,20 +29,11 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prev: Record<string, any> = existing ?? {}
 
-  // Write the incoming value only when it carries something meaningful; otherwise
-  // keep whatever is already stored (or null on a brand-new insert). This is what
-  // makes the save non-destructive: an absent/empty field preserves the prior value.
-  const mergeStr = (incoming: unknown, column: string): string | null => {
-    const v = typeof incoming === 'string' ? incoming.trim() : ''
-    if (v) return v
-    return prev[column] ?? null
-  }
-  const mergeArr = (incoming: unknown, column: string): string[] => {
-    if (Array.isArray(incoming)) {
-      const cleaned = incoming.filter((x): x is string => typeof x === 'string' && x.trim() !== '')
-      if (cleaned.length) return cleaned
-    }
-    return Array.isArray(prev[column]) ? prev[column] : []
+  const { mergeStr, mergeArr } = brandMergers(prev, isAgentFormat)
+
+  // A form save can clear optional fields, but not the name the profile is keyed on.
+  if (!isAgentFormat && 'brand_name' in body && typeof body.brand_name === 'string' && !body.brand_name.trim()) {
+    return NextResponse.json({ error: 'Brand name is required.' }, { status: 400 })
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
