@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 import { AUDIT_STEPS, AuditError, runAudit } from '@/lib/geo-audit'
-import { consumeRun, identityFor } from '@/lib/geo-audit/rate-limit'
+import { consumeRun, identityFor, isQuotaExempt } from '@/lib/geo-audit/rate-limit'
+import { createClient } from '@/lib/supabase/server'
 
 /**
  * Shared NDJSON streaming endpoint for the free GEO and AO analyzers.
@@ -24,7 +25,12 @@ export async function POST(request: Request) {
 
   // Rate limit before doing any paid work. Presented as a budget, not a wall:
   // the remaining count rides on every response so the UI can show it up front.
-  const budget = await consumeRun(identityFor(request.headers), { tool: type })
+  // The signed-in owner is exempt so demos are not cut off after three runs.
+  // Their runs are still counted, under their account id, so usage stays visible.
+  const user = await verifiedUser()
+  const exempt = isQuotaExempt(user)
+  const counted = await consumeRun(exempt ? `user:${user!.id}` : identityFor(request.headers), { tool: type })
+  const budget = exempt ? { ...counted, allowed: true, exempt: true } : counted
   if (!budget.allowed) {
     return json(
       {
@@ -69,6 +75,17 @@ export async function POST(request: Request) {
       'X-Accel-Buffering': 'no',
     },
   })
+}
+
+/** The auth-server-verified user for this request, or null if anonymous. */
+async function verifiedUser() {
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    return data.user ?? null
+  } catch {
+    return null
+  }
 }
 
 function json(payload: unknown, status: number): Response {

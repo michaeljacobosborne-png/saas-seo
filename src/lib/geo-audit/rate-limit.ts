@@ -44,6 +44,27 @@ export function identityFor(headers: Headers): string {
   return `${ip}|${hash(ua)}`
 }
 
+/**
+ * The one account exempt from the free-run budget, so the owner can demo the
+ * tool to several prospects from one connection.
+ *
+ * The exemption is decided only from a Supabase user that the auth server has
+ * verified (`auth.getUser()`), never from an IP, a header or a cookie value read
+ * directly — anything a caller can type must not be able to lift the quota.
+ */
+const OWNER_EMAIL = 'michaeljacobosborne@gmail.com'
+
+export interface VerifiedUser {
+  id: string
+  email?: string | null
+  email_confirmed_at?: string | null
+}
+
+export function isQuotaExempt(user: VerifiedUser | null | undefined): boolean {
+  if (!user?.id || !user.email || !user.email_confirmed_at) return false
+  return user.email.trim().toLowerCase() === OWNER_EMAIL
+}
+
 function hash(s: string): string {
   let h = 2166136261
   for (let i = 0; i < s.length; i++) {
