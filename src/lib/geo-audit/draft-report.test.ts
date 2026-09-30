@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { Marked } from 'marked'
 import { describe, expect, it } from 'vitest'
 import { adaptMarkdown, locateLine } from './adapt-markdown'
 import { DRAFT_SCOPE, buildDraftReport } from './draft-report'
@@ -117,6 +118,17 @@ describe('adaptMarkdown — equivalence with the live extractor (spec §2.5)', (
     expect(rawHtmlBlocks).toBeGreaterThanOrEqual(2)
     expect(page.structuredDataTypes).toEqual([])
     expect(page.mainText).not.toContain('embedded')
+  })
+
+  it('reads editor-saved HTML (TipTap autosave) instead of dropping it', () => {
+    const md = adaptMarkdown(MD, { articleId: 'a1' }).page
+    const html = adaptMarkdown(new Marked().parse(MD, { async: false }) as string, { articleId: 'a1' })
+    expect(html.rawHtmlBlocks).toBe(0)
+    expect(html.page.wordCount).toBe(md.wordCount)
+    expect(html.page.headings).toEqual(md.headings)
+    // Structured data injected via saved HTML is still a template concern.
+    const withLd = adaptMarkdown(`<p>x</p><script type="application/ld+json">{"@type":"Organization","name":"F"}</script>`, { articleId: 'a' })
+    expect(withLd.page.structuredDataTypes).toEqual([])
   })
 
   it('uses the article title as the H1 only when the draft has none', () => {
