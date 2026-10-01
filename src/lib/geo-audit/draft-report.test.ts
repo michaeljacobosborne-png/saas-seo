@@ -167,8 +167,9 @@ describe('buildDraftReport — the draft-time denominator', () => {
       expect(g.checks.every((c) => c.state === 'unverified' && !c.scored && c.score === 0)).toBe(true)
     }
     expect(report.afterPublication.map((a) => a.id)).toEqual(
-      expect.arrayContaining(['access-crawlers', 'parse-server-text', 'parse-structured-data', 'named-authorship']),
+      expect.arrayContaining(['access-crawlers', 'parse-server-text', 'parse-structured-data', 'entity-resolution']),
     )
+    expect(report.afterPublication.map((a) => a.id)).not.toContain('named-authorship')
   })
 
   it('still withholds a draft too thin to assess, inside the draft denominator', () => {
@@ -178,9 +179,29 @@ describe('buildDraftReport — the draft-time denominator', () => {
     expect(thin.gap.quadrant).toBe('indeterminate')
   })
 
-  it('assesses the three writer-controlled citability signals and leaves template ones unverified', () => {
+  it('scores named authorship from the brand profile byline (decision 5)', () => {
+    const band = (author: Parameters<typeof buildDraftReport>[0]['author']) =>
+      buildDraftReport({ markdown: MD, articleId: 'a1', brandName: 'Acme', author, now: NOW }).citability.signals.find(
+        (s) => s.id === 'named-authorship',
+      )!
+    // No author columns on the profile yet (migration not applied): unverified, never absent.
+    expect(band(undefined).band).toBe('unverified')
+    // Columns present but no author set: absent, with the fix stated.
+    expect(band(null).band).toBe('absent')
+    expect(band({ name: '  ' }).detail).toMatch(/Add the author/)
+    expect(band({ name: 'Michael Jacobs' }).band).toBe('adequate')
+    const strong = band({ name: 'Michael Jacobs', credentials: '15 years in technical SEO' })
+    expect(strong.band).toBe('strong')
+    expect(strong.evidence[0].snippet).toContain('Michael Jacobs')
+  })
+
+  it('states the 45-of-100 scope inline (decision 3)', () => {
+    expect(report.scope).toMatch(/45 of the 100 points/)
+    expect(report.scope).toMatch(/once it is live/)
+  })
+
+  it('assesses the body-text citability signals and leaves template ones unverified', () => {
     const byId = Object.fromEntries(report.citability.signals.map((s) => [s.id, s.band]))
-    expect(byId['named-authorship']).toBe('unverified')
     expect(byId['entity-resolution']).toBe('unverified')
     expect(byId['freshness-provenance']).toBe('unverified')
     expect(byId['brand-proximity']).not.toBe('unverified')

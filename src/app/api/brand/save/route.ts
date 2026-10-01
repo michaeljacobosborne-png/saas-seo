@@ -60,6 +60,11 @@ export async function POST(request: Request) {
   // Only touch these when explicitly included in the request, then merge as usual.
   if ('website_url' in body) payload.website_url = mergeStr(body.website_url, 'website_url')
   if ('primary_keywords' in body) payload.primary_keywords = mergeArr(body.primary_keywords, 'primary_keywords')
+  // Byline author (decision 5). Only written when sent, so saves keep working
+  // before migration 20261001_brand_author adds the columns.
+  for (const col of ['author_name', 'author_credentials', 'author_url'] as const) {
+    if (col in body) payload[col] = mergeStr(body[col], col)
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)

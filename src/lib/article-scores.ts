@@ -20,7 +20,19 @@ import {
   buildRankingPrediction,
   buildTrafficPrediction,
 } from '@/lib/article-scoring'
-import { buildDraftReport } from '@/lib/geo-audit/draft-report'
+import { buildDraftReport, type DraftAuthor } from '@/lib/geo-audit/draft-report'
+
+/**
+ * The byline from a brand_profiles row. Returns undefined when the row has no
+ * author columns (migration 20261001_brand_author not applied), which the draft
+ * report treats as unverified rather than absent.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function authorFromProfile(row: Record<string, any> | null | undefined): DraftAuthor | null | undefined {
+  if (!row) return null
+  if (!('author_name' in row)) return undefined
+  return { name: row.author_name ?? null, credentials: row.author_credentials ?? null, url: row.author_url ?? null }
+}
 
 export interface ArticleScoreInput {
   content: string
@@ -34,6 +46,7 @@ export interface ArticleScoreInput {
   title?: string | null
   brandName?: string | null
   siteUrl?: string | null
+  author?: DraftAuthor | null
   now: Date
 }
 
@@ -51,6 +64,7 @@ export function buildArticleScores(input: ArticleScoreInput): ArticleScores {
       title: input.title,
       brandName: input.brandName,
       siteUrl: input.siteUrl,
+      author: input.author,
       now: input.now,
     })
   } catch (err) {

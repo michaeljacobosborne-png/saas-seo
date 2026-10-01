@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ArticleScores } from '@/lib/supabase/types'
-import { buildArticleScores } from '@/lib/article-scores'
+import { authorFromProfile, buildArticleScores } from '@/lib/article-scores'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -36,8 +36,9 @@ export async function POST(request: Request) {
     .ilike('keyword', targetKeyword)
     .maybeSingle() : { data: null }
 
+  // `*` so the author columns are picked up whether or not the migration has run.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const brandQuery = (supabase as any).from('brand_profiles').select('brand_name, website_url').eq('user_id', user.id)
+  const brandQuery = (supabase as any).from('brand_profiles').select('*').eq('user_id', user.id)
   const { data: brand } = await (article.brand_profile_id
     ? brandQuery.eq('id', article.brand_profile_id)
     : brandQuery.limit(1)
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
     title: article.title,
     brandName: brand?.brand_name ?? null,
     siteUrl: brand?.website_url ?? null,
+    author: authorFromProfile(brand),
     now: new Date(),
   })
 

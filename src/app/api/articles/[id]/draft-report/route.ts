@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildDraftReport } from '@/lib/geo-audit/draft-report'
+import { authorFromProfile } from '@/lib/article-scores'
 
 /**
  * Draft-time report for an article (paid engine, phases 1–2 of
@@ -26,7 +27,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .maybeSingle()
   if (!article) return NextResponse.json({ error: 'Article not found' }, { status: 404 })
 
-  const brandQuery = sb.from('brand_profiles').select('brand_name, website_url').eq('user_id', user.id)
+  const brandQuery = sb.from('brand_profiles').select('*').eq('user_id', user.id)
   const { data: brand } = await (article.brand_profile_id ? brandQuery.eq('id', article.brand_profile_id) : brandQuery.limit(1)).maybeSingle()
 
   const report = buildDraftReport({
@@ -35,6 +36,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     title: article.title,
     siteUrl: brand?.website_url ?? null,
     brandName: brand?.brand_name ?? null,
+    author: authorFromProfile(brand),
     now: new Date(),
   })
 

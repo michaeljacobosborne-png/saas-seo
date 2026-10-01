@@ -4,7 +4,7 @@ export const maxDuration = 30
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { checkArticleLimit } from '@/lib/usage'
-import { buildArticleScores } from '@/lib/article-scores'
+import { authorFromProfile, buildArticleScores } from '@/lib/article-scores'
 import type { ArticleScores } from '@/lib/supabase/types'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -100,6 +100,7 @@ export async function POST(request: Request) {
           title: content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null,
           brandName: brandProfile?.brand_name ?? null,
           siteUrl: brandProfile?.website_url ?? null,
+          author: authorFromProfile(brandProfile),
           now: new Date(),
         })
 
