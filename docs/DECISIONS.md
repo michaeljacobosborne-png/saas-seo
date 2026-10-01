@@ -6,26 +6,39 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
-## 15. The author byline is part of the draft
-**Date:** 2026-10-01
-**Decision:** Named authorship is scored at draft time from the brand profile's author (new `author_name`, `author_credentials`, `author_url` columns).
-**Drivers:** It is actionable while writing, and entity consistency is a live concern for this product (see 10).
-**Revisit if:** customers publish through templates that override or drop the byline, so the draft would credit authorship the published page lacks.
+## 13–19. Paid engine product decisions (docs/paid-engine-spec.md §7), answered 2026-10-01
 
-## 14. Announce the score change to existing customers
-**Date:** 2026-10-01
-**Decision:** When paid scores move to the real engine, announce it in-product and by email. Do not migrate quietly, and do not run old and new side by side. The draft wording is in `docs/notices/score-change-notice.md`.
-**Drivers:** Byline sells honest measurement. Silently lowering everyone's numbers is the one option that contradicts the product.
-**Revisit if:** never, for the principle. The wording is open to review.
+### 13. Two scores in the editor, matching the free tool
+**Decision:** The paid editor shows two scores, Retrievable (a number) and Citable (a band), as the free tool does. They are never blended into one number.
+**Drivers:** The publish loop only pays off if the draft-time and published measurements are visibly the same kind of thing. A customer who runs a published article through the free tool must see the same framework the editor showed. Citability is heuristic, so a single blended number would be false precision.
+**Revisit if:** customers consistently fail to understand two scores in usability testing.
 
-## 13. State the draft scope inline
-**Date:** 2026-10-01
-**Decision:** The editor says inline, not in a tooltip, that a draft is assessed on 45 of the 100 points and that the rest is checked after publication.
-**Drivers:** Stating what cannot be known before publication is the differentiator; hiding it would contradict everything else in the product.
-**Revisit if:** usability testing shows the inline text is unread. Then shorten it; do not hide it.
+### 14. GEO and AEO name the tools; Retrievable and Citable name the scores
+**Decision:** The tools and pages stay titled GEO and AEO. The scores inside the product are Retrievable and Citable. Category terms live on the outside; the framework is the vocabulary inside. Apply this consistently in UI copy (`src/lib/score-labels.ts` holds the score names).
+**Drivers:** People search for GEO and AEO and expect those words on the tool. Inside, two vocabularies for one concept is a support cost, so the scores use the framework's names everywhere.
+**Revisit if:** search demand shifts to different category terms.
 
-## Pending: decisions 1 and 2 (one or two scores in the editor; what they are called)
-With Michael as of 2026-10-01. Recommendation: two scores matching the free tool, named Retrievable and Citable in the editor, with GEO and AEO kept as the names of the tools and pages. No UI copy commits to the names until he confirms (`src/lib/score-labels.ts`).
+### 15. Drafts get their own breakdown; unpublishable checks are "not yet assessable", never missing marks
+**Decision:** The draft breakdown reads as "what can be judged now" and "what is judged at publication". Anything that belongs to the domain or the published page (crawler access, server rendering, structured data, entity markup, publication dates) is reported as not yet assessable, with the reason. It is never a zero, a failure or a deduction. The 45-of-100 scope is stated inline, not in a tooltip.
+**Drivers:** Michael: do not make it seem a draft will fail or succeed on things that are not there yet. Stating what cannot be known before publication is the differentiator, and hiding it would contradict the rest of the product.
+**Revisit if:** usability testing shows the inline scope text is unread. Then shorten it; do not hide it.
+
+### 16. No migration notice and no side-by-side period
+**Decision:** Skip the score-change announcement and any old/new side-by-side display. Supersedes the earlier same-day answer to announce it, which was given before it was clear there are no active users.
+**Drivers:** There are no active users whose numbers would move, so a notice would be addressed to nobody. The draft notice in `docs/notices/score-change-notice.md` is kept only as reference.
+**Revisit if:** paying users exist before the new scores ship. Then announce rather than migrate quietly, because silently lowering numbers contradicts a product that sells honest measurement.
+
+### 17. The byline is part of the draft, but a profile claim is an intention, not evidence
+**Decision:**
+- At draft time, named authorship is scored from the brand profile's author (`author_name`, `author_credentials`, `author_url`, migration `20261001_brand_author.sql`).
+- The live audit must verify that the byline actually renders on the published page.
+- A profile that claims an author while the published pages show none is itself a finding, and is reported as one.
+**Drivers:** It is actionable at draft time, and entity consistency is a live concern for this product (see 10). Michael: it is not enough that a byline exists in the brand profile; it has to appear on the live articles. Evidence is what is on the page.
+**Revisit if:** never, for "evidence is what is on the page". How the check detects a byline can change.
+
+### 18–19. Rendering entitlement and live re-audit limits: post-MVP
+**Decision:** Decision 6 (is JavaScript rendering a paid entitlement, and on which plan) and decision 7 (live re-audits per plan per month) are deferred until after MVP. Until then, paid runs stay raw-HTML only (see 6) and there is no publish-loop re-audit.
+**Revisit if:** the publish loop (spec phase 4) is scheduled.
 
 ## 12. Draft-time score uses its own denominator; MIN_ASSESSED_SHARE stays 0.6
 **Date:** late Sept 2026 (recorded 2026-09-30)
