@@ -40,6 +40,16 @@ It has never been exercised in a real browser. That is the work.
 7. Mid-scan edits. Type in a field while the scan is streaming. The later profile event must not overwrite it (a ref
    guards this; verify it).
 
+8. Author fields (added 2026-10-01, decision 15). The paid engine now scores named authorship from
+   `brand_profiles.author_name`, `author_credentials` and `author_url`. The migration is
+   `supabase/migrations/20261001_brand_author.sql` on master; Michael applies it by hand in the Supabase SQL editor.
+   `/api/brand/save` already accepts the three fields, writing them only when they are sent.
+   - Add them to the "Edit manually" modal.
+   - Add an optional "Who writes your articles?" field to the onboarding review screen. It stays optional: still
+     under five required fields.
+   - Until the migration is applied, do not send them, or the save will error on the missing columns. Guard on
+     whether the loaded profile row has an `author_name` key.
+
 ## Invariants (absolute)
 
 - Nothing claims AI visibility or citation. The access card reports what the origin served, with evidence, never a
