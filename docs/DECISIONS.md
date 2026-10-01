@@ -6,6 +6,12 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 20. Manual SQL is always sent as plain text in the message
+**Date:** 2026-10-01
+**Decision:** Any SQL Michael must run by hand in the Supabase SQL editor is pasted in full, as plain text, in the reply at the moment the migration is created. A file path or a "see the repo" pointer is never enough on its own. Long SQL is split across messages rather than summarised. The status file notes each migration as pending until he confirms it is applied.
+**Drivers:** Michael applies migrations from the Supabase SQL editor, often away from the repo, and could not find the migration files last time. The direct database host is IPv6-only, so these migrations cannot be applied from the dev machine.
+**Revisit if:** migrations become automatically applied (for example by a CI step with database access).
+
 ## 13–19. Paid engine product decisions (docs/paid-engine-spec.md §7), answered 2026-10-01
 
 ### 13. Two scores in the editor, matching the free tool
