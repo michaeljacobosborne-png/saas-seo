@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { brandMergers } from './brand-merge'
+import { brandMergers, isMissingAuthorColumn } from './brand-merge'
 import { brandFromTitle, onboardingAccess, parseSuggestions, readIdentity } from './brand-derive'
 import { extractPage } from '@/lib/geo-audit/extract'
 import type { CrawlerAccessReport, CrawlerProbe } from '@/lib/geo-audit/crawler-access'
@@ -61,6 +61,42 @@ describe('readIdentity', () => {
     expect(id.brand_name).toMatchObject({ value: 'Acme Inc.', source: 'json-ld', suggested: false })
     expect(id.website_url.value).toBe('https://acme.io')
     expect(id.description?.value).toContain('teams of 5 to 50')
+  })
+})
+
+describe('readIdentity: author (decision 17)', () => {
+  const html = (head: string) =>
+    `<!doctype html><html><head><title>Acme</title>${head}</head><body><main><p>${'Body text about payroll. '.repeat(20)}</p></main></body></html>`
+
+  it('reads a Person node as the author, with evidence', () => {
+    const h = html('<script type="application/ld+json">{"@type":"Person","name":"Jane Doe"}</script>')
+    const id = readIdentity(extractPage(h, 'https://acme.io/'), h, 'https://acme.io/')
+    expect(id.author_name).toMatchObject({ value: 'Jane Doe', source: 'json-ld', suggested: false })
+  })
+
+  it('falls back to <meta name="author">', () => {
+    const h = html('<meta name="author" content="Jane Doe">')
+    expect(readIdentity(extractPage(h, 'https://acme.io/'), h, 'https://acme.io/').author_name?.source).toBe('meta-author')
+  })
+
+  it('returns no author rather than guessing', () => {
+    const h = html('')
+    expect(readIdentity(extractPage(h, 'https://acme.io/'), h, 'https://acme.io/').author_name).toBeNull()
+  })
+
+  it('ignores an email address posing as an author', () => {
+    const h = html('<meta name="author" content="info@acme.io">')
+    expect(readIdentity(extractPage(h, 'https://acme.io/'), h, 'https://acme.io/').author_name).toBeNull()
+  })
+})
+
+describe('isMissingAuthorColumn (save before the migration is applied)', () => {
+  it('recognises the missing-column error for an author column only', () => {
+    expect(isMissingAuthorColumn("Could not find the 'author_name' column of 'brand_profiles' in the schema cache")).toBe(true)
+    expect(isMissingAuthorColumn('column "author_credentials" of relation "brand_profiles" does not exist')).toBe(true)
+    expect(isMissingAuthorColumn("Could not find the 'industry' column of 'brand_profiles' in the schema cache")).toBe(false)
+    expect(isMissingAuthorColumn('duplicate key value violates unique constraint')).toBe(false)
+    expect(isMissingAuthorColumn(undefined)).toBe(false)
   })
 })
 

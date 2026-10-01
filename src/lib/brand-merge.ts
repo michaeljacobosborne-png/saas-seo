@@ -19,6 +19,19 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>
 
+/** Byline author columns (decision 17), added by migration 20261001_brand_author. */
+export const AUTHOR_COLUMNS = ['author_name', 'author_credentials', 'author_url'] as const
+
+/**
+ * True when a PostgREST error says an author column does not exist, i.e. the
+ * migration has not been applied yet. Matches the column name, so an unrelated
+ * error is never swallowed.
+ */
+export function isMissingAuthorColumn(message: string | null | undefined): boolean {
+  if (!message) return false
+  return AUTHOR_COLUMNS.some((c) => message.includes(c)) && /column|schema cache/i.test(message)
+}
+
 export function brandMergers(prev: Row, isAgentFormat: boolean) {
   const stored = (column: string): string | null => prev[column] ?? null
   const storedArr = (column: string): string[] => (Array.isArray(prev[column]) ? prev[column] : [])

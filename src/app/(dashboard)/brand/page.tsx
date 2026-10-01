@@ -35,6 +35,16 @@ type EditForm = {
   avoid_topics: string
   competitors: string[]
   primary_keywords: string[]
+  author_name: string
+  author_credentials: string
+  author_url: string
+}
+
+/** Author columns arrive with migration 20261001_brand_author (decision 17). */
+type ProfileRow = BrandProfile & {
+  author_name?: string | null
+  author_credentials?: string | null
+  author_url?: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -100,7 +110,9 @@ function TagInput({
 
 export default function BrandPage() {
   const [pageState, setPageState] = useState<'loading' | 'quickstart' | 'chat' | 'profile'>('loading')
-  const [existingProfile, setExistingProfile] = useState<BrandProfile | null>(null)
+  const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null)
+  // False until the author migration is applied: then the row carries the keys.
+  const [authorSupported, setAuthorSupported] = useState(false)
   const [isUpdate, setIsUpdate] = useState(false)
 
   // Chat state
@@ -117,6 +129,7 @@ export default function BrandPage() {
   const [editForm, setEditForm] = useState<EditForm>({
     brand_name: '', website_url: '', industry: '', target_audience: '',
     tone_notes: '', content_goals: '', avoid_topics: '', competitors: [], primary_keywords: [],
+    author_name: '', author_credentials: '', author_url: '',
   })
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
@@ -140,8 +153,9 @@ export default function BrandPage() {
       .maybeSingle()
 
     if (data) {
-      const profile = data as BrandProfile
+      const profile = data as ProfileRow
       setExistingProfile(profile)
+      setAuthorSupported('author_name' in data)
       setEditForm({
         brand_name: profile.brand_name,
         website_url: profile.website_url ?? '',
@@ -152,6 +166,9 @@ export default function BrandPage() {
         avoid_topics: profile.avoid_topics ?? '',
         competitors: profile.competitors ?? [],
         primary_keywords: profile.primary_keywords ?? [],
+        author_name: profile.author_name ?? '',
+        author_credentials: profile.author_credentials ?? '',
+        author_url: profile.author_url ?? '',
       })
       setPageState('profile')
     } else {
@@ -285,7 +302,13 @@ export default function BrandPage() {
       const res = await fetch('/api/brand/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
+        // Author fields only once the columns exist; otherwise the save would
+        // fall back and silently drop them.
+        body: JSON.stringify(
+          authorSupported
+            ? editForm
+            : Object.fromEntries(Object.entries(editForm).filter(([k]) => !k.startsWith('author_'))),
+        ),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Save failed')
@@ -635,6 +658,24 @@ export default function BrandPage() {
             </div>
           )}
 
+          {/* Author (decision 17) */}
+          {p.author_name && (
+            <div className="px-6 py-4 flex gap-3">
+              <Users className="w-4 h-4 text-[var(--cream-faint)] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-medium text-[var(--cream-dim)] uppercase tracking-wide mb-1">Author</p>
+                <p className="text-sm text-[var(--cream)]">
+                  {p.author_url ? (
+                    <a href={p.author_url} target="_blank" rel="noopener noreferrer" className="hover:underline">{p.author_name}</a>
+                  ) : (
+                    p.author_name
+                  )}
+                </p>
+                {p.author_credentials && <p className="text-sm text-[var(--cream-dim)] mt-0.5">{p.author_credentials}</p>}
+              </div>
+            </div>
+          )}
+
           {/* Primary keywords */}
           {p.primary_keywords?.length > 0 && (
             <div className="px-6 py-4 flex gap-3">
@@ -698,6 +739,28 @@ export default function BrandPage() {
                   />
                 </div>
               ))}
+
+              {/* Author (decision 17): only editable once the columns exist. */}
+              {authorSupported ? (
+                [
+                  { label: 'Author Name', key: 'author_name' as const, placeholder: 'Jane Doe' },
+                  { label: 'Author Experience (one line)', key: 'author_credentials' as const, placeholder: '12 years running payroll for small businesses' },
+                  { label: 'Author Profile Link', key: 'author_url' as const, placeholder: 'https://' },
+                ].map(({ label, key, placeholder }) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1">{label}</label>
+                    <input
+                      type="text"
+                      value={editForm[key]}
+                      onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="w-full px-3 py-2 border border-[rgba(184,115,51,0.25)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#B87333] focus:border-transparent"
+                    />
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-[var(--cream-faint)]">Author fields will appear here after a pending database update.</p>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-[var(--cream-dim)] mb-1">Competitors</label>

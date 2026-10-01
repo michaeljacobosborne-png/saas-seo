@@ -20,7 +20,7 @@ import {
   isPolicyBlock,
 } from '@/lib/geo-audit/crawler-access'
 
-export type FieldSource = 'json-ld' | 'og:site_name' | 'title' | 'meta-description' | 'url' | 'page-text' | 'model'
+export type FieldSource = 'json-ld' | 'og:site_name' | 'title' | 'meta-description' | 'meta-author' | 'url' | 'page-text' | 'model'
 
 export interface DerivedField<T = string> {
   value: T
@@ -35,6 +35,8 @@ export interface DerivedProfile {
   website_url: DerivedField
   brand_name: DerivedField | null
   description: DerivedField | null
+  /** Read from the site's own markup when it names an author. */
+  author_name: DerivedField | null
   industry: DerivedField | null
   target_audience: DerivedField | null
   tone_notes: DerivedField | null
@@ -112,7 +114,26 @@ export function readIdentity(page: ExtractedPage, html: string, finalUrl: string
     ? { value: page.metaDescription, source: 'meta-description', evidence: page.metaDescription, suggested: false }
     : null
 
-  return { website_url, brand_name, description }
+  return { website_url, brand_name, description, author_name: readAuthor(page, html) }
+}
+
+/**
+ * A named author, when the site states one: a Person node in structured data,
+ * or `<meta name="author">`. Offered for the user to confirm; on the live page
+ * the byline is verified again by the audit (decision 17).
+ */
+function readAuthor(page: ExtractedPage, html: string): DerivedField | null {
+  const person = page.structuredData.find((n) => n.types.some((t) => /^Person$/i.test(t)) && typeof n.raw.name === 'string')
+  const name = typeof person?.raw.name === 'string' ? person.raw.name.trim() : ''
+  if (name && !name.includes('@')) return { value: name, source: 'json-ld', evidence: `Person: ${name}`, suggested: false }
+  const meta =
+    html.match(/<meta[^>]+name=["']author["'][^>]*content=["']([^"']+)["']/i) ??
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]*name=["']author["']/i)
+  const fromMeta = meta?.[1]?.trim()
+  if (fromMeta && fromMeta.length <= 80 && !fromMeta.includes('@')) {
+    return { value: fromMeta, source: 'meta-author', evidence: `<meta name="author" content="${fromMeta}">`, suggested: false }
+  }
+  return null
 }
 
 // ── Model suggestions ─────────────────────────────────────────────────────────
