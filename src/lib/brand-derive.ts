@@ -136,6 +136,16 @@ function readAuthor(page: ExtractedPage, html: string): DerivedField | null {
   return null
 }
 
+/**
+ * What to tell the user when their homepage yields almost no readable text.
+ * Facts about the fetch only: no claim about rankings, visibility or citation.
+ */
+export function jsOnlyNotice(jsOnlySuspected: boolean, wordCount: number): string {
+  return jsOnlySuspected
+    ? `Your homepage returned only ${wordCount} words of readable text before JavaScript runs. AI crawlers such as GPTBot and PerplexityBot read that raw HTML and do not run JavaScript, so this near-empty page is what they get. We could not read your profile from it either, so please fill in the details below.`
+    : `We could read only ${wordCount} words from that page, too little to build your profile from. Please fill in the details below.`
+}
+
 // ── Model suggestions ─────────────────────────────────────────────────────────
 
 export const SUGGEST_FIELDS = ['industry', 'target_audience', 'tone_notes', 'content_goals'] as const
@@ -261,7 +271,11 @@ export function onboardingAccess(report: CrawlerAccessReport): OnboardingAccess 
 
   let headline: string
   if (report.baselineFailed) {
-    headline = 'We could not load your homepage even as an ordinary browser, so crawler access is unknown for now.'
+    const s = report.baseline.status
+    headline =
+      s !== null && s >= 200 && s < 300
+        ? `That address returned HTTP ${s} but almost no content, even to an ordinary browser, so crawler access cannot be judged from it. Try your homepage.`
+        : 'We could not load your homepage even as an ordinary browser, so crawler access is unknown for now.'
   } else if (served === total) {
     headline = `All ${total} AI search crawlers we tested were served your homepage.`
   } else if (served === 0 && unknown === total) {

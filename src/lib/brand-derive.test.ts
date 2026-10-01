@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { brandMergers, isMissingAuthorColumn } from './brand-merge'
-import { brandFromTitle, onboardingAccess, parseSuggestions, readIdentity } from './brand-derive'
+import { brandFromTitle, jsOnlyNotice, onboardingAccess, parseSuggestions, readIdentity } from './brand-derive'
 import { extractPage } from '@/lib/geo-audit/extract'
 import type { CrawlerAccessReport, CrawlerProbe } from '@/lib/geo-audit/crawler-access'
 
@@ -87,6 +87,23 @@ describe('readIdentity: author (decision 17)', () => {
   it('ignores an email address posing as an author', () => {
     const h = html('<meta name="author" content="info@acme.io">')
     expect(readIdentity(extractPage(h, 'https://acme.io/'), h, 'https://acme.io/').author_name).toBeNull()
+  })
+})
+
+describe('onboarding notices and headlines for hostile sites', () => {
+  it('explains JavaScript-only content as a fact about the fetch, with no visibility claim', () => {
+    const n = jsOnlyNotice(true, 1)
+    expect(n).toMatch(/1 words of readable text before JavaScript runs/)
+    expect(n).toMatch(/GPTBot and PerplexityBot/)
+    expect(n).not.toMatch(/rank|cite|citation|visib|invisible/i)
+    expect(jsOnlyNotice(false, 12)).toMatch(/only 12 words/)
+  })
+
+  it('does not say "could not load" when the address answered 200 with almost nothing', () => {
+    const r = report([probe({ status: 200, contentServed: false })], true)
+    const a = onboardingAccess({ ...r, baseline: { ...r.baseline, status: 200 } })
+    expect(a.headline).toMatch(/returned HTTP 200 but almost no content/)
+    expect(a.headline).not.toMatch(/could not load/)
   })
 })
 

@@ -60,6 +60,8 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [authorNotice, setAuthorNotice] = useState(false)
+  // A finding about the fetched page (e.g. JavaScript-only content), shown above the form.
+  const [notice, setNotice] = useState<string | null>(null)
 
   // Fill untouched fields as values arrive, never overwriting what the user typed.
   function applyDerived(p: DerivedProfile) {
@@ -89,6 +91,7 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
     setAccessDone(false)
     setDerived(null)
     setScanError(null)
+    setNotice(null)
     setForm({ ...EMPTY, website_url: url.trim() })
     touched.current = new Set()
 
@@ -121,6 +124,8 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
           } else if (ev.type === 'profile') {
             applyDerived(ev.profile)
             if (ev.final) setPhase('review')
+          } else if (ev.type === 'notice') {
+            setNotice(ev.notice)
           } else if (ev.type === 'error') {
             setScanError(ev.error)
           } else if (ev.type === 'done') {
@@ -250,8 +255,15 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
               ? 'Reading your site…'
               : scanError
                 ? scanError
-                : 'We filled this in from your site. Fix anything that is off.'}
+                : notice
+                  ? 'Fill in what we could not read.'
+                  : 'We filled this in from your site. Fix anything that is off.'}
           </p>
+          {notice && (
+            <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm leading-relaxed text-[var(--cream-dim)]">
+              {notice}
+            </p>
+          )}
         </div>
 
         <Field label="Brand name" required derived={derived?.brand_name}>
