@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { ArticleScores } from '@/lib/supabase/types'
 import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
 import { logUsageEvent } from '@/lib/usage'
+import { draftWeakAreas } from '@/lib/agent-weak-areas'
 import Anthropic from '@anthropic-ai/sdk'
 
 const AGENT_MODEL = 'claude-sonnet-4-6'
@@ -162,10 +163,7 @@ export async function POST(
 WEAK AREAS TO PRIORITIZE (translate into specific editorial actions — do NOT recite verbatim):
 SEO gaps:
 ${buildFailedList(scores.seo.breakdown)}
-AEO gaps:
-${buildFailedList(scores.aeo.breakdown as Record<string, { label: string; passed?: boolean }>)}
-GEO gaps:
-${buildFailedList(scores.geo.breakdown as Record<string, { label: string; passed?: boolean }>)}` : `
+${draftWeakAreas(scores)}` : `
 SCORING CONTEXT: Article not yet scored. Focus purely on the content above.`
 
   const memoryLines: string[] = []

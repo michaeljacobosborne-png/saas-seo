@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { FileText, Plus, CheckCircle2, Clock, Loader2, BookOpen, Globe, Sparkles, Upload } from 'lucide-react'
 import type { Article } from '@/lib/supabase/types'
+import { SCORE_LABELS } from '@/lib/score-labels'
 import DuplicateArticleButton from './DuplicateArticleButton'
 import DeleteArticleButton from './DeleteArticleButton'
 import PublishButton from './PublishButton'
@@ -141,8 +142,15 @@ export default async function ArticlesPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>SEO</span>
                           <ScorePill score={scores.seo?.score ?? 0} />
-                          <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>AEO</span>
-                          <ScorePill score={scores.aeo?.score ?? 0} />
+                          <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>{SCORE_LABELS.retrievable}</span>
+                          {/* The real engine's draft score. Withheld or not yet computed shows a dash, never 0. */}
+                          {scores.draft && !scores.draft.retrievability?.scoreWithheld ? (
+                            <ScorePill score={scores.draft.retrievability.score} />
+                          ) : (
+                            <span className="text-xs" style={{ color: 'var(--cream-dim)' }} title={scores.draft ? 'Draft too short to score yet' : 'Re-score to see this'}>
+                              —
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-xs" style={{ color: 'var(--cream-dim)' }}>Not scored</span>
