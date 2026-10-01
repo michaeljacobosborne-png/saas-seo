@@ -55,14 +55,23 @@ export function adaptMarkdown(md: string, meta: DraftMeta): AdaptedDraft {
   })
 
   const source = md ?? ''
-  const hasH1 = marked.lexer(source).some((t) => t.type === 'heading' && t.depth === 1)
+  // `articles.content` is markdown when generated, but the editor autosaves
+  // TipTap HTML (`editor.getHTML()`), so any article a user has touched is
+  // HTML. Same test the editor uses (`prepareContent`). HTML goes straight to
+  // the extractor; it must not pass through marked, whose raw-HTML handling
+  // would drop the whole body.
+  const isHtml = source.trim().startsWith('<')
+  const hasH1 = isHtml
+    ? /<h1[\s>]/i.test(source)
+    : marked.lexer(source).some((t) => t.type === 'heading' && t.depth === 1)
   const title = (meta.title ?? '').trim()
 
   // The published page's H1 is the article title in every template we render,
   // so a draft without its own H1 is assessed with the title in that slot.
   // Disclosed on the report, never silent.
   const h1FromTitle = !hasH1 && !!title
-  const body = (h1FromTitle ? `<h1>${escapeHtml(title)}</h1>\n` : '') + (marked.parse(source, { async: false }) as string)
+  const rendered = isHtml ? source : (marked.parse(source, { async: false }) as string)
+  const body = (h1FromTitle ? `<h1>${escapeHtml(title)}</h1>\n` : '') + rendered
 
   const html = `<!doctype html><html><head><title>${escapeHtml(title)}</title></head><body><main><article>${body}</article></main></body></html>`
 

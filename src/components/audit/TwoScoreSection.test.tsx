@@ -97,6 +97,25 @@ describe('TwoScoreSection — legacy fallback', () => {
   })
 })
 
+describe('TwoScoreSection — draft variant (paid editor)', () => {
+  const pageHtml = render(PHASE_B)
+  const draftHtml = renderToStaticMarkup(
+    <TwoScoreSection result={PHASE_B} variant="draft" scope="A draft is assessed on 45 of the 100 points." />,
+  )
+
+  it('leaves the report pages exactly as worded before', () => {
+    expect(pageHtml).toContain('Can an engine reach, parse and lift a clean answer from this page.')
+    expect(pageHtml).toContain('If an engine lifts this content, does anything in it force attribution back to you.')
+    expect(pageHtml).not.toContain('45 of the 100')
+  })
+
+  it('words the cards for a draft and states the scope inline', () => {
+    expect(draftHtml).not.toContain('this page')
+    expect(draftHtml).toContain('45 of 100 points')
+    expect(draftHtml).toContain('A draft is assessed on 45 of the 100 points.')
+  })
+})
+
 describe('TwoScoreSection — withheld score', () => {
   const withheld: TwoScoreData = {
     ...PHASE_B,

@@ -173,35 +173,42 @@
       "id": "kb_009",
       "category": "product",
       "priority": "p2",
-      "title": "What the GEO score measures (Generative Engine Optimization)",
+      "title": "GEO and AEO readiness: the Retrievable score",
       "trigger_phrases": [
         "what is GEO score",
         "generative engine optimization",
         "GEO score breakdown",
         "AI search optimization",
-        "optimize for AI search"
+        "optimize for AI search",
+        "what is retrievable",
+        "retrievable score",
+        "where did my GEO score go"
       ],
-      "agent_response": "GEO (Generative Engine Optimization) scores how well your article is structured to be cited by AI search engines like ChatGPT, Perplexity, and Google's AI Overviews. The score checks five things: a definitional statement in the first 500 words (+20), at least 3 H2 sections (+20), stat or data references throughout (+20), a FAQ section (+20), and a word count of 1500+ (+20). AI engines favor structured, authoritative content — articles that define terms clearly, use data, and answer questions directly.",
+      "agent_response": "Byline shows GEO and AEO readiness as two scores, Retrievable and Citable, the same as our free GEO analyzer. Retrievable is a number out of 100. For a draft it covers 45 of the 100 points we score on a live page: how the article is structured (one clear H1, enough H2 sections, sections that stand alone when quoted, sensible section length) and how cleanly an answer can be lifted from it (a direct opening answer, a plain definition, question-style headings, lists and tables). The other 55 points (crawler access, server rendering, structured data) depend on the published page, so they are listed under 'Judged at publication' and are not part of the draft score. They are never counted against you. Every finding shows the text it is based on. This is an assessment of content readiness. It does not measure whether any AI system has cited your article.",
       "escalate_to_human": false,
       "escalation_reason": "",
-      "internal_notes": "computeGEO in /api/articles/score/route.ts. Stat detection uses regex for keywords like 'according to', 'percent', '%', numeric multipliers. Definition detection uses regex: /\\b\\w[\\w\\s]*\\s+is\\s+(a|an|the)\\b|\\brefers?\\s+to\\b/i — checks first 500 words."
+      "internal_notes": "Since 2026-10-01 the editor uses the real engine's draft report (src/lib/geo-audit/draft-report.ts, stored as articles.scores.draft by /api/articles/score via src/lib/article-scores.ts). Draft denominator = Chunkability 25 + Extractability 20 = 45; MIN_ASSESSED_SHARE 0.6 still applies inside it, so a very short draft shows '—' (withheld), never 0. Articles scored before 2026-10-01 show a Re-score prompt. The legacy regex computeGEO still runs and is stored but is no longer shown. Decisions 13–15 in docs/DECISIONS.md."
     },
     {
       "id": "kb_010",
       "category": "product",
       "priority": "p2",
-      "title": "What the AEO score measures (Answer Engine Optimization)",
+      "title": "GEO and AEO readiness: the Citable score",
       "trigger_phrases": [
         "what is AEO score",
         "answer engine optimization",
         "AEO score breakdown",
         "featured snippet",
-        "direct answer paragraph"
+        "direct answer paragraph",
+        "what is citable",
+        "citable score",
+        "where did my AEO score go",
+        "named authorship"
       ],
-      "agent_response": "AEO (Answer Engine Optimization) scores how well your article is set up to capture featured snippets and direct-answer results. It checks: FAQ section with 3+ H3 question headings (+40 for 3+, +20 for 1–2), a short direct-answer paragraph of 40–80 words (+30), lists or numbered steps present (+15), and a Key Takeaways or Summary section (+15). The direct-answer paragraph is the one AI engines pull for 'What is X?' results — it should appear early and be a crisp prose answer, not a bullet list.",
+      "agent_response": "Citable is the second of the two GEO/AEO readiness scores. It is a band (Strong, Adequate, Weak or Absent), not a number, because it is a judgement rather than a count. It answers one question: if a passage from your article is quoted, does anything in it carry attribution back to you? In a draft it looks at four things: your brand name inside the sections that make claims, original evidence (real figures, examples or methods of your own), terms that are distinctively yours, and a named author from your brand profile. Entity markup and publication dates depend on the published page, so they are judged after you publish. The named author is checked again on the live page, because a profile that names an author only counts if the byline actually appears on the article. Fix suggestions never ask you to add invented statistics or sources.",
       "escalate_to_human": false,
       "escalation_reason": "",
-      "internal_notes": "computeAEO in /api/articles/score/route.ts. H3 question detection: /^###\\s+.+\\?/gm. Key Takeaways detection: /^#{1,3}\\s*(key takeaways?|summary|wrap[\\s-]?up)/im. Direct answer: paragraph 40–80 words, not starting with #."
+      "internal_notes": "Citability signals from src/lib/geo-audit/assess-citability.ts via draft-report.ts. Named authorship at draft time comes from brand_profiles.author_name/_credentials (migration 20261001_brand_author.sql; before it is applied the signal shows 'Not assessed'). Live audits verify the byline renders on the page (src/lib/geo-audit/byline.ts, decision 17). The legacy regex computeAEO is no longer shown."
     },
     {
       "id": "kb_011",
@@ -268,7 +275,7 @@
         "auto fix article",
         "full article rewrite"
       ],
-      "agent_response": "Auto mode rewrites the entire article in one pass, applying all failing score criteria automatically. It analyzes every weak area from your SEO, GEO, AEO, and Readability scores, then produces a complete revised article that preserves your voice and structure while fixing the issues. Auto mode is available on the Team plan. If you're on Growth or Starter, you'll see it locked in the UI. For most users, Assist mode (Growth plan) gives you more control anyway — you can target specific sections rather than wholesale-replacing the article.",
+      "agent_response": "Auto mode rewrites the entire article in one pass, applying all failing score criteria automatically. It analyzes every weak area from your SEO and Readability scores and the Retrievable and Citable gaps in your draft, then produces a complete revised article that preserves your voice and structure while fixing the issues. Auto mode is available on the Team plan. If you're on Growth or Starter, you'll see it locked in the UI. For most users, Assist mode (Growth plan) gives you more control anyway — you can target specific sections rather than wholesale-replacing the article.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "canAuto = plan === 'team' || plan === 'agency'. Returns 403 with 'Auto mode is available on the Team plan' message for others. Streams via Claude Sonnet 4.6 with max_tokens: 8192. System prompt includes full article content and all failing criteria."
@@ -340,7 +347,7 @@
         "what's included",
         "plan comparison"
       ],
-      "agent_response": "Byline has three plans. Starter ($49/mo): 8 articles/month, 10 keyword sessions, agent Review mode, SEO/GEO/AEO scoring. Growth ($99/mo): 30 articles/month, 60 keyword sessions, agent Assist mode (select-and-rewrite), persistent agent memory, polish pass on article generation. Team ($249/mo): 100 articles/month, 200 keyword sessions, 3 brand profiles, 2 seats, Auto mode, dedicated onboarding. All plans billed monthly or annually (20% discount). 30-day money-back guarantee on all plans.",
+      "agent_response": "Byline has three plans. Starter ($49/mo): 8 articles/month, 10 keyword sessions, agent Review mode, SEO scoring and GEO/AEO readiness scoring (Retrievable and Citable). Growth ($99/mo): 30 articles/month, 60 keyword sessions, agent Assist mode (select-and-rewrite), persistent agent memory, polish pass on article generation. Team ($249/mo): 100 articles/month, 200 keyword sessions, 3 brand profiles, 2 seats, Auto mode, dedicated onboarding. All plans billed monthly or annually (20% discount). 30-day money-back guarantee on all plans.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Pricing defined in pricing-cards.tsx. Plan IDs in code: starter, pro (=Growth), team. Annual pricing: Starter $470/yr, Growth $950/yr, Team $2390/yr. Stripe price IDs are in env vars. Team plan contact is mailto:hi@bylineseo.com — it goes through a manual sales touch."
@@ -557,7 +564,7 @@
         "audit my website",
         "check my existing content"
       ],
-      "agent_response": "The content audit tool (under Dashboard > Content Audit) lets you analyze existing published content — paste a URL or article text and get SEO, GEO, AEO, and Readability scores for it. It's useful for auditing content you wrote before using Byline, or for evaluating competitor content. The scoring logic is the same as for generated articles.",
+      "agent_response": "The content audit tool (under Dashboard > Content Audit) lets you analyze existing published content — paste a URL or article text and get SEO and Readability scores plus the two GEO/AEO readiness scores, Retrievable and Citable, for it. It's useful for auditing content you wrote before using Byline, or for evaluating competitor content. The scoring logic is the same as for generated articles.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Content audit route is /api/audit. The marketing page at /(marketing)/audit/page.tsx also has a public-facing audit tool. The dashboard version is at /content-audit."

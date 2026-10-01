@@ -4,6 +4,8 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { FileText, Loader2, AlertCircle, ArrowLeft, Upload } from 'lucide-react'
 import * as mammoth from 'mammoth'
+import type { DraftReport } from '@/lib/geo-audit/draft-report'
+import { DraftScores } from '../[id]/_components/DraftScores'
 
 function htmlToMarkdown(html: string): string {
   return html
@@ -59,8 +61,8 @@ interface ContentGap {
 interface ScoreResult {
   seo: { score: number }
   readability: { score: number }
-  geo: { score: number }
-  aeo: { score: number }
+  /** Real-engine draft report; absent only if it failed to build. */
+  draft?: DraftReport
 }
 
 interface AnalyzeResult {
@@ -471,12 +473,13 @@ export default function ImportArticlePage() {
       {status === 'done' && result && (
         <div className="space-y-8">
           {/* Score cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* GEO/AEO readiness from the real engine: Retrievable and Citable (decisions 13–15). */}
+          {result.scores.draft && <DraftScores draft={result.scores.draft} keyword={targetKeyword} />}
+
+          <div className="grid grid-cols-2 gap-4">
             {([
               { label: 'SEO', score: result.scores.seo.score },
               { label: 'Readability', score: result.scores.readability.score },
-              { label: 'GEO', score: result.scores.geo.score },
-              { label: 'AEO', score: result.scores.aeo.score },
             ] as const).map(({ label, score }) => (
               <div
                 key={label}

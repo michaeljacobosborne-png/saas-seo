@@ -21,8 +21,9 @@
  * text-to-markup check would award a spurious perfect mark to markdown, which is
  * nearly pure text (spec §3.2). A flattering check is worse than a missing one.
  *
- * Citability: the three signals the writer controls are assessed; authorship,
- * entity resolution and freshness belong to the template and are unverified.
+ * Citability: the three signals in the body text are assessed, and named
+ * authorship is assessed from the brand profile's byline (decision 5). Entity
+ * resolution and freshness belong to the template and are unverified.
  *
  * No model call anywhere in this file. Scoring is deterministic and in code;
  * the model never sets a score.
@@ -36,7 +37,6 @@ import {
   BAND_LABELS,
   BAND_RANK,
   HIGH_RETRIEVABILITY,
-  STATUS_LABELS,
   type Citability,
   type CitabilitySignal,
   type Confidence,
@@ -51,7 +51,7 @@ import {
 export const DRAFT_ASSESSABLE_GROUPS: readonly RetrievabilityGroupId[] = ['chunkability', 'extractability']
 
 /** Citability signals decided by the published template, not the draft. */
-export const TEMPLATE_SIGNALS = ['named-authorship', 'entity-resolution', 'freshness-provenance'] as const
+export const TEMPLATE_SIGNALS = ['entity-resolution', 'freshness-provenance'] as const
 
 const AFTER_PUBLICATION: Record<'access' | 'parseability', string> = {
   access:
@@ -61,8 +61,6 @@ const AFTER_PUBLICATION: Record<'access' | 'parseability', string> = {
 }
 
 const TEMPLATE_SIGNAL_REASON: Record<(typeof TEMPLATE_SIGNALS)[number], string> = {
-  'named-authorship':
-    'Whether a named author appears is decided by the published page template, not the draft. Assessed once this is live.',
   'entity-resolution':
     'Organization markup and sameAs profiles are emitted by the page template. Assessed once this is live.',
   'freshness-provenance':
@@ -101,18 +99,41 @@ export interface DraftReport {
   /** Checks that can only be made once the article is published. */
   afterPublication: { id: string; name: string; reason: string }[]
   wordCount: number
+  /** The brand name proximity was measured against, from the brand profile. */
+  brandName: string | null
+}
+
+/**
+ * The byline, from the brand profile. Decision 5 (docs/DECISIONS.md): the byline
+ * is part of the draft, so named authorship is assessed at draft time.
+ *
+ * `undefined` means the profile carries no author fields at all (the
+ * 20261001_brand_author migration is not applied), so authorship is unverified.
+ * `null`, or a profile with no name, means no author is set: that is absent, and
+ * the fix is to add one.
+ */
+export interface DraftAuthor {
+  name?: string | null
+  credentials?: string | null
+  url?: string | null
 }
 
 export interface DraftInput extends DraftMeta {
   markdown: string
   /** From the brand profile. Needed to measure brand-claim proximity. */
   brandName?: string | null
+  author?: DraftAuthor | null
   now: Date
 }
 
+/**
+ * Decision 3: the draft scope is stated inline on every report, never hidden in
+ * a tooltip. Saying what cannot be known before publication is the point.
+ */
 export const DRAFT_SCOPE =
-  'Draft score: structure and extractability only (45 of the 100 points the live analyzer uses). ' +
-  'Crawler access, markup and authorship are scored after publication. This is an assessment of content readiness, ' +
+  'A draft is assessed on 45 of the 100 points the live analyzer uses: how the article is structured and how cleanly ' +
+  'answers can be lifted from it. The other 55 depend on the published page (crawler access, server rendering and ' +
+  'structured data), so they are checked once it is live. This is an assessment of content readiness, ' +
   'not a measurement of whether any AI system retrieves or cites the article.'
 
 export function buildDraftReport(input: DraftInput): DraftReport {
@@ -152,7 +173,7 @@ export function buildDraftReport(input: DraftInput): DraftReport {
     groups,
   }
 
-  const citability = draftCitability(page, input.brandName ?? null, input.now, md)
+  const citability = draftCitability(page, input.brandName ?? null, input.author, input.now, md)
   const notes: string[] = []
   if (h1FromTitle) notes.push('The draft has no H1 of its own, so the article title was assessed as the H1, as the published template renders it.')
   if (rawHtmlBlocks) notes.push(`${rawHtmlBlocks} block(s) of raw HTML in the draft were not assessed.`)
@@ -179,18 +200,44 @@ export function buildDraftReport(input: DraftInput): DraftReport {
     notes,
     afterPublication,
     wordCount: page.wordCount,
+    brandName: input.brandName ?? null,
   }
 }
+
+/**
+ * Label for checks that belong to the published page (decision 15). They are
+ * not "unable to assess" in the sense of something going wrong: they are not
+ * yet assessable, and the label says when they will be.
+ */
+export const AT_PUBLICATION_LABEL = 'Judged at publication'
 
 function unverifiedGroup(g: RetrievabilityGroup, reason: string): RetrievabilityGroup {
   const checks = g.checks
     .filter((c) => c.maxScore > 0)
-    .map((c) => new FactorBuilder(c.id, c.name, c.maxScore).unverified(reason).build())
-  return { ...g, score: 0, deduction: 0, scored: false, status: 'unverified', label: STATUS_LABELS.unverified, checks }
+    .map((c) => ({ ...new FactorBuilder(c.id, c.name, c.maxScore).unverified(reason).build(), label: AT_PUBLICATION_LABEL }))
+  return { ...g, score: 0, deduction: 0, scored: false, status: 'unverified', label: AT_PUBLICATION_LABEL, checks }
 }
 
 function withLines(g: RetrievabilityGroup, md: string): RetrievabilityGroup {
-  return { ...g, checks: g.checks.map((c) => ({ ...c, evidence: c.evidence.map((e) => lineEvidence(e, md)) })) }
+  return {
+    ...g,
+    checks: g.checks.map((c) => ({ ...c, detail: draftWording(c.detail), evidence: c.evidence.map((e) => lineEvidence(e, md)) })),
+  }
+}
+
+/**
+ * The live engine describes a page. The checks a draft carries are the same
+ * checks, but the reader is looking at an unpublished draft, so the finding
+ * says so. Only judged-now details are reworded; publication-layer reasons are
+ * written for drafts already.
+ */
+export function draftWording(s: string): string {
+  return s
+    .replace(/ — it is present only in the page chrome\./g, ' of the draft.')
+    .replace(/\bThe page\b/g, 'The draft')
+    .replace(/\bthe page\b/g, 'the draft')
+    .replace(/\bthis page\b/g, 'this draft')
+    .replace(/\bThis page\b/g, 'This draft')
 }
 
 /** `L12 · snippet`, so the editor can scroll to the finding (spec §2.4). */
@@ -199,9 +246,39 @@ function lineEvidence(e: Evidence, md: string): Evidence {
   return line ? { ...e, snippet: `L${line} · ${e.snippet}` } : e
 }
 
+/** Named authorship from the brand profile's byline (decision 5). */
+function authorSignal(author: DraftAuthor | null | undefined): CitabilitySignal {
+  const base = { id: 'named-authorship', name: 'Named authorship' }
+  if (author === undefined) {
+    return {
+      ...base,
+      band: 'unverified',
+      state: 'unverified',
+      detail: 'Author details are not available on the brand profile yet, so named authorship could not be assessed.',
+      evidence: [],
+    }
+  }
+  const name = author?.name?.trim()
+  const credentials = author?.credentials?.trim()
+  if (!name) {
+    return {
+      ...base,
+      band: 'absent',
+      state: 'absent',
+      detail: 'No author is set on the brand profile, so the article carries no named person to attribute it to. Add the author and one line of their experience.',
+      evidence: [],
+    }
+  }
+  const evidence = [{ url: 'brand-profile', kind: 'text' as const, snippet: credentials ? `Author: ${name} — ${credentials}` : `Author: ${name}` }]
+  return credentials
+    ? { ...base, band: 'strong', state: 'present', detail: `The byline names ${name}, with stated experience alongside the name.`, evidence }
+    : { ...base, band: 'adequate', state: 'present', detail: `The byline names ${name}, but no experience or specialism is stated alongside the name.`, evidence }
+}
+
 function draftCitability(
   page: ReturnType<typeof adaptMarkdown>['page'],
   brandName: string | null,
+  author: DraftAuthor | null | undefined,
   now: Date,
   md: string,
 ): Citability {
@@ -216,17 +293,14 @@ function draftCitability(
   const live = assessCitability({ home, keyPages: [], now })
 
   const signals: CitabilitySignal[] = live.signals.map((s) => {
+    if (s.id === 'named-authorship') return authorSignal(author)
     if ((TEMPLATE_SIGNALS as readonly string[]).includes(s.id)) {
       return { id: s.id, name: s.name, band: 'unverified', state: 'unverified', detail: TEMPLATE_SIGNAL_REASON[s.id as (typeof TEMPLATE_SIGNALS)[number]], evidence: [] }
     }
     if (s.id === 'brand-proximity' && !brandName) {
       return { ...s, band: 'unverified', state: 'unverified', detail: 'No brand name is set on the brand profile, so brand-claim proximity could not be measured.', evidence: [] }
     }
-    if (s.id === 'brand-proximity' && s.band === 'absent') {
-      // The live wording blames page chrome; a draft has none.
-      return { ...s, detail: s.detail.replace(/ — it is present only in the page chrome\./, ' of the draft.') }
-    }
-    return { ...s, evidence: s.evidence.map((e) => lineEvidence(e, md)) }
+    return { ...s, detail: draftWording(s.detail), evidence: s.evidence.map((e) => lineEvidence(e, md)) }
   })
 
   const band = overallBand(signals)

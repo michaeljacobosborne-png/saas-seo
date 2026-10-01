@@ -41,6 +41,8 @@ export async function POST(request: Request) {
     )
   }
 
+  const expectedAuthor = user ? await profileAuthorFor(user.id, url) : null
+
   const encoder = new TextEncoder()
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -52,6 +54,7 @@ export async function POST(request: Request) {
           // engine has to assume what "now" is.
           now: new Date(),
           onProgress: (message, step) => send({ type: 'progress', message, step, total: AUDIT_STEPS }),
+          expectedAuthor,
         })
         send({ type: 'result', ...report, rateLimit: budget })
       } catch (err) {
@@ -75,6 +78,27 @@ export async function POST(request: Request) {
       'X-Accel-Buffering': 'no',
     },
   })
+}
+
+/**
+ * The author the signed-in user's brand profile claims, but only when the URL
+ * being audited is on that profile's own website: a profile author must never
+ * be checked against somebody else's site (decision 17). Null otherwise, or if
+ * the author columns do not exist yet.
+ */
+async function profileAuthorFor(userId: string, rawUrl: string): Promise<string | null> {
+  try {
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rows } = await (supabase as any).from('brand_profiles').select('*').eq('user_id', userId)
+    const host = (u: string) => new URL(/^https?:\/\//i.test(u) ? u : `https://${u}`).hostname.replace(/^www\./, '')
+    const target = host(rawUrl)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const own = (rows ?? []).find((r: any) => r.website_url && host(r.website_url) === target)
+    return typeof own?.author_name === 'string' && own.author_name.trim() ? own.author_name.trim() : null
+  } catch {
+    return null
+  }
 }
 
 /** The auth-server-verified user for this request, or null if anonymous. */

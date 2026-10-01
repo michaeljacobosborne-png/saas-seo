@@ -14,6 +14,8 @@
  * historical reports rendering exactly as they always did.
  */
 
+import { SCORE_DESCRIPTIONS, SCORE_LABELS } from '@/lib/score-labels'
+
 export type Band = 'strong' | 'adequate' | 'weak' | 'absent' | 'unverified'
 
 export interface TwoScoreData {
@@ -66,10 +68,21 @@ const kicker: React.CSSProperties = {
   margin: '0 0 8px',
 }
 
-export function TwoScoreSection({ result }: { result: TwoScoreData }) {
+export function TwoScoreSection({
+  result,
+  variant = 'page',
+  scope,
+}: {
+  result: TwoScoreData
+  /** `draft` words the cards for an unpublished article (paid editor). */
+  variant?: 'page' | 'draft'
+  /** Stated inline under the scores when given (decision 3: never hidden). */
+  scope?: string
+}) {
   const { retrievability: r, citability: c, gap } = result
   // Pre-Phase-B report: render nothing and let the host page's legacy layout stand.
   if (!r || !c || !gap) return null
+  const describe = SCORE_DESCRIPTIONS[variant]
 
   const rColor = r.scoreWithheld ? '#998876' : r.score >= 70 ? '#16a34a' : r.score >= 40 ? '#d97706' : '#dc2626'
   const filled = BAND_ORDER.indexOf(c.band) + 1
@@ -79,7 +92,7 @@ export function TwoScoreSection({ result }: { result: TwoScoreData }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 16 }}>
         {/* Retrievability — rule-derived, so it gets a number. */}
         <div style={card}>
-          <p style={kicker}>Retrievable</p>
+          <p style={kicker}>{SCORE_LABELS.retrievable}</p>
           <p style={{ fontSize: 30, fontWeight: 700, margin: 0, color: rColor, lineHeight: 1.1 }}>
             {r.scoreWithheld ? '—' : r.score}
             {!r.scoreWithheld && <span style={{ fontSize: 15, fontWeight: 400, color: '#998876' }}>/100</span>}
@@ -92,13 +105,13 @@ export function TwoScoreSection({ result }: { result: TwoScoreData }) {
           <p style={{ fontSize: 12, color: '#57534E', margin: '6px 0 0', lineHeight: 1.5 }}>
             {r.scoreWithheld
               ? (r.withheldReason ?? 'Not enough could be read to score it.')
-              : 'Can an engine reach, parse and lift a clean answer from this page.'}
+              : describe.retrievable}
           </p>
         </div>
 
         {/* Citability — heuristic, so it gets a band, never a number. */}
         <div style={card}>
-          <p style={kicker}>Citable</p>
+          <p style={kicker}>{SCORE_LABELS.citable}</p>
           <p style={{ fontSize: 30, fontWeight: 700, margin: 0, color: BAND_COLOR[c.band] ?? '#998876', lineHeight: 1.1 }}>
             {c.label}
           </p>
@@ -116,10 +129,12 @@ export function TwoScoreSection({ result }: { result: TwoScoreData }) {
             ))}
           </div>
           <p style={{ fontSize: 12, color: '#57534E', margin: '8px 0 0', lineHeight: 1.5 }}>
-            If an engine lifts this content, does anything in it force attribution back to you.
+            {describe.citable}
           </p>
         </div>
       </div>
+
+      {scope && <p style={{ fontSize: 12, color: '#57534E', lineHeight: 1.6, margin: '0 0 16px' }}>{scope}</p>}
 
       {/* The Gap — the diagnosis, and the reason the two numbers are separate. */}
       <div style={{ background: '#1C1917', borderRadius: 12, padding: 20, color: '#F7F3EC' }}>

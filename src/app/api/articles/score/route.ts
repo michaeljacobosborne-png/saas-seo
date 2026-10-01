@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ArticleScores } from '@/lib/supabase/types'
-import {
-  computeSEO,
-  computeReadability,
-  computeGEO,
-  computeAEO,
-  buildRankingPrediction,
-  buildTrafficPrediction,
-} from '@/lib/article-scoring'
+import { authorFromProfile, buildArticleScores } from '@/lib/article-scores'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -22,7 +15,7 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: article } = await (supabase as any)
     .from('articles')
-    .select('id, content, brief, target_keyword, keyword_project_id')
+    .select('id, title, content, brief, target_keyword, keyword_project_id, brand_profile_id')
     .eq('id', articleId)
     .eq('user_id', user.id)
     .single()
@@ -43,17 +36,27 @@ export async function POST(request: Request) {
     .ilike('keyword', targetKeyword)
     .maybeSingle() : { data: null }
 
-  const seo = computeSEO(article.content, brief, targetKeyword)
-  const readability = computeReadability(article.content)
-  const geo = computeGEO(article.content)
-  const aeo = computeAEO(article.content)
-  const ranking_prediction = buildRankingPrediction(
-    kwData?.keyword_difficulty ?? null,
-    seo.score,
-  )
-  const traffic_prediction = buildTrafficPrediction(kwData?.avg_monthly_searches ?? null)
+  // `*` so the author columns are picked up whether or not the migration has run.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const brandQuery = (supabase as any).from('brand_profiles').select('*').eq('user_id', user.id)
+  const { data: brand } = await (article.brand_profile_id
+    ? brandQuery.eq('id', article.brand_profile_id)
+    : brandQuery.limit(1)
+  ).maybeSingle()
 
-  const scores: ArticleScores = { seo, readability, geo, aeo, ranking_prediction, traffic_prediction }
+  const scores: ArticleScores = buildArticleScores({
+    content: article.content,
+    brief,
+    targetKeyword,
+    keywordDifficulty: kwData?.keyword_difficulty ?? null,
+    monthlySearches: kwData?.avg_monthly_searches ?? null,
+    articleId: article.id,
+    title: article.title,
+    brandName: brand?.brand_name ?? null,
+    siteUrl: brand?.website_url ?? null,
+    author: authorFromProfile(brand),
+    now: new Date(),
+  })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)

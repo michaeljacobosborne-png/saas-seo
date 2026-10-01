@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { Marked } from 'marked'
 import { describe, expect, it } from 'vitest'
 import { adaptMarkdown, locateLine } from './adapt-markdown'
 import { DRAFT_SCOPE, buildDraftReport } from './draft-report'
@@ -119,6 +120,17 @@ describe('adaptMarkdown — equivalence with the live extractor (spec §2.5)', (
     expect(page.mainText).not.toContain('embedded')
   })
 
+  it('reads editor-saved HTML (TipTap autosave) instead of dropping it', () => {
+    const md = adaptMarkdown(MD, { articleId: 'a1' }).page
+    const html = adaptMarkdown(new Marked().parse(MD, { async: false }) as string, { articleId: 'a1' })
+    expect(html.rawHtmlBlocks).toBe(0)
+    expect(html.page.wordCount).toBe(md.wordCount)
+    expect(html.page.headings).toEqual(md.headings)
+    // Structured data injected via saved HTML is still a template concern.
+    const withLd = adaptMarkdown(`<p>x</p><script type="application/ld+json">{"@type":"Organization","name":"F"}</script>`, { articleId: 'a' })
+    expect(withLd.page.structuredDataTypes).toEqual([])
+  })
+
   it('uses the article title as the H1 only when the draft has none', () => {
     const noH1 = MD.replace(/^# .*\n/, '')
     expect(adaptMarkdown(noH1, { articleId: 'a', title: 'Title' }).h1FromTitle).toBe(true)
@@ -155,8 +167,9 @@ describe('buildDraftReport — the draft-time denominator', () => {
       expect(g.checks.every((c) => c.state === 'unverified' && !c.scored && c.score === 0)).toBe(true)
     }
     expect(report.afterPublication.map((a) => a.id)).toEqual(
-      expect.arrayContaining(['access-crawlers', 'parse-server-text', 'parse-structured-data', 'named-authorship']),
+      expect.arrayContaining(['access-crawlers', 'parse-server-text', 'parse-structured-data', 'entity-resolution']),
     )
+    expect(report.afterPublication.map((a) => a.id)).not.toContain('named-authorship')
   })
 
   it('still withholds a draft too thin to assess, inside the draft denominator', () => {
@@ -166,9 +179,29 @@ describe('buildDraftReport — the draft-time denominator', () => {
     expect(thin.gap.quadrant).toBe('indeterminate')
   })
 
-  it('assesses the three writer-controlled citability signals and leaves template ones unverified', () => {
+  it('scores named authorship from the brand profile byline (decision 5)', () => {
+    const band = (author: Parameters<typeof buildDraftReport>[0]['author']) =>
+      buildDraftReport({ markdown: MD, articleId: 'a1', brandName: 'Acme', author, now: NOW }).citability.signals.find(
+        (s) => s.id === 'named-authorship',
+      )!
+    // No author columns on the profile yet (migration not applied): unverified, never absent.
+    expect(band(undefined).band).toBe('unverified')
+    // Columns present but no author set: absent, with the fix stated.
+    expect(band(null).band).toBe('absent')
+    expect(band({ name: '  ' }).detail).toMatch(/Add the author/)
+    expect(band({ name: 'Michael Jacobs' }).band).toBe('adequate')
+    const strong = band({ name: 'Michael Jacobs', credentials: '15 years in technical SEO' })
+    expect(strong.band).toBe('strong')
+    expect(strong.evidence[0].snippet).toContain('Michael Jacobs')
+  })
+
+  it('states the 45-of-100 scope inline (decision 3)', () => {
+    expect(report.scope).toMatch(/45 of the 100 points/)
+    expect(report.scope).toMatch(/once it is live/)
+  })
+
+  it('assesses the body-text citability signals and leaves template ones unverified', () => {
     const byId = Object.fromEntries(report.citability.signals.map((s) => [s.id, s.band]))
-    expect(byId['named-authorship']).toBe('unverified')
     expect(byId['entity-resolution']).toBe('unverified')
     expect(byId['freshness-provenance']).toBe('unverified')
     expect(byId['brand-proximity']).not.toBe('unverified')
@@ -181,6 +214,12 @@ describe('buildDraftReport — the draft-time denominator', () => {
     const s = r.citability.signals.find((x) => x.id === 'brand-proximity')!
     expect(s.band).toBe('absent')
     expect(s.detail).not.toMatch(/chrome/)
+  })
+
+  it('words judged-now findings for a draft, never "the page"', () => {
+    const now = report.retrievability.groups.filter((g) => g.scored).flatMap((g) => g.checks.map((c) => c.detail))
+    const signals = report.citability.signals.filter((s) => s.band !== 'unverified').map((s) => s.detail)
+    for (const d of [...now, ...signals]) expect(d).not.toMatch(/\b(the|this) page\b/i)
   })
 
   it('reports brand proximity as unverified, not absent, without a brand name', () => {
