@@ -15,11 +15,15 @@ type Form = {
   primary_keywords: string
   competitors: string
   avoid_topics: string
+  author_name: string
+  author_credentials: string
+  author_url: string
 }
 
 const EMPTY: Form = {
   brand_name: '', website_url: '', target_audience: '', industry: '', tone_notes: '',
   content_goals: '', primary_keywords: '', competitors: '', avoid_topics: '',
+  author_name: '', author_credentials: '', author_url: '',
 }
 
 const REQUIRED: (keyof Form)[] = ['brand_name', 'website_url', 'target_audience']
@@ -29,6 +33,7 @@ const SOURCE_LABEL: Record<DerivedField['source'], string> = {
   'og:site_name': "Read from your site's social sharing tags",
   title: "Read from your homepage's title",
   'meta-description': "Read from your homepage's description",
+  'meta-author': "Read from your homepage's author tag",
   url: 'The address you entered',
   'page-text': 'Read from your homepage',
   model: 'Suggested from your homepage — check it',
@@ -54,6 +59,9 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
   const touched = useRef<Set<keyof Form>>(new Set())
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [authorNotice, setAuthorNotice] = useState(false)
+  // A finding about the fetched page (e.g. JavaScript-only content), shown above the form.
+  const [notice, setNotice] = useState<string | null>(null)
 
   // Fill untouched fields as values arrive, never overwriting what the user typed.
   function applyDerived(p: DerivedProfile) {
@@ -70,6 +78,7 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
       put('tone_notes', p.tone_notes?.value)
       put('content_goals', p.content_goals?.value)
       put('primary_keywords', p.primary_keywords?.value.join(', '))
+      put('author_name', p.author_name?.value)
       return next
     })
   }
@@ -82,6 +91,7 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
     setAccessDone(false)
     setDerived(null)
     setScanError(null)
+    setNotice(null)
     setForm({ ...EMPTY, website_url: url.trim() })
     touched.current = new Set()
 
@@ -114,6 +124,8 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
           } else if (ev.type === 'profile') {
             applyDerived(ev.profile)
             if (ev.final) setPhase('review')
+          } else if (ev.type === 'notice') {
+            setNotice(ev.notice)
           } else if (ev.type === 'error') {
             setScanError(ev.error)
           } else if (ev.type === 'done') {
@@ -157,10 +169,21 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
           avoid_topics: form.avoid_topics,
           primary_keywords: list(form.primary_keywords),
           competitors: list(form.competitors),
+          // Author fields only when given, so a profile without them never
+          // touches columns that may not exist yet.
+          ...(form.author_name.trim()
+            ? { author_name: form.author_name, author_credentials: form.author_credentials, author_url: form.author_url }
+            : {}),
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Save failed')
+      if (form.author_name.trim() && data.authorSaved === false) {
+        // Profile saved; the author could not be stored yet. Say so rather than drop it silently.
+        setAuthorNotice(true)
+        setSaving(false)
+        return
+      }
       router.push('/dashboard')
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Save failed')
@@ -232,8 +255,15 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
               ? 'Reading your site…'
               : scanError
                 ? scanError
-                : 'We filled this in from your site. Fix anything that is off.'}
+                : notice
+                  ? 'Fill in what we could not read.'
+                  : 'We filled this in from your site. Fix anything that is off.'}
           </p>
+          {notice && (
+            <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm leading-relaxed text-[var(--cream-dim)]">
+              {notice}
+            </p>
+          )}
         </div>
 
         <Field label="Brand name" required derived={derived?.brand_name}>
@@ -245,6 +275,22 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
         <Field label="Who you write for" required derived={derived?.target_audience} hint="One or two sentences.">
           <textarea value={form.target_audience} onChange={set('target_audience')} rows={2} placeholder="Marketing leads at B2B SaaS companies." className={`${inputCls} resize-none`} />
         </Field>
+
+        {/* Optional, but asked up front: a named author feeds the Citable score (decision 17). */}
+        <div className="rounded-lg border border-[rgba(184,115,51,0.15)] px-4 py-4 space-y-4">
+          <p className="text-sm text-[var(--cream-dim)]">
+            Who writes your articles? <span className="text-[var(--cream-faint)]">Optional. A named author with real experience is one of the strongest attribution signals, and we check it appears on your published pages.</span>
+          </p>
+          <Field label="Author name" derived={derived?.author_name}>
+            <input value={form.author_name} onChange={set('author_name')} placeholder="Jane Doe" className={inputCls} />
+          </Field>
+          <Field label="Their experience, in one line" hint="e.g. 12 years running payroll for small businesses.">
+            <input value={form.author_credentials} onChange={set('author_credentials')} className={inputCls} />
+          </Field>
+          <Field label="Author profile link" hint="LinkedIn, an author page, or similar.">
+            <input value={form.author_url} onChange={set('author_url')} placeholder="https://" className={inputCls} />
+          </Field>
+        </div>
 
         <details className="group rounded-lg border border-[rgba(184,115,51,0.15)] px-4 py-3">
           <summary className="cursor-pointer text-sm text-[var(--cream-dim)] select-none">
@@ -275,6 +321,15 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
 
         {saveError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{saveError}</p>}
 
+        {authorNotice && (
+          <div className="rounded-lg border border-[rgba(184,115,51,0.3)] px-4 py-3 text-sm text-[var(--cream-dim)]">
+            Your profile is saved. The author could not be stored yet; you can add it later under Brand.
+            <button onClick={() => router.push('/dashboard')} className="ml-3 font-medium text-[var(--copper-lt)] hover:underline">
+              Continue
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-4">
           <button
             onClick={save}
@@ -296,6 +351,7 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
 const FIELD_NAMES: Record<keyof Form, string> = {
   brand_name: 'brand name', website_url: 'website', target_audience: 'who you write for', industry: 'industry',
   tone_notes: 'voice', content_goals: 'goals', primary_keywords: 'keywords', competitors: 'competitors', avoid_topics: 'topics to avoid',
+  author_name: 'author', author_credentials: 'author experience', author_url: 'author link',
 }
 
 function Field({

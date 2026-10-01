@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
-import { brandMergers } from '@/lib/brand-merge'
+import { AUTHOR_COLUMNS, brandMergers, isMissingAuthorColumn } from '@/lib/brand-merge'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -62,14 +62,26 @@ export async function POST(request: Request) {
   if ('primary_keywords' in body) payload.primary_keywords = mergeArr(body.primary_keywords, 'primary_keywords')
   // Byline author (decision 5). Only written when sent, so saves keep working
   // before migration 20261001_brand_author adds the columns.
-  for (const col of ['author_name', 'author_credentials', 'author_url'] as const) {
+  for (const col of AUTHOR_COLUMNS) {
     if (col in body) payload[col] = mergeStr(body[col], col)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from('brand_profiles')
-    .upsert(payload, { onConflict: 'user_id' })
+  const upsert = (p: typeof payload) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).from('brand_profiles').upsert(p, { onConflict: 'user_id' })
+
+  let { error } = await upsert(payload)
+  let authorSaved = AUTHOR_COLUMNS.some((c) => c in payload)
+
+  // Before migration 20261001_brand_author is applied the author columns do not
+  // exist. Save everything else rather than failing the whole profile, and say
+  // the author was not stored so the client can tell the user.
+  if (error && authorSaved && isMissingAuthorColumn(error.message)) {
+    const withoutAuthor = { ...payload }
+    for (const c of AUTHOR_COLUMNS) delete withoutAuthor[c]
+    ;({ error } = await upsert(withoutAuthor))
+    authorSaved = false
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -87,5 +99,5 @@ export async function POST(request: Request) {
     })
   }
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, authorSaved })
 }

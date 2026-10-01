@@ -10,6 +10,7 @@ import { fetchRobotsTxt } from '@/lib/geo-audit/robots'
 import { crossReferenceRobots, probeCrawlerAccess } from '@/lib/geo-audit/crawler-access'
 import { SUGGEST_PROMPT, onboardingAccess, pageDigest, parseSuggestions, readIdentity } from '@/lib/brand-derive'
 import { logUsageEvent } from '@/lib/usage'
+import { jsOnlyNotice } from '@/lib/brand-derive'
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
@@ -68,6 +69,13 @@ export async function POST(request: Request) {
         const page = extractPage(fetched.html, fetched.finalUrl)
         const identity = readIdentity(page, fetched.html, fetched.finalUrl)
         send({ type: 'profile', profile: { ...identity, industry: null, target_audience: null, tone_notes: null, content_goals: null, primary_keywords: null }, final: false })
+
+        if (!page.hasMeaningfulContent) {
+          // A finding in its own right, and often the most useful one: the
+          // content only exists after JavaScript runs, which most AI crawlers
+          // do not do. Stated as what we fetched, not as a verdict on rankings.
+          send({ type: 'notice', notice: jsOnlyNotice(fetched.jsOnlySuspected, page.wordCount) })
+        }
 
         if (!page.hasMeaningfulContent || !process.env.ANTHROPIC_API_KEY) {
           send({ type: 'profile', profile: { ...identity, industry: null, target_audience: null, tone_notes: null, content_goals: null, primary_keywords: null }, final: true })
