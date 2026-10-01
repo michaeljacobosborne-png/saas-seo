@@ -7,6 +7,9 @@ import dynamic from 'next/dynamic'
 import { marked } from 'marked'
 import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
+import { draftFixes } from '@/lib/draft-fixes'
+import { SCORE_LABELS } from '@/lib/score-labels'
+import { DraftScores } from './_components/DraftScores'
 import type ArticleEditorType from './ArticleEditor'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
@@ -90,16 +93,11 @@ function getScoreFailures(scores: ArticleScores, keyword: string): Array<{ label
       if (instruction) items.push({ label: c.label, instruction, priority: c.max })
     }
   }
-  for (const c of Object.values(scores.aeo.breakdown)) {
-    if (!c.passed) {
-      const instruction = mapToFixInstruction(c.label, keyword)
-      if (instruction) items.push({ label: c.label, instruction, priority: 8 })
-    }
-  }
-  for (const c of Object.values(scores.geo.breakdown)) {
-    if (!c.passed) {
-      const instruction = mapToFixInstruction(c.label, keyword)
-      if (instruction) items.push({ label: c.label, instruction, priority: 7 })
+  // GEO/AEO suggestions come from the real engine's draft report now. The old
+  // regex breakdowns are no longer shown, so they must not drive fixes either.
+  if (scores.draft) {
+    for (const f of draftFixes(scores.draft, keyword, scores.draft.brandName)) {
+      items.push({ label: f.label, instruction: f.instruction, priority: f.priority })
     }
   }
 
@@ -107,21 +105,6 @@ function getScoreFailures(scores: ArticleScores, keyword: string): Array<{ label
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 3)
     .map(({ label, instruction }) => ({ label, instruction }))
-}
-
-function ScoreBar({ label, score }: { label: string; score: number }) {
-  const barColor = score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-400' : 'bg-red-400'
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm font-medium text-[var(--cream-dim)]">{label}</span>
-        <span className="text-sm font-bold tabular-nums" style={{ color: COPPER }}>{score}</span>
-      </div>
-      <div className="w-full bg-[var(--ink-deep)] rounded-full h-2.5">
-        <div className={`h-2.5 rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${score}%` }} />
-      </div>
-    </div>
-  )
 }
 
 function ConfidenceChip({ confidence }: { confidence: 'low' | 'medium' | 'high' }) {
@@ -158,18 +141,6 @@ function FixButton({ onFix }: { onFix: () => void }) {
     <button onClick={handleClick} className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-[#A0622A] transition-colors whitespace-nowrap">
       Fix →
     </button>
-  )
-}
-
-function CriteriaRow({ label, passed, onFix }: { label: string; passed: boolean; onFix?: () => void }) {
-  return (
-    <div className="flex items-center gap-2.5 py-1.5">
-      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[var(--ink-deep)]'}`}>
-        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
-      </div>
-      <span className={`text-xs flex-1 ${passed ? 'text-[var(--cream-dim)]' : 'text-[var(--cream-faint)]'}`}>{label}</span>
-      {!passed && onFix && <FixButton onFix={onFix} />}
-    </div>
   )
 }
 
@@ -1497,12 +1468,33 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               </div>
             ) : (
               <div className="space-y-5">
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {/* GEO/AEO readiness: the real engine, two scores (decisions 13–15). */}
+                {scores.draft ? (
+                  <DraftScores
+                    draft={scores.draft}
+                    keyword={article.target_keyword ?? ''}
+                    renderFix={(instruction) => <FixButton onFix={() => sendPatchMode(instruction)} />}
+                  />
+                ) : (
+                  <div className="border border-dashed border-[rgba(184,115,51,0.3)] rounded-xl p-5 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-[var(--cream-dim)]">
+                      Re-score to see {SCORE_LABELS.retrievable} and {SCORE_LABELS.citable} for this draft.
+                    </p>
+                    <button
+                      onClick={handleScore}
+                      disabled={scoring}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-50 transition-colors"
+                    >
+                      {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      Re-score
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
                   {[
                     { label: 'SEO', score: scores.seo.score },
                     { label: 'Readability', score: scores.readability.score },
-                    { label: 'GEO', score: scores.geo.score },
-                    { label: 'AEO', score: scores.aeo.score },
                   ].map(({ label, score }) => (
                     <div key={label} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
                       <div className="text-2xl font-bold mb-1" style={{ color: COPPER }}>{score}</div>
@@ -1517,16 +1509,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   ))}
                 </div>
 
-                <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
-                  <h3 className="font-semibold text-[var(--cream)] text-sm mb-4">Score Overview</h3>
-                  <div className="space-y-3">
-                    <ScoreBar label="SEO" score={scores.seo.score} />
-                    <ScoreBar label="Readability" score={scores.readability.score} />
-                    <ScoreBar label="GEO (Generative Engine)" score={scores.geo.score} />
-                    <ScoreBar label="AEO (Answer Engine)" score={scores.aeo.score} />
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-3">
@@ -1538,40 +1520,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
                         return (
                           <SEOCriteriaRow key={i} label={c.label} passed={c.passed} points={c.points} max={c.max}
-                            onFix={!c.passed && instruction ? () => sendPatchMode(instruction) : undefined}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[var(--cream)] text-sm">AEO Breakdown</h3>
-                      <span className="font-bold text-base" style={{ color: COPPER }}>{scores.aeo.score}/100</span>
-                    </div>
-                    <div className="divide-y divide-gray-50">
-                      {Object.values(scores.aeo.breakdown).map((c, i) => {
-                        const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
-                        return (
-                          <CriteriaRow key={i} label={c.label} passed={c.passed}
-                            onFix={!c.passed && instruction ? () => sendPatchMode(instruction) : undefined}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[var(--cream)] text-sm">GEO Breakdown</h3>
-                      <span className="font-bold text-base" style={{ color: COPPER }}>{scores.geo.score}/100</span>
-                    </div>
-                    <div className="divide-y divide-gray-50">
-                      {Object.values(scores.geo.breakdown).map((c, i) => {
-                        const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
-                        return (
-                          <CriteriaRow key={i} label={c.label} passed={c.passed}
                             onFix={!c.passed && instruction ? () => sendPatchMode(instruction) : undefined}
                           />
                         )

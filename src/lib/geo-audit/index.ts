@@ -18,6 +18,7 @@ import { narrate, type NarrateOutput } from './narrate'
 import { scoreRetrievability } from './score-retrievability'
 import { assessCitability } from './assess-citability'
 import { diagnoseGap } from './gap'
+import { verifyByline } from './byline'
 import { findBandInconsistencies, findScoreInconsistencies } from './scoring'
 import type { AuditReport, ChainOfCustody, InspectedPage } from './types'
 
@@ -36,6 +37,11 @@ export interface RunAuditOptions extends FetchOptions {
   /** Set false to skip the model and use deterministic wording. */
   useModel?: boolean
   onProgress?: (message: string, step: number, total: number) => void
+  /**
+   * The author the user's brand profile claims, when the run is auditing their
+   * own site (decision 17). Verified against the page; never used as evidence.
+   */
+  expectedAuthor?: string | null
 }
 
 export const AUDIT_STEPS = 4
@@ -61,6 +67,7 @@ export async function runAudit(
     maxCrawlPages = 3,
     useModel = true,
     onProgress = () => {},
+    expectedAuthor = null,
     ...fetchOptions
   } = options
 
@@ -201,6 +208,19 @@ export async function runAudit(
   const citability = assessCitability({ home, keyPages, now })
   const gap = diagnoseGap(retrievability, citability)
 
+  // Decision 17: a profile's author is an intention; the page is the evidence.
+  // The band above is decided by the page alone, so the same page scores the
+  // same with or without a profile. A mismatch is reported, not scored.
+  const byline = verifyByline(home, expectedAuthor)
+  if (byline) {
+    const signal = citability.signals.find((s) => s.id === 'named-authorship')
+    if (signal) {
+      signal.detail = `${signal.detail} ${byline.detail}`.trim()
+      signal.evidence.push(...byline.evidence)
+    }
+    if (!byline.found) notes.push(byline.detail)
+  }
+
   // `breakdown` is the flattened retrievability checks, so it sums to the score
   // the report publishes. Legacy renderers iterate this unchanged.
   const factors = retrievability.groups.flatMap((g) => g.checks)
@@ -274,6 +294,7 @@ export async function runAudit(
     retrievability,
     citability,
     gap,
+    ...(byline ? { byline } : {}),
   }
 }
 

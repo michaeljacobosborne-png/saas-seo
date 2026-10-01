@@ -216,6 +216,12 @@ describe('buildDraftReport — the draft-time denominator', () => {
     expect(s.detail).not.toMatch(/chrome/)
   })
 
+  it('words judged-now findings for a draft, never "the page"', () => {
+    const now = report.retrievability.groups.filter((g) => g.scored).flatMap((g) => g.checks.map((c) => c.detail))
+    const signals = report.citability.signals.filter((s) => s.band !== 'unverified').map((s) => s.detail)
+    for (const d of [...now, ...signals]) expect(d).not.toMatch(/\b(the|this) page\b/i)
+  })
+
   it('reports brand proximity as unverified, not absent, without a brand name', () => {
     const r = buildDraftReport({ markdown: MD, articleId: 'a1', now: NOW })
     expect(r.citability.signals.find((s) => s.id === 'brand-proximity')?.band).toBe('unverified')

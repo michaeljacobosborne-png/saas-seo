@@ -175,6 +175,21 @@ export interface AuditReport {
   citability: Citability
   /** The distance between the two, and what it means. */
   gap: Gap
+  /**
+   * Present only when the run knew which author the brand profile claims
+   * (decision 17): whether that byline actually renders on the page.
+   */
+  byline?: BylineCheck
+}
+
+export interface BylineCheck {
+  /** The author the brand profile names. */
+  expected: string
+  /** True when the name is found in the page text or a Person node. */
+  found: boolean
+  /** Where it was found, or the finding when it was not. */
+  detail: string
+  evidence: Evidence[]
 }
 
 // ── Score thresholds — the single source of truth for labels ────────────────

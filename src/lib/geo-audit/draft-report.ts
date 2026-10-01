@@ -37,7 +37,6 @@ import {
   BAND_LABELS,
   BAND_RANK,
   HIGH_RETRIEVABILITY,
-  STATUS_LABELS,
   type Citability,
   type CitabilitySignal,
   type Confidence,
@@ -100,6 +99,8 @@ export interface DraftReport {
   /** Checks that can only be made once the article is published. */
   afterPublication: { id: string; name: string; reason: string }[]
   wordCount: number
+  /** The brand name proximity was measured against, from the brand profile. */
+  brandName: string | null
 }
 
 /**
@@ -199,18 +200,44 @@ export function buildDraftReport(input: DraftInput): DraftReport {
     notes,
     afterPublication,
     wordCount: page.wordCount,
+    brandName: input.brandName ?? null,
   }
 }
+
+/**
+ * Label for checks that belong to the published page (decision 15). They are
+ * not "unable to assess" in the sense of something going wrong: they are not
+ * yet assessable, and the label says when they will be.
+ */
+export const AT_PUBLICATION_LABEL = 'Judged at publication'
 
 function unverifiedGroup(g: RetrievabilityGroup, reason: string): RetrievabilityGroup {
   const checks = g.checks
     .filter((c) => c.maxScore > 0)
-    .map((c) => new FactorBuilder(c.id, c.name, c.maxScore).unverified(reason).build())
-  return { ...g, score: 0, deduction: 0, scored: false, status: 'unverified', label: STATUS_LABELS.unverified, checks }
+    .map((c) => ({ ...new FactorBuilder(c.id, c.name, c.maxScore).unverified(reason).build(), label: AT_PUBLICATION_LABEL }))
+  return { ...g, score: 0, deduction: 0, scored: false, status: 'unverified', label: AT_PUBLICATION_LABEL, checks }
 }
 
 function withLines(g: RetrievabilityGroup, md: string): RetrievabilityGroup {
-  return { ...g, checks: g.checks.map((c) => ({ ...c, evidence: c.evidence.map((e) => lineEvidence(e, md)) })) }
+  return {
+    ...g,
+    checks: g.checks.map((c) => ({ ...c, detail: draftWording(c.detail), evidence: c.evidence.map((e) => lineEvidence(e, md)) })),
+  }
+}
+
+/**
+ * The live engine describes a page. The checks a draft carries are the same
+ * checks, but the reader is looking at an unpublished draft, so the finding
+ * says so. Only judged-now details are reworded; publication-layer reasons are
+ * written for drafts already.
+ */
+export function draftWording(s: string): string {
+  return s
+    .replace(/ — it is present only in the page chrome\./g, ' of the draft.')
+    .replace(/\bThe page\b/g, 'The draft')
+    .replace(/\bthe page\b/g, 'the draft')
+    .replace(/\bthis page\b/g, 'this draft')
+    .replace(/\bThis page\b/g, 'This draft')
 }
 
 /** `L12 · snippet`, so the editor can scroll to the finding (spec §2.4). */
@@ -273,11 +300,7 @@ function draftCitability(
     if (s.id === 'brand-proximity' && !brandName) {
       return { ...s, band: 'unverified', state: 'unverified', detail: 'No brand name is set on the brand profile, so brand-claim proximity could not be measured.', evidence: [] }
     }
-    if (s.id === 'brand-proximity' && s.band === 'absent') {
-      // The live wording blames page chrome; a draft has none.
-      return { ...s, detail: s.detail.replace(/ — it is present only in the page chrome\./, ' of the draft.') }
-    }
-    return { ...s, evidence: s.evidence.map((e) => lineEvidence(e, md)) }
+    return { ...s, detail: draftWording(s.detail), evidence: s.evidence.map((e) => lineEvidence(e, md)) }
   })
 
   const band = overallBand(signals)
