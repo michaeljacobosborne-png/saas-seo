@@ -6,6 +6,27 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 15. The author byline is part of the draft
+**Date:** 2026-10-01
+**Decision:** Named authorship is scored at draft time from the brand profile's author (new `author_name`, `author_credentials`, `author_url` columns).
+**Drivers:** It is actionable while writing, and entity consistency is a live concern for this product (see 10).
+**Revisit if:** customers publish through templates that override or drop the byline, so the draft would credit authorship the published page lacks.
+
+## 14. Announce the score change to existing customers
+**Date:** 2026-10-01
+**Decision:** When paid scores move to the real engine, announce it in-product and by email. Do not migrate quietly, and do not run old and new side by side. The draft wording is in `docs/notices/score-change-notice.md`.
+**Drivers:** Byline sells honest measurement. Silently lowering everyone's numbers is the one option that contradicts the product.
+**Revisit if:** never, for the principle. The wording is open to review.
+
+## 13. State the draft scope inline
+**Date:** 2026-10-01
+**Decision:** The editor says inline, not in a tooltip, that a draft is assessed on 45 of the 100 points and that the rest is checked after publication.
+**Drivers:** Stating what cannot be known before publication is the differentiator; hiding it would contradict everything else in the product.
+**Revisit if:** usability testing shows the inline text is unread. Then shorten it; do not hide it.
+
+## Pending: decisions 1 and 2 (one or two scores in the editor; what they are called)
+With Michael as of 2026-10-01. Recommendation: two scores matching the free tool, named Retrievable and Citable in the editor, with GEO and AEO kept as the names of the tools and pages. No UI copy commits to the names until he confirms (`src/lib/score-labels.ts`).
+
 ## 12. Draft-time score uses its own denominator; MIN_ASSESSED_SHARE stays 0.6
 **Date:** late Sept 2026 (recorded 2026-09-30)
 **Decision:** The paid engine scores drafts over a separate 45-point denominator (Chunkability 25 + Extractability 20), normalised to 0–100 and labelled structure-only. `MIN_ASSESSED_SHARE` is not lowered.
