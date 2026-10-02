@@ -5,8 +5,9 @@
  *   npx tsx scripts/save-audit.ts <url> [geo|ao]
  *
  * Writes, under BYLINE_AUDIT_DIR (default C:\Users\ozzy5\Documents\byline-audits):
- *   <domain>/<YYYY-MM-DD>_<HHMM>Z_<tool>.json   full AuditReport plus the raw crawler probe
- *   <domain>/<YYYY-MM-DD>_<HHMM>Z_<tool>.md     human-readable summary with evidence
+ *   <domain>/<YYYY-MM-DD>_<HHMMSS>Z_<path>_<tool>.json   full AuditReport plus the raw crawler probe
+ *   <domain>/<YYYY-MM-DD>_<HHMMSS>Z_<path>_<tool>.md     human-readable summary with evidence
+ * (<path> is the page path as a slug, or "home"; files before 2026-10-02 lack it)
  * and appends one line to INDEX.md at the root.
  */
 import { config } from 'dotenv'
@@ -39,7 +40,18 @@ async function main() {
     probeCrawlerAccess(url, { now }).catch(() => null),
   ])
 
-  const stamp = now.toISOString().replace(/:\d{2}\.\d{3}Z$/, 'Z').replace('T', '_').replace(':', '')
+  // Date, time to the second, and the page path, so two runs on one domain in
+  // the same minute, or on different pages, never overwrite each other.
+  const time = now.toISOString().replace(/\.\d{3}Z$/, 'Z').replace('T', '_').replace(/:/g, '')
+  const pathSlug = (() => {
+    try {
+      const p = new URL(url).pathname.replace(/^\/+|\/+$/g, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+      return p ? `_${p.slice(0, 60)}` : '_home'
+    } catch {
+      return ''
+    }
+  })()
+  const stamp = `${time}${pathSlug}`
   const domainOf = (u: string) => new URL(u).hostname.replace(/^www\./, '')
   const index = join(ROOT, 'INDEX.md')
   const ensureIndex = () => {
