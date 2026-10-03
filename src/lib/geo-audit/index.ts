@@ -20,7 +20,7 @@ import { assessCitability } from './assess-citability'
 import { diagnoseGap } from './gap'
 import { verifyByline } from './byline'
 import { findBandInconsistencies, findScoreInconsistencies } from './scoring'
-import type { AuditReport, ChainOfCustody, InspectedPage } from './types'
+import { ENGINE_VERSION, type AuditReport, type ChainOfCustody, type InspectedPage } from './types'
 
 export * from './types'
 export { extractPage } from './extract'
@@ -276,6 +276,7 @@ export async function runAudit(
     url,
     finalUrl: fetched.finalUrl,
     analyzedAt: now.toISOString(),
+    engineVersion: ENGINE_VERSION,
     rawScore: retrievability.rawScore,
     assessedMaxScore: retrievability.assessedMaxScore,
     totalMaxScore: retrievability.totalMaxScore,
@@ -346,6 +347,7 @@ function incompleteReport(args: {
     url,
     finalUrl,
     analyzedAt: now.toISOString(),
+    engineVersion: ENGINE_VERSION,
     rawScore: retrievability.rawScore,
     assessedMaxScore: retrievability.assessedMaxScore,
     totalMaxScore: retrievability.totalMaxScore,

@@ -144,6 +144,11 @@ export interface AuditReport {
   finalUrl: string
   /** ISO timestamp of the run, from the injected clock. */
   analyzedAt: string
+  /**
+   * Which scoring engine produced this report. Scores are only compared across
+   * runs with the same version; absent on reports written before 2026-10.
+   */
+  engineVersion?: string
   /** Sum of `score` over scored factors. */
   rawScore: number
   /** Sum of `maxScore` over scored factors. */
@@ -191,6 +196,12 @@ export interface BylineCheck {
   detail: string
   evidence: Evidence[]
 }
+
+/**
+ * Bump when a change to scoring would move scores for the same page, so
+ * comparisons over time never mix measurements from two different rubrics.
+ */
+export const ENGINE_VERSION = '2026.10'
 
 // ── Score thresholds — the single source of truth for labels ────────────────
 
