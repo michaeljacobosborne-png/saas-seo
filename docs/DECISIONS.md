@@ -35,8 +35,15 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 **Decision:** MCP calls and audits are recorded against the account and visible to Michael (admin), but never enter a GHL email, tag or nurture flow.
 **Drivers:** Someone wiring up a developer tool is not a lead and must not be emailed as one.
 
-### Open: M7, a feature of existing plans or a separate data-layer plan
-Michael wants to talk it through. Built so the answer is a configuration change: every entitlement check goes through one function reading one plan-model table (`src/lib/mcp/entitlements.ts`).
+### 27. MCP is a feature of existing plans for now, built to become its own product
+**Date:** 2026-10-04
+**Decision:** The MCP server is a feature of existing paid plans, not a separate product, for now. It is built with the explicit intention that it may become its own product later. Requirements:
+- Every entitlement check routes through one place (`src/lib/mcp/entitlements.ts`), so moving MCP onto its own plan is a configuration change, not a rewrite.
+- Usage is metered per account AND per key/client from the start, per tool, with enough detail (tool, target domain, outcome, duration, model cost) to price MCP separately later. Plan-level totals alone would make that impossible.
+- The MCP surface depends only on the geo-audit library and the data layer, never on dashboard-specific code, so it can be split out without untangling.
+- No plan names or tier assumptions in tool responses or error messages. Wording comes from the same entitlement module.
+**Drivers:** Agencies can keep their own systems and workflows while Byline supplies the data and tracking underneath, which is the positioning the research pointed at (decisions 3–4).
+**Revisit if:** meaningful MCP usage comes from accounts that do not use the dashboard, or agencies ask to buy the data layer without the rest of the product. Those signals mean it has become its own thing.
 
 ## 20. Manual SQL is always sent as plain text in the message
 **Date:** 2026-10-01
