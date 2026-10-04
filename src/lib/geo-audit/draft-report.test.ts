@@ -279,3 +279,23 @@ describe('agent artefacts cannot game the draft score (signed-in pass finding 2)
     expect(md.retrievability.score).toBe(clean.retrievability.score)
   })
 })
+
+describe('projected Retrievable (decision 29)', () => {
+  it('projects with the same scorer, and the listed points add up exactly', async () => {
+    const { projectRetrievability } = await import('./projection')
+    const { DRAFT_ASSESSABLE_GROUPS } = await import('./draft-report')
+    const thin = buildDraftReport({ markdown: MD.replace(/^- .*$/gm, '').replace(/^\|.*$/gm, ''), articleId: 'p', now: NOW })
+    const p = projectRetrievability(thin)
+    expect(thin.retrievability.scoreWithheld).toBe(false)
+    expect(p).not.toBeNull()
+    expect(p!.from).toBe(thin.retrievability.score)
+    expect(p!.findings.reduce((s, f) => s + f.points, 0)).toBe(p!.to - p!.from)
+    const open = thin.retrievability.groups.filter((g) => DRAFT_ASSESSABLE_GROUPS.includes(g.id)).flatMap((g) => g.checks).filter((c) => c.scored && c.score < c.maxScore)
+    expect(p!.findings.map((f) => f.id).sort()).toEqual(open.map((c) => c.id).sort())
+  })
+
+  it('never mentions time, traffic, position or citation likelihood', async () => {
+    const src = readFileSync(join(__dirname, 'projection.ts'), 'utf8').replace(/\/\*\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    expect(src).not.toMatch(/month|week|traffic|rank|position|likel|cited|citation/i)
+  })
+})

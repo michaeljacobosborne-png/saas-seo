@@ -36,6 +36,7 @@ import { FactorBuilder, bandCounts, computeTotals, deriveStatus, overallBand } f
 import {
   BAND_LABELS,
   BAND_RANK,
+  ENGINE_VERSION,
   HIGH_RETRIEVABILITY,
   type Citability,
   type CitabilitySignal,
@@ -101,6 +102,15 @@ export interface DraftReport {
   wordCount: number
   /** The brand name proximity was measured against, from the brand profile. */
   brandName: string | null
+  /**
+   * Decision 29: scores will be plotted over time, annotated with what changed.
+   * Every report says which engine scored it and which content it scored, so a
+   * series can be drawn and diffed later without retrofitting. Absent on
+   * reports built before 2026-10-04.
+   */
+  engineVersion?: string
+  /** FNV-1a of the scored content. Equal hashes mean the same text was scored. */
+  contentHash?: string
 }
 
 /**
@@ -203,7 +213,19 @@ export function buildDraftReport(input: DraftInput): DraftReport {
     afterPublication,
     wordCount: page.wordCount,
     brandName: input.brandName ?? null,
+    engineVersion: ENGINE_VERSION,
+    contentHash: contentHash(md),
   }
+}
+
+/** FNV-1a, 32-bit, hex. Not cryptographic: it only tells two scored texts apart. */
+export function contentHash(s: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(16).padStart(8, '0')
 }
 
 /**

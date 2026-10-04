@@ -9,8 +9,8 @@
  *   "Judged at publication"  checks that belong to the published page, with the
  *                            reason, and never a zero, a failure or a deduction
  *
- * Every finding shows the text it rests on. Types only from the engine, so no
- * server code reaches the client bundle.
+ * Every finding shows the text it rests on. From the engine: types, plus the
+ * pure projection/scoring arithmetic, so no server code reaches the client bundle.
  */
 import type { ReactNode } from 'react'
 import { Clock } from 'lucide-react'
@@ -18,6 +18,7 @@ import type { DraftReport } from '@/lib/geo-audit/draft-report'
 import type { Band } from '@/lib/geo-audit/types'
 import { SCORE_DESCRIPTIONS, SCORE_LABELS } from '@/lib/score-labels'
 import { draftFixes } from '@/lib/draft-fixes'
+import { projectRetrievability } from '@/lib/geo-audit/projection'
 
 const COPPER = '#B87333'
 
@@ -71,6 +72,7 @@ export function DraftScores({
 }) {
   const r = draft.retrievability
   const c = draft.citability
+  const projection = projectRetrievability(draft)
   const fixById = new Map(draftFixes(draft, keyword, draft.brandName).map((f) => [f.id, f.instruction]))
   const filled = BAND_ORDER.indexOf(c.band) + 1
   const rColor = r.scoreWithheld ? '#a8a29e' : ratioColor(r.score, 100)
@@ -138,6 +140,32 @@ export function DraftScores({
           {draft.gap.nextStep}
         </p>
       </div>
+
+      {/* Decision 29: a projected score on our own rubric, never time, traffic or position. */}
+      {projection && (
+        <div className={`${card} p-5`}>
+          <h3 className="text-sm font-semibold text-[var(--cream)]">
+            Fix these and {SCORE_LABELS.retrievable} goes from {projection.from} to {projection.to}
+          </h3>
+          <p className="mt-0.5 mb-3 text-xs text-[var(--cream-faint)]">
+            Points each check adds on the 0–100 scale when it reaches full marks.
+          </p>
+          <ul className="space-y-2">
+            {projection.findings.map((f) => (
+              <li key={f.id} className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-[var(--cream)]">{f.name}</span>
+                <span className="flex shrink-0 items-center gap-3">
+                  {fix(f.id)}
+                  <span className="text-xs font-semibold tabular-nums text-[#22c55e]">+{f.points}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs leading-relaxed text-[var(--cream-faint)]">
+            This is arithmetic on Byline&apos;s own rubric for the draft. It is not a forecast of rankings, traffic or citations.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Judged now: Retrievable checks the draft carries. */}

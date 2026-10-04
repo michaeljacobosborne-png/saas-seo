@@ -6,6 +6,22 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 28. The SEO and Readability panels keep only checks with a real basis
+**Date:** 2026-10-04 (Michael, from signed-in pass findings 5 and 10)
+**Decision:** Audit every check in the editor's SEO and Readability panels and sort them into two piles:
+- Keep genuine, verifiable constraints with a technical basis: title presence and length, meta description presence and length, canonical, indexability, internal linking, image alt text, and similar.
+- Remove invented thresholds whose target cannot be justified with a source: heading-count targets, word-count targets, keyword-density-style checks and the like.
+Retuning a conflicting target is not acceptable. The two piles are reported, with reasons for borderline checks, before anything is removed. The goal is a smaller panel that is right rather than a fuller one that contradicts the engine.
+**Drivers:** The old panel wanted 2–4 H2s while Retrievable wants 6+, so following the product's own advice lowered the new score (finding 5). "2–4 H2 headings" is folklore with no evidence; picking a different number would only move the conflict. Readability showed 100/100 while its own metrics missed target (finding 10), the same problem.
+**Revisit if:** a removed check can be shown, with a citable source, to affect indexing, retrieval or citation.
+
+## 29. No ranking prediction; a projected score on our own rubric instead
+**Date:** 2026-10-04 (Michael, from signed-in pass finding 11)
+**Decision:** Ranking Prediction ("4–6 months to top 10, High confidence") and the traffic-per-position estimates are removed outright, not softened. They are replaced by a projected score: "fix these specific findings and Retrievable goes from X to Y". The projection is computed by the deterministic scorer on our own rubric, and lists each contributing finding with the points it would add. It is never expressed as time, traffic, position, or likelihood of being cited.
+**Longer term:** the real replacement is score over time. Retrievable and Citable get plotted across months once monthly re-runs exist, annotated with what changed and when. That is the honest answer to "is this working" and the argument for a monthly subscription. Design for it now rather than retrofitting it: every stored score must carry engine version, date and the content state it scored, so the series can be drawn and annotated later.
+**Drivers:** A months-to-top-ten forecast with a confidence level is a guarantee and contradicts the core invariant (nothing claims results we cannot measure). Arithmetic on our own rubric is fully defensible, specific, and entirely in the user's control.
+**Revisit if:** never for ranking or traffic forecasts. The projection itself is revisited if the rubric changes in a way that makes a projected score misleading.
+
 ## 21–26. MCP server decisions (docs/mcp-server-spec.md §7), answered 2026-10-04
 
 ### 21. OAuth 2.1 is the target auth; API keys only as a cheap side effect
