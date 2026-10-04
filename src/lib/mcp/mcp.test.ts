@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { apiKeyResolver, bearerToken, generateApiKey, hashApiKey, isWellFormedApiKey, planTier, type StoredKey } from './auth'
-import { checkLimits, DOMAIN_BUDGET, MONTHLY_QUOTA, RATE, targetDomainOf, type CallRecord } from './limits'
+import { checkLimits, DOMAIN_BUDGET, RATE, targetDomainOf, type CallRecord } from './limits'
+import { PLAN_MODEL } from './entitlements'
 import { checkCrawlerAccessInput, compareAuditsInput, getAuditInput, isNonPublicHost, publicUrl, runAuditInput, scoreDraftInput } from './schemas'
 
 const req = (auth?: string) => new Request('https://app.bylineseo.com/api/mcp', { headers: auth ? { authorization: auth } : {} })
@@ -111,18 +112,21 @@ describe('limits', () => {
   })
 
   it('applies monthly quotas by plan and tool class, and says when they reset', () => {
-    const quota = MONTHLY_QUOTA.starter.audit!
+    const quota = PLAN_MODEL.allowances.starter.audit!
     const used = Array.from({ length: quota }, (_, i): CallRecord => ({ tool: 'run_audit', targetDomain: `s${i}.com`, at: now - 86_400_000 + i }))
     const r = checkLimits({ tool: 'run_audit', targetDomain: 'acme.io', plan: 'starter', isOwner: false, history: used, now })
     expect(r).toMatchObject({ ok: false, reason: 'quota' })
-    expect(checkLimits({ tool: 'run_audit', targetDomain: 'acme.io', plan: 'growth', isOwner: false, history: used, now })).toMatchObject({ ok: true, remaining: MONTHLY_QUOTA.growth.audit! - quota - 1 })
+    expect(checkLimits({ tool: 'run_audit', targetDomain: 'acme.io', plan: 'growth', isOwner: false, history: used, now })).toMatchObject({ ok: true, remaining: PLAN_MODEL.allowances.growth.audit! - quota - 1 })
+    expect((r as { message: string }).message).not.toMatch(/starter|growth|multi|free|plan\b/i)
     // Last month's calls do not count.
     const lastMonth = used.map((c) => ({ ...c, at: Date.UTC(2026, 8, 20) }))
     expect(checkLimits({ tool: 'run_audit', targetDomain: 'acme.io', plan: 'starter', isOwner: false, history: lastMonth, now }).ok).toBe(true)
   })
 
-  it('says "not in plan" rather than "quota used" for tools a plan excludes', () => {
-    expect(checkLimits({ tool: 'run_audit', targetDomain: 'acme.io', plan: 'free', isOwner: false, history: [], now })).toMatchObject({ ok: false, reason: 'not_in_plan' })
+  it('says "not entitled" rather than "quota used" for excluded tools, without naming a tier', () => {
+    const r = checkLimits({ tool: 'run_audit', targetDomain: 'acme.io', plan: 'free', isOwner: false, history: [], now })
+    expect(r).toMatchObject({ ok: false, reason: 'not_entitled', upgradeUrl: PLAN_MODEL.upgradeUrl })
+    expect((r as { message: string }).message).not.toMatch(/starter|growth|multi|free|pro\b|agency/i)
   })
 
   it('exempts the owner from quota and rate, not from the domain cap', () => {

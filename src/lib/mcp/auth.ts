@@ -88,6 +88,44 @@ export function planTier(subscriptionPlan: string | null | undefined): PlanTier 
   }
 }
 
+/**
+ * OAuth 2.1 bearer tokens (decision 21). Supabase Auth is the authorization
+ * server (its OAuth 2.1 server issues user access tokens to registered or
+ * dynamically registered clients such as claude.ai); this server is only a
+ * resource server. A token is accepted when Supabase verifies it, and the
+ * calling client is recorded from its `client_id` claim for metering.
+ */
+export function oauthResolver(deps: {
+  /** Verify an access token with Supabase (auth.getUser(token) or JWKS); null when invalid or expired. */
+  verifyToken: (token: string) => Promise<{ userId: string; clientId: string | null } | null>
+  planFor: (userId: string) => Promise<PlanTier>
+  isOwner: (userId: string) => Promise<boolean>
+}): AuthResolver {
+  return {
+    async resolve(request) {
+      const token = bearerToken(request)
+      if (!token || token.startsWith(API_KEY_PREFIX)) return null
+      const v = await deps.verifyToken(token)
+      if (!v) return null
+      const [plan, owner] = await Promise.all([deps.planFor(v.userId), deps.isOwner(v.userId)])
+      return { userId: v.userId, keyId: v.clientId, plan, isOwner: owner, via: 'oauth' }
+    },
+  }
+}
+
+/** Try resolvers in order (OAuth first, then API keys as a developer side path). */
+export function chainResolvers(...resolvers: AuthResolver[]): AuthResolver {
+  return {
+    async resolve(request) {
+      for (const r of resolvers) {
+        const p = await r.resolve(request)
+        if (p) return p
+      }
+      return null
+    },
+  }
+}
+
 export interface StoredKey {
   keyId: string
   userId: string

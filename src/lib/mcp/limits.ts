@@ -1,45 +1,28 @@
 /**
- * MCP metering and rate limits (docs/mcp-server-spec.md §4), as pure functions
- * over call records. The `api_calls` table supplies the records later; the
- * decisions here are testable now.
+ * MCP rate limits and quota checks (docs/mcp-server-spec.md §4), as pure
+ * functions over call records. Entitlement and allowances come from
+ * `entitlements.ts`, the single place plan decisions live (decision 27).
  *
- * Three guards, checked in this order:
- *   1. per-key rate: 10 calls/minute, 2 concurrent run_audit
- *   2. per-target-domain: at most 6 probe/audit calls per domain per 10 minutes
- *      per user, because check_crawler_access sends one request per AI crawler
- *      user-agent and must not become a way to hammer third-party sites
- *   3. monthly quota per plan and tool class
+ * Checked in this order:
+ *   1. entitlement: is the tool included at all
+ *   2. per-key rate: 10 calls/minute, 2 concurrent run_audit
+ *   3. per-target-domain: at most 6 probe/audit calls per domain per 10 minutes,
+ *      because check_crawler_access sends one request per AI crawler user-agent
+ *      and must not become a way to hammer third-party sites
+ *   4. monthly allowance per capability
  *
- * The owner (decision 11) skips 1 and 3. Nobody skips 2: it protects other
+ * The owner (decision 11) skips 1, 2 and 4. Nobody skips 3: it protects other
  * people's sites, not our bill.
  */
 import type { PlanTier } from './auth'
+import { PLAN_MODEL, TOOL_CAPABILITY, entitlementFor, quotaExhaustedMessage, type PlanModel } from './entitlements'
 import type { ToolName } from './schemas'
-
-export type ToolClass = 'audit' | 'probe' | 'read'
-
-export const TOOL_CLASS: Record<ToolName, ToolClass> = {
-  run_audit: 'audit',
-  check_crawler_access: 'probe',
-  get_audit: 'read',
-  list_audits: 'read',
-  compare_audits: 'read',
-  score_draft: 'read',
-}
-
-/**
- * PROPOSED quotas, pending decision M3. `null` = unmetered (rate limit only);
- * 0 = not available on that plan (pending decision M2).
- */
-export const MONTHLY_QUOTA: Record<PlanTier, Record<ToolClass, number | null>> = {
-  free: { audit: 0, probe: 10, read: 20 },
-  starter: { audit: 100, probe: 300, read: null },
-  growth: { audit: 400, probe: 1200, read: null },
-  multi_brand: { audit: 1200, probe: 3600, read: null },
-}
 
 export const RATE = { perMinute: 10, concurrentAudits: 2 } as const
 export const DOMAIN_BUDGET = { max: 6, windowMs: 10 * 60_000 } as const
+
+/** Capabilities that fetch a third-party site and so count against the domain cap. */
+const FETCHES_TARGET = new Set(['crawler_check', 'audit'])
 
 export interface CallRecord {
   tool: ToolName
@@ -52,7 +35,7 @@ export interface CallRecord {
 
 export type LimitResult =
   | { ok: true; remaining: number | null }
-  | { ok: false; reason: 'rate' | 'concurrency' | 'domain' | 'quota' | 'not_in_plan'; retryAfterMs: number | null; message: string }
+  | { ok: false; reason: 'not_entitled' | 'rate' | 'concurrency' | 'domain' | 'quota'; retryAfterMs: number | null; message: string; upgradeUrl?: string }
 
 /** The domain used for the per-target cap: lower-case host without www. */
 export function targetDomainOf(url: string): string {
@@ -69,26 +52,31 @@ export function checkLimits(args: {
   targetDomain: string | null
   plan: PlanTier
   isOwner: boolean
-  /** This key's or user's calls, at least the last month's. */
+  /** This account's calls, at least the current month's. */
   history: CallRecord[]
   now: number
+  model?: PlanModel
 }): LimitResult {
-  const { tool, targetDomain, plan, isOwner, history, now } = args
-  const cls = TOOL_CLASS[tool]
+  const { tool, targetDomain, plan, isOwner, history, now, model = PLAN_MODEL } = args
+  const ent = entitlementFor(plan, isOwner, tool, model)
+  if (!ent.allowed) return { ok: false, reason: 'not_entitled', retryAfterMs: null, message: ent.message, upgradeUrl: ent.upgradeUrl }
+  const cap = ent.capability
 
   if (!isOwner) {
     const lastMinute = history.filter((c) => c.at > now - 60_000)
     if (lastMinute.length >= RATE.perMinute) {
       const oldest = Math.min(...lastMinute.map((c) => c.at))
-      return { ok: false, reason: 'rate', retryAfterMs: oldest + 60_000 - now, message: `Rate limit: ${RATE.perMinute} calls per minute.` }
+      return { ok: false, reason: 'rate', retryAfterMs: oldest + 60_000 - now, message: `Too many requests: at most ${RATE.perMinute} per minute.` }
     }
     if (tool === 'run_audit' && history.filter((c) => c.tool === 'run_audit' && c.inFlight).length >= RATE.concurrentAudits) {
       return { ok: false, reason: 'concurrency', retryAfterMs: null, message: `At most ${RATE.concurrentAudits} audits can run at once.` }
     }
   }
 
-  if (cls !== 'read' && targetDomain) {
-    const recent = history.filter((c) => TOOL_CLASS[c.tool] !== 'read' && c.targetDomain === targetDomain && c.at > now - DOMAIN_BUDGET.windowMs)
+  if (FETCHES_TARGET.has(cap) && targetDomain) {
+    const recent = history.filter(
+      (c) => FETCHES_TARGET.has(TOOL_CAPABILITY[c.tool]) && c.targetDomain === targetDomain && c.at > now - DOMAIN_BUDGET.windowMs,
+    )
     if (recent.length >= DOMAIN_BUDGET.max) {
       const oldest = Math.min(...recent.map((c) => c.at))
       return {
@@ -100,19 +88,13 @@ export function checkLimits(args: {
     }
   }
 
-  if (isOwner) return { ok: true, remaining: null }
-
-  const quota = MONTHLY_QUOTA[plan][cls]
-  if (quota === null) return { ok: true, remaining: null }
-  if (quota === 0) {
-    return { ok: false, reason: 'not_in_plan', retryAfterMs: null, message: `${tool} is not included in your plan.` }
-  }
+  if (ent.monthlyAllowance === null) return { ok: true, remaining: null }
   const monthStart = startOfMonthUtc(now)
-  const used = history.filter((c) => TOOL_CLASS[c.tool] === cls && c.at >= monthStart).length
-  if (used >= quota) {
+  const used = history.filter((c) => TOOL_CAPABILITY[c.tool] === cap && c.at >= monthStart).length
+  if (used >= ent.monthlyAllowance) {
     const d = new Date(now)
     const next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)
-    return { ok: false, reason: 'quota', retryAfterMs: next - now, message: `Monthly ${cls} quota used (${used}/${quota}). It resets on the 1st (UTC).` }
+    return { ok: false, reason: 'quota', retryAfterMs: next - now, message: quotaExhaustedMessage(cap, used, ent.monthlyAllowance) }
   }
-  return { ok: true, remaining: quota - used - 1 }
+  return { ok: true, remaining: ent.monthlyAllowance - used - 1 }
 }
