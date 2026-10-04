@@ -82,8 +82,8 @@ export interface ArticleScores {
   readability: { score: number; breakdown: Record<string, { label: string; value: number }> }
   geo: { score: number; breakdown: Record<string, { label: string; passed: boolean }> }
   aeo: { score: number; breakdown: Record<string, { label: string; passed: boolean }> }
-  ranking_prediction: { timeline: string; confidence: 'low' | 'medium' | 'high' }
-  traffic_prediction: { at_rank_1: number; at_rank_3: number; at_rank_5: number; at_rank_10: number }
+  // ranking_prediction and traffic_prediction were removed 2026-10-04: a
+  // months-to-top-ten forecast is a guarantee. Old rows may still carry them; nothing reads them.
   /** Real-engine draft report (paid engine phase 2). Absent on rows scored before 2026-09-30. */
   draft?: import('@/lib/geo-audit/draft-report').DraftReport
 }

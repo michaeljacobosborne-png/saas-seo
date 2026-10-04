@@ -41,7 +41,7 @@ const CHECK_INSTRUCTIONS: Record<string, (kw: string) => string> = {
 
 const SIGNAL_INSTRUCTIONS: Record<string, (brand: string) => string> = {
   'brand-proximity': (brand) =>
-    `Put the brand name "${brand}" inside the sections that make claims, in the sentence that makes the claim, so a quoted passage carries the name with it. Do not add it to every paragraph.`,
+    `Where a section states what "${brand}" does, offers or recommends, name "${brand}" in that sentence so a quoted passage carries the name with it. Never present a statistic, finding or claim as ${brand}'s own research, analysis or data, and never attach an existing unsourced number to ${brand}. Do not add the name to every paragraph.`,
   'original-evidence': () =>
     'Where the article makes a claim, support it with first-hand material you can stand behind: a real example, a named method you used, or a figure from a source you can cite. Do not invent numbers or sources. Where none exists yet, insert a clearly marked [ADD EVIDENCE: …] placeholder for the writer instead.',
   'proprietary-terms': () =>

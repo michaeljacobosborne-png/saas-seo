@@ -254,3 +254,28 @@ describe('locateLine', () => {
     expect(locateLine(MD, 'nothing like this appears')).toBeNull()
   })
 })
+
+describe('agent artefacts cannot game the draft score (signed-in pass finding 2)', () => {
+  const clean = buildDraftReport({ markdown: MD, articleId: 'a1', title: 'T', brandName: 'Acme', now: NOW })
+  const html = new Marked({ gfm: true }).parse(MD, { async: false }) as string
+  const leaked = `<p>SUMMARY: Added "Acme" attribution to key claim-making sentences across the article so quoted passages carry the brand name with them.</p>${html}`
+  const cleanHtml = buildDraftReport({ markdown: html, articleId: 'a1', title: 'T', brandName: 'Acme', now: NOW })
+  const dirty = buildDraftReport({ markdown: leaked, articleId: 'a1', title: 'T', brandName: 'Acme', now: NOW })
+  const answers = (r: typeof clean) => r.retrievability.groups.flatMap((g) => g.checks).find((c) => c.id === 'extract-answers')
+
+  it('scores the same with or without a leaked SUMMARY line above the H1', () => {
+    expect(dirty.retrievability.score).toBe(cleanHtml.retrievability.score)
+    expect(answers(dirty)?.score).toBe(answers(cleanHtml)?.score)
+    expect(JSON.stringify(answers(dirty)?.evidence)).not.toContain('SUMMARY')
+  })
+
+  it('says it left the artefact out', () => {
+    expect(dirty.notes.some((n) => /agent output/.test(n))).toBe(true)
+    expect(clean.notes.some((n) => /agent output/.test(n))).toBe(false)
+  })
+
+  it('also ignores a SUMMARY line in markdown', () => {
+    const md = buildDraftReport({ markdown: `SUMMARY: Added things.\n\n${MD}`, articleId: 'a1', title: 'T', brandName: 'Acme', now: NOW })
+    expect(md.retrievability.score).toBe(clean.retrievability.score)
+  })
+})

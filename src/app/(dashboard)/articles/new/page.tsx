@@ -1102,7 +1102,7 @@ function NewArticleWizard() {
           <p className="text-sm text-[var(--cream-dim)] mb-7 max-w-sm mx-auto">
             {generatingStatus === 'expanded'
               ? 'A second research pass added real substance to hit your target word count.'
-              : 'Your article is ready. View the full content, SEO scores, and ranking predictions.'}
+              : 'Your article is ready. View the full content and its scores.'}
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link href="/articles" className="px-4 py-2 text-sm text-[var(--cream-dim)] border border-[rgba(184,115,51,0.2)] rounded-lg hover:bg-[var(--ink-card)] transition-colors">

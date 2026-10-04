@@ -17,8 +17,6 @@ import {
   computeReadability,
   computeGEO,
   computeAEO,
-  buildRankingPrediction,
-  buildTrafficPrediction,
 } from '@/lib/article-scoring'
 import { buildDraftReport, type DraftAuthor } from '@/lib/geo-audit/draft-report'
 
@@ -39,8 +37,6 @@ export interface ArticleScoreInput {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   brief: Record<string, any>
   targetKeyword: string
-  keywordDifficulty?: number | null
-  monthlySearches?: number | null
   /** For the draft report. `articleId` null for content not yet saved. */
   articleId: string | null
   title?: string | null
@@ -78,8 +74,6 @@ export function buildArticleScores(input: ArticleScoreInput): ArticleScores {
     readability,
     geo,
     aeo,
-    ranking_prediction: buildRankingPrediction(input.keywordDifficulty ?? null, seo.score),
-    traffic_prediction: buildTrafficPrediction(input.monthlySearches ?? null),
     ...(draft ? { draft } : {}),
   }
 }

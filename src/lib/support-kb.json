@@ -538,7 +538,7 @@
       "id": "kb_029",
       "category": "product",
       "priority": "p2",
-      "title": "Ranking and traffic predictions — what they mean",
+      "title": "Ranking and traffic predictions — removed",
       "trigger_phrases": [
         "ranking prediction",
         "traffic prediction",
@@ -547,10 +547,10 @@
         "how accurate is the ranking prediction",
         "estimated traffic"
       ],
-      "agent_response": "After scoring an article, Byline shows a ranking prediction (estimated time to reach page 1) and traffic estimates at different rank positions. The ranking prediction combines your keyword difficulty score (from DataForSEO) with your SEO score — lower difficulty + higher SEO score = faster estimated ranking. Traffic estimates use standard CTR benchmarks: ~28% at rank 1, ~11% at rank 3, ~6% at rank 5, ~2% at rank 10, applied to the keyword's monthly search volume. These are estimates — not guarantees — based on industry averages.",
+      "agent_response": "Byline no longer shows ranking or traffic predictions. Nobody can honestly forecast when a page will rank or how much traffic it will get, so Byline does not estimate it. The Scores tab assesses what the draft controls: its structure (Retrievable) and whether quoted passages carry attribution back to you (Citable).",
       "escalate_to_human": false,
       "escalation_reason": "",
-      "internal_notes": "buildRankingPrediction and buildTrafficPrediction in /api/articles/score/route.ts. Ranking prediction uses keyword_difficulty from DataForSEO keywords table, crossed with seoScore. Traffic uses hardcoded CTR multipliers: 0.28, 0.11, 0.06, 0.02. Values are illustrative; explain this if user asks about accuracy."
+      "internal_notes": "Removed 2026-10-04 (signed-in pass finding 11): the months-to-top-ten forecast with a confidence level read as a guarantee, contradicting the core invariant. Do not describe or reintroduce it."
     },
     {
       "id": "kb_030",

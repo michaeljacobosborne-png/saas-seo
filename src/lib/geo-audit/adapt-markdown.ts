@@ -34,6 +34,10 @@ export interface AdaptedDraft {
   rawHtmlBlocks: number
   /** True when the H1 came from the article title rather than the markdown. */
   h1FromTitle: boolean
+  /** Agent header lines (SUMMARY:/PATCH:) removed before scoring. */
+  artefactsRemoved: number
+  /** True when text above the draft's own H1 was left out. */
+  preH1Removed: boolean
 }
 
 export const DRAFT_URL_PREFIX = 'draft:'
@@ -70,7 +74,25 @@ export function adaptMarkdown(md: string, meta: DraftMeta): AdaptedDraft {
   // so a draft without its own H1 is assessed with the title in that slot.
   // Disclosed on the report, never silent.
   const h1FromTitle = !hasH1 && !!title
-  const rendered = isHtml ? source : (marked.parse(source, { async: false }) as string)
+  let rendered = isHtml ? source : (marked.parse(source, { async: false }) as string)
+
+  // Agent artefacts are never article content. A fix once left its own
+  // "SUMMARY: …" line above the H1, and the scorer took it for the opening
+  // answer (Direct answers 7 → 10). Strip them, and treat anything above the
+  // draft's own H1 as outside the article: the published page opens at the H1.
+  let artefactsRemoved = 0
+  rendered = rendered.replace(AGENT_ARTEFACT_BLOCK, () => {
+    artefactsRemoved++
+    return ''
+  })
+  let preH1Removed = false
+  if (hasH1) {
+    const at = rendered.search(/<h1[\s>]/i)
+    if (at > 0 && rendered.slice(0, at).replace(/<[^>]+>/g, '').trim()) {
+      preH1Removed = true
+      rendered = rendered.slice(at)
+    }
+  }
   const body = (h1FromTitle ? `<h1>${escapeHtml(title)}</h1>\n` : '') + rendered
 
   const html = `<!doctype html><html><head><title>${escapeHtml(title)}</title></head><body><main><article>${body}</article></main></body></html>`
@@ -91,8 +113,11 @@ export function adaptMarkdown(md: string, meta: DraftMeta): AdaptedDraft {
     jsonLdBlocks: [],
   }
 
-  return { page, rawHtmlBlocks, h1FromTitle }
+  return { page, rawHtmlBlocks, h1FromTitle, artefactsRemoved, preH1Removed }
 }
+
+/** A paragraph that is an agent header line ("SUMMARY: …", "PATCH:REPLACE"). */
+const AGENT_ARTEFACT_BLOCK = /<p[^>]*>\s*(?:SUMMARY:|PATCH:(?:APPEND|REPLACE|EDITS)\b)[\s\S]*?<\/p>/gi
 
 function safeBase(siteUrl?: string | null): string {
   try {

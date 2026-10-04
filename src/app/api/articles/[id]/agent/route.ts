@@ -4,6 +4,7 @@ import type { ArticleScores } from '@/lib/supabase/types'
 import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
 import { logUsageEvent } from '@/lib/usage'
 import { draftWeakAreas } from '@/lib/agent-weak-areas'
+import { applyFixEdits, MAX_EDITS, numberBlocks, splitBlocks, stripAgentArtefacts, type FixEdit } from '@/lib/targeted-fix'
 import Anthropic from '@anthropic-ai/sdk'
 
 const AGENT_MODEL = 'claude-sonnet-4-6'
@@ -45,12 +46,13 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { messages, mode, selectedText, fixInstruction, userInstruction } = await request.json() as {
+  const { messages, mode, selectedText, fixInstruction, userInstruction, content: editorContent } = await request.json() as {
     messages: Message[]
     mode?: 'review' | 'assist' | 'auto' | 'patch'
     selectedText?: string
     fixInstruction?: string
     userInstruction?: string   // optional focus instructions for auto mode
+    content?: string           // patch mode: the editor's current HTML, so a fix never works on a stale save
   }
 
   // Free tier: gate assist mode and enforce 3-turn cap on review
@@ -279,6 +281,10 @@ REWRITE INSTRUCTIONS:
 - Keep all sections and structural elements that are already working
 - Add or strengthen sections needed to pass failing criteria
 - Do not add a preamble, intro, or any commentary — return the article content only
+INTEGRITY RULES (these override every other instruction):
+- Never add a number, percentage, statistic, study, source or quote that is not already in the article.
+- Never present a claim as research, analysis, data, testing or findings by ${brand?.brand_name ? `"${brand.brand_name}"` : 'the brand'}, by "we" or by "our". Attributing an existing unsourced number to anyone is fabrication.
+- Where a claim needs evidence the article does not have, insert a visible placeholder: [ADD EVIDENCE: what is needed].
 ANTI-SLOP STANDARDS (apply throughout the rewrite):
 - Active voice. Find the human doing the action. Never: "The data suggests" — always: "Researchers found."
 - Kill adverbs. If the verb needs one, replace the verb.
@@ -334,7 +340,14 @@ ANTI-SLOP STANDARDS (apply throughout the rewrite):
   }
 
   if (mode === 'patch') {
-    const patchSystem = `You are a targeted SEO editor. Your job is to fix ONE specific issue in the article.
+    // Targeted fix: the model names the blocks it changes; the server splices
+    // them in and refuses fabricated figures or first-party research claims.
+    // The summary is a separate field, so it can never enter the article body.
+    const source = typeof editorContent === 'string' && editorContent.trim() ? editorContent : fullContent
+    const blocks = splitBlocks(source)
+    if (!blocks.length) return NextResponse.json({ error: 'The article is empty.' }, { status: 400 })
+
+    const patchSystem = `You are a targeted editor. Fix ONE specific issue in the article and change nothing else.
 
 ARTICLE CONTEXT:
 Title: ${articleTitle}
@@ -342,68 +355,78 @@ Target keyword: "${article.target_keyword ?? '(none set)'}"
 ${brand?.brand_name ? `Brand: ${brand.brand_name} | Voice: ${brand?.brand_voice ?? 'professional'}` : ''}
 ${brand?.tone_notes ? `Tone notes: ${brand.tone_notes}` : ''}
 ${brand?.expertise_notes ? `\nAUTHOR EXPERTISE:\n${brand.expertise_notes}` : ''}
-${brand?.signature_angles ? `\nSIGNATURE ANGLES:\n${brand.signature_angles}` : ''}
 
-FULL ARTICLE (current):
-${fullContent}
+THE ARTICLE, as numbered blocks ("[index] (tag) text"):
+${numberBlocks(blocks)}
 
-YOUR RESPONSE MUST start with EXACTLY one of these two lines (no spaces, no punctuation):
-PATCH:APPEND
-PATCH:REPLACE
+HOW TO ANSWER: call the apply_fix tool once.
+- Each edit either replaces one block (op "replace", the block's index) or inserts new blocks after one (op "insert_after"; -1 inserts at the very start).
+- Edit only the blocks the issue is about. Every block you do not name stays exactly as it is. At most ${MAX_EDITS} edits.
+- A replacement keeps everything in the original block that the fix does not require changing: same wording, same sentences, same facts. Do not restyle, tighten or "improve" unrelated sentences.
+- Write markdown for each edit. Use a heading marker (##, ###) only when the block is a heading.
 
-Then on the very next line, a one-sentence summary prefixed with SUMMARY: that describes what you changed.
+INTEGRITY RULES (an edit that breaks one is discarded):
+- Never add a number, percentage, statistic, study, source or quote that is not already in that block.
+- Never present a claim as research, analysis, data, testing or findings by ${brand?.brand_name ? `"${brand.brand_name}"` : 'the brand'}, by "we" or by "our". Attributing an existing unsourced number to anyone is fabrication.
+- Name the brand only where the sentence states what the brand does, offers or recommends.
+- Where a claim needs evidence that does not exist in the article, insert a visible placeholder: [ADD EVIDENCE: what is needed].
 
-Then a blank line.
+STYLE: active voice; no em dashes; avoid the words delve, leverage, robust, seamlessly, crucial, game-changer, moreover, furthermore, utilize.`
 
-Then the content.
-
-Rules:
-- PATCH:APPEND — Use when the fix only requires ADDING a new section (FAQ, statistics callout, author bio, CTA, schema note, etc). Return ONLY the new section(s) in clean markdown. Do NOT return the rest of the article.
-- PATCH:REPLACE — Use when the fix requires changes scattered throughout (keyword density, heading restructure, readability). Return the COMPLETE revised article in clean markdown.
-- Match the article's existing tone and formatting style.
-- No preamble. No "Here is the..." commentary. Output starts with PATCH:APPEND or PATCH:REPLACE.
-ANTI-SLOP STANDARDS:
-- Active voice. Kill adverbs. No throat-clearing (Importantly, Notably, Ultimately, Essentially).
-- Em dashes (—) are banned. Replace with a comma, parentheses, or colon.
-- No Wh- starters: What makes this / Which means / Why this matters.
-- No binary contrasts: "Not X — it's Y."
-- No inanimate subjects doing human actions.
-- Banned words: delve, leverage, robust, seamlessly, crucial, cutting-edge, game-changer, revolutionary, transformative, unprecedented, dive into, moreover, furthermore, utilize, facilitate.`
-
-    const patchStream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder()
-        try {
-          const anthropicStream = anthropic.messages.stream({
-            model: AGENT_MODEL,
-            max_tokens: 8192,
-            system: patchSystem,
-            messages: [{ role: 'user', content: `Fix this specific issue: ${userInstruction ?? 'improve the article'}` }],
-          })
-          for await (const event of anthropicStream) {
-            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-              controller.enqueue(encoder.encode(event.delta.text))
-            }
-          }
-          try {
-            const fm = await anthropicStream.finalMessage()
-            await logUsageEvent({ userId: user.id, feature: 'agent_patch', model: AGENT_MODEL, inputTokens: fm.usage.input_tokens, outputTokens: fm.usage.output_tokens })
-          } catch { /* never block the stream on cost logging */ }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Stream error'
-          controller.enqueue(encoder.encode(`\n\n[Error: ${msg}]`))
-        } finally {
-          controller.close()
-        }
+    const tool: Anthropic.Tool = {
+      name: 'apply_fix',
+      description: 'Apply a targeted fix as block-level edits.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          summary: { type: 'string', description: 'One sentence for the writer describing what changed. Never placed in the article.' },
+          edits: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                op: { type: 'string', enum: ['replace', 'insert_after'] },
+                block: { type: 'integer' },
+                markdown: { type: 'string' },
+              },
+              required: ['op', 'block', 'markdown'],
+            },
+          },
+        },
+        required: ['summary', 'edits'],
       },
-    })
+    }
 
-    return new Response(patchStream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'X-Content-Type-Options': 'nosniff',
-      },
-    })
+    try {
+      const msg = await anthropic.messages.create({
+        model: AGENT_MODEL,
+        max_tokens: 4096,
+        system: patchSystem,
+        tools: [tool],
+        tool_choice: { type: 'tool', name: 'apply_fix' },
+        messages: [{ role: 'user', content: `Fix this specific issue: ${userInstruction ?? 'improve the article'}` }],
+      })
+      try {
+        await logUsageEvent({ userId: user.id, feature: 'agent_patch', model: AGENT_MODEL, inputTokens: msg.usage.input_tokens, outputTokens: msg.usage.output_tokens })
+      } catch { /* never block the fix on cost logging */ }
+
+      const call = msg.content.find((b) => b.type === 'tool_use')
+      const input = (call?.type === 'tool_use' ? call.input : null) as { summary?: string; edits?: FixEdit[] } | null
+      if (!input || !Array.isArray(input.edits)) {
+        return NextResponse.json({ error: 'The agent did not return a usable fix. Please try again.' }, { status: 502 })
+      }
+      const result = applyFixEdits(source, input.edits, { brandName: brand?.brand_name ?? null })
+      return NextResponse.json({
+        summary: stripAgentArtefacts(input.summary ?? '') || 'Fix applied.',
+        html: result.applied.length ? result.html : null,
+        applied: result.applied.length,
+        touched: result.touched,
+        rejected: result.rejected.map((r) => r.reason),
+      })
+    } catch (err) {
+      console.error('[agent/patch] failed:', err)
+      return NextResponse.json({ error: 'The fix could not be completed. Please try again.' }, { status: 500 })
+    }
   }
 
   const expertiseSection = [

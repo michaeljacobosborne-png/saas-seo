@@ -81,11 +81,12 @@ interface ArticleEditorProps {
   replaceContentRef?: React.MutableRefObject<((markdown: string) => void) | null>  // full replace (auto mode)
   applyContentRef?: React.MutableRefObject<((markdown: string) => void) | null>   // insert at cursor (review mode)
   applyAtRangeRef?: React.MutableRefObject<((from: number, to: number, html: string) => void) | null>
-  appendContentRef?: React.MutableRefObject<((html: string) => void) | null>      // append at end (patch mode)
+  appendContentRef?: React.MutableRefObject<((html: string) => void) | null>      // append at end
+  htmlRef?: React.MutableRefObject<{ get: () => string; set: (html: string) => void } | null> // targeted fixes
   onSelectionChange?: (text: string, from: number, to: number) => void
 }
 
-export default function ArticleEditor({ articleId, initialContent, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef, onSelectionChange }: ArticleEditorProps) {
+export default function ArticleEditor({ articleId, initialContent, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef, htmlRef, onSelectionChange }: ArticleEditorProps) {
   const supabase = createClient()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
@@ -170,8 +171,13 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
           editor.commands.insertContentAt(editor.state.doc.content.size, html)
         }
       }
+      if (htmlRef) {
+        // emitUpdate so autosave persists a fix; undo (⌘/Ctrl+Z) reverts it.
+        htmlRef.current = { get: () => editor.getHTML(), set: (html: string) => { editor.commands.setContent(html, { emitUpdate: true }) } }
+      }
     }
     return () => {
+      if (htmlRef) htmlRef.current = null
       getTextRef.current = null
       if (getWordCountRef) getWordCountRef.current = null
       if (replaceContentRef) replaceContentRef.current = null
@@ -179,7 +185,7 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
       if (applyAtRangeRef) applyAtRangeRef.current = null
       if (appendContentRef) appendContentRef.current = null
     }
-  }, [editor, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef])
+  }, [editor, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef, htmlRef])
 
 
   if (!editor) return null

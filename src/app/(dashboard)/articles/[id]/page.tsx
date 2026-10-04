@@ -13,7 +13,7 @@ import { DraftScores } from './_components/DraftScores'
 import type ArticleEditorType from './ArticleEditor'
 import {
   ArrowLeft, Copy, CopyPlus, CheckCircle2, Loader2, Sparkles,
-  TrendingUp, AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
+  AlertCircle, BarChart2, Bot, X, Send, Lock, Wand2,
   Image as ImageIcon, RefreshCw, ChevronRight, Globe, Upload, ExternalLink, Trash2, Pencil, Link2,
 } from 'lucide-react'
 
@@ -107,15 +107,6 @@ function getScoreFailures(scores: ArticleScores, keyword: string): Array<{ label
     .map(({ label, instruction }) => ({ label, instruction }))
 }
 
-function ConfidenceChip({ confidence }: { confidence: 'low' | 'medium' | 'high' }) {
-  const cfg = { high: 'bg-green-50 text-green-700', medium: 'bg-amber-50 text-amber-700', low: 'bg-red-50 text-red-600' }
-  return (
-    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cfg[confidence]}`}>
-      {confidence.charAt(0).toUpperCase() + confidence.slice(1)} confidence
-    </span>
-  )
-}
-
 function FixButton({ onFix }: { onFix: () => void }) {
   const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle')
   const handleClick = () => {
@@ -203,6 +194,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const applyContentRef = useRef<((markdown: string) => void) | null>(null)
   const applyAtRangeRef = useRef<((from: number, to: number, html: string) => void) | null>(null)
   const appendContentRef = useRef<((html: string) => void) | null>(null)
+  const htmlRef = useRef<{ get: () => string; set: (html: string) => void } | null>(null)
   const [publishing, setPublishing] = useState(false)
 
   // WordPress publishing
@@ -630,81 +622,39 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
     try {
       resetWatchdog()
-      const originalLength = getEditorTextRef.current?.()?.length ?? 0
+      const before = htmlRef.current?.get() ?? ''
 
+      // Targeted fix: the server returns the article with only the named blocks
+      // changed, plus a summary that is shown here and never enters the body.
       const res = await fetch(`/api/articles/${id}/agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [], mode: 'patch', userInstruction: instruction }),
+        body: JSON.stringify({ messages: [], mode: 'patch', userInstruction: instruction, content: before || undefined }),
         signal: controller.signal,
       })
-
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string; summary?: string; html?: string | null; applied?: number; touched?: number[]; rejected?: string[]
+      }
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        const errorMsg = (errorData as { error?: string }).error ?? 'Something went wrong. Please try again.'
-        finalize(`❌ ${errorMsg}`)
+        finalize(`❌ ${data.error ?? 'Something went wrong. Please try again.'}`)
         return
       }
-      if (!res.body) {
-        finalize('❌ No response from agent. Please try again.')
+      // The editor changed while the fix ran: applying would overwrite those edits.
+      if (before && htmlRef.current && htmlRef.current.get() !== before) {
+        finalize('❌ The article changed while the fix was running, so it was not applied. Press Fix again.')
         return
       }
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        resetWatchdog()
-        buffer += decoder.decode(value)
-      }
-
-      // Parse the structured response
-      const lines = buffer.trimStart().split('\n')
-      const patchTypeLine = lines[0]?.trim() ?? ''
-      const summaryLine = lines[1]?.trim() ?? ''
-      const summary = summaryLine.startsWith('SUMMARY:') ? summaryLine.slice('SUMMARY:'.length).trim() : 'Fix applied.'
-      // Content is everything after the first two header lines (PATCH:*, SUMMARY:*).
-      // Skip any leading blank lines — do NOT depend on a blank line being present,
-      // since the model sometimes omits it and the old findIndex would start slicing
-      // from the first blank line *inside* the content body, losing the top of it.
-      const bodyLines = lines.slice(2)
-      const firstContentLine = bodyLines.findIndex((l) => l.trim() !== '')
-      const content = bodyLines.slice(firstContentLine >= 0 ? firstContentLine : 0).join('\n').trim()
-
-      if (!content) {
-        finalize('❌ The agent returned empty content. Please try again.')
+      const rejected = data.rejected ?? []
+      const rejectedNote = rejected.length
+        ? `\n\nNot applied (${rejected.length}): ${rejected.map((r) => `this edit ${r}`).join('; ')}.`
+        : ''
+      if (!data.html || !data.applied) {
+        finalize(`❌ No change was applied.${rejectedNote || ' Please try again.'}`)
         return
       }
-
-      if (patchTypeLine === 'PATCH:APPEND') {
-        const html = marked.parse(content) as string
-        appendContentRef.current?.(html)
-        // Show a preview of what was appended so users can verify without hunting
-        // through the article. First 400 chars gives enough context for debugging.
-        const preview = content.length > 400
-          ? content.slice(0, 400).trimEnd() + '\n\n*(full section appended to article)*'
-          : content
-        finalize(`✅ ${summary}\n\n---\n\n${preview}`)
-      } else if (patchTypeLine === 'PATCH:REPLACE') {
-        // Safety check: don't apply if the result is suspiciously shorter than the original
-        if (originalLength > 500 && content.length < originalLength * 0.4) {
-          finalize(`❌ The rewrite came back too short (possible truncation). Original: ~${originalLength} chars, received: ~${content.length} chars. Try again or use the manual editor.`)
-          return
-        }
-        replaceContentRef.current?.(content)
-        finalize(`✅ ${summary} (full article rewritten)`)
-      } else {
-        // Model didn't follow the format — treat entire response as APPEND
-        const html = marked.parse(buffer) as string
-        appendContentRef.current?.(html)
-        const preview = buffer.length > 400
-          ? buffer.slice(0, 400).trimEnd() + '\n\n*(full response appended to article)*'
-          : buffer
-        finalize(`✅ Fix applied. (Note: response format was unexpected — appended content to article.)\n\n---\n\n${preview}`)
-      }
+      htmlRef.current?.set(data.html)
+      const n = data.touched?.length ?? data.applied
+      finalize(`✅ ${data.summary ?? 'Fix applied.'} (${n} block${n === 1 ? '' : 's'} changed; the rest of the article is untouched. Undo with ⌘/Ctrl+Z.)${rejectedNote}`)
     } catch (err) {
       const aborted = err instanceof DOMException && err.name === 'AbortError'
       if (aborted && !timedOut) {
@@ -1436,6 +1386,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               applyContentRef={applyContentRef}
               applyAtRangeRef={applyAtRangeRef}
               appendContentRef={appendContentRef}
+              htmlRef={htmlRef}
               onSelectionChange={handleSelectionChange}
             />
           </div>
@@ -1540,51 +1491,6 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <TrendingUp className="w-4 h-4 text-[var(--copper-lt)]" />
-                      <h3 className="font-semibold text-[var(--cream)] text-sm">Ranking Prediction</h3>
-                    </div>
-                    {scores.ranking_prediction ? (
-                      <>
-                        <p className="text-sm text-[var(--cream-dim)] mb-3 leading-relaxed">{scores.ranking_prediction.timeline}</p>
-                        <ConfidenceChip confidence={scores.ranking_prediction.confidence} />
-                      </>
-                    ) : (
-                      <p className="text-sm text-[var(--cream-faint)]">Re-score to generate prediction.</p>
-                    )}
-                  </div>
-
-                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <BarChart2 className="w-4 h-4 text-[var(--copper-lt)]" />
-                      <h3 className="font-semibold text-[var(--cream)] text-sm">Traffic Prediction (monthly)</h3>
-                    </div>
-                    {scores.traffic_prediction ? (
-                      <table className="w-full text-xs">
-                        <tbody className="divide-y divide-gray-50">
-                          {([
-                            { rank: 1, visits: scores.traffic_prediction.at_rank_1, ctr: '28%' },
-                            { rank: 3, visits: scores.traffic_prediction.at_rank_3, ctr: '11%' },
-                            { rank: 5, visits: scores.traffic_prediction.at_rank_5, ctr: '6%' },
-                            { rank: 10, visits: scores.traffic_prediction.at_rank_10, ctr: '2%' },
-                          ]).map(({ rank, visits, ctr }) => (
-                            <tr key={rank}>
-                              <td className="py-1.5 text-[var(--cream-dim)]">Position {rank}</td>
-                              <td className="py-1.5 text-[var(--cream-faint)] text-right">{ctr} CTR</td>
-                              <td className="py-1.5 font-semibold text-[var(--cream-dim)] text-right tabular-nums">
-                                {visits.toLocaleString()} <span className="font-normal text-[var(--cream-faint)]">visits</span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <p className="text-sm text-[var(--cream-faint)]">Re-score to generate prediction.</p>
-                    )}
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -2029,10 +1935,8 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                             <span className="text-xs text-[var(--cream-dim)] flex-1 leading-snug">{f.label}</span>
                             <button
                               onClick={() => {
-                                if (!agentStreaming) {
-                                  setAgentMode('auto')
-                                  sendAutoMode(f.instruction)
-                                }
+                                // A fix for one finding is targeted, never a full rewrite.
+                                if (!agentStreaming) sendPatchMode(f.instruction)
                               }}
                               disabled={agentStreaming}
                               className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-indigo-800 disabled:opacity-40 whitespace-nowrap"

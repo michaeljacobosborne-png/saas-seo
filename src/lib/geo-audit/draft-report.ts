@@ -137,7 +137,7 @@ export const DRAFT_SCOPE =
   'not a measurement of whether any AI system retrieves or cites the article.'
 
 export function buildDraftReport(input: DraftInput): DraftReport {
-  const { page, rawHtmlBlocks, h1FromTitle } = adaptMarkdown(input.markdown, input)
+  const { page, rawHtmlBlocks, h1FromTitle, artefactsRemoved, preH1Removed } = adaptMarkdown(input.markdown, input)
   const md = input.markdown ?? ''
 
   const live = scoreRetrievability({
@@ -177,6 +177,8 @@ export function buildDraftReport(input: DraftInput): DraftReport {
   const notes: string[] = []
   if (h1FromTitle) notes.push('The draft has no H1 of its own, so the article title was assessed as the H1, as the published template renders it.')
   if (rawHtmlBlocks) notes.push(`${rawHtmlBlocks} block(s) of raw HTML in the draft were not assessed.`)
+  if (artefactsRemoved) notes.push(`${artefactsRemoved} line(s) of agent output (SUMMARY/PATCH headers) were found in the draft and not assessed. Remove them before publishing.`)
+  if (preH1Removed) notes.push('Text above the H1 was not assessed: the published page opens at the H1.')
   if (!input.brandName) notes.push('No brand name is set on the brand profile, so brand-claim proximity could not be measured.')
   notes.push('FAQ structured data is added by the template, so question coverage here is judged on headings alone.')
 

@@ -27,15 +27,6 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const brief = (article.brief ?? {}) as Record<string, any>
 
-  // Fetch keyword difficulty + volume from DataForSEO data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: kwData } = article.keyword_project_id && targetKeyword ? await (supabase as any)
-    .from('keywords')
-    .select('keyword_difficulty, avg_monthly_searches')
-    .eq('project_id', article.keyword_project_id)
-    .ilike('keyword', targetKeyword)
-    .maybeSingle() : { data: null }
-
   // `*` so the author columns are picked up whether or not the migration has run.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const brandQuery = (supabase as any).from('brand_profiles').select('*').eq('user_id', user.id)
@@ -48,8 +39,6 @@ export async function POST(request: Request) {
     content: article.content,
     brief,
     targetKeyword,
-    keywordDifficulty: kwData?.keyword_difficulty ?? null,
-    monthlySearches: kwData?.avg_monthly_searches ?? null,
     articleId: article.id,
     title: article.title,
     brandName: brand?.brand_name ?? null,
