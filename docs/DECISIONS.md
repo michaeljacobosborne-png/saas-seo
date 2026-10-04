@@ -6,6 +6,38 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 21–26. MCP server decisions (docs/mcp-server-spec.md §7), answered 2026-10-04
+
+### 21. OAuth 2.1 is the target auth; API keys only as a cheap side effect
+**Decision:** Build the MCP server on OAuth 2.1 (the MCP authorization spec), so it works as a claude.ai custom connector. A personal-API-key path may exist for developers and Claude Code, but only where it falls out of the same principal/entitlement layer at little cost. OAuth is what must work.
+**Drivers:** The target user works in claude.ai Projects (decision 4's driver), where only OAuth connectors work. Shipping keys first and redoing it later is rework. This is the 31–48h path rather than 21–32h, accepted.
+**Revisit if:** claude.ai starts accepting header-based credentials for custom connectors.
+
+### 22. Crawler access test is free; audit, stored audits and comparison are paid
+**Decision:** `check_crawler_access` is free. `run_audit`, `get_audit`/`list_audits` (stored history) and `compare_audits` are paid. Comparison is never free.
+**Drivers:** The crawler test is cheap and is the clearest first value moment (the same reasoning as onboarding). Longitudinal comparison is the thing no competitor can do (decision 8), so it is the paid core.
+**Revisit if:** free-to-paid conversion from MCP users is negligible.
+
+### 23. Quotas: a happy medium, metered from day one
+**Decision:** Generous enough to feel useful, not so generous that volume or abuse becomes the cost. Every call is metered regardless of plan. The exact numbers are proposed in the spec (§4) and await Michael's confirmation.
+**Drivers:** About $0.001 per audit, so the real risk is volume and abuse, not per-call cost.
+
+### 24. Include score_draft
+**Decision:** `score_draft` ships: deterministic draft scoring for content written in Claude.
+**Drivers:** It is the bridge between a practitioner's own Claude workflow and Byline's framework, at zero model cost.
+
+### 25. Endpoint on a subdomain: mcp.bylineseo.com
+**Decision:** The MCP server is served at `mcp.bylineseo.com`.
+**Drivers:** A stable, product-named address independent of the app's host split.
+**Needs:** a DNS record and a Vercel domain on the project (Michael).
+
+### 26. MCP usage is recorded, never emailed
+**Decision:** MCP calls and audits are recorded against the account and visible to Michael (admin), but never enter a GHL email, tag or nurture flow.
+**Drivers:** Someone wiring up a developer tool is not a lead and must not be emailed as one.
+
+### Open: M7, a feature of existing plans or a separate data-layer plan
+Michael wants to talk it through. Built so the answer is a configuration change: every entitlement check goes through one function reading one plan-model table (`src/lib/mcp/entitlements.ts`).
+
 ## 20. Manual SQL is always sent as plain text in the message
 **Date:** 2026-10-01
 **Decision:** Any SQL Michael must run by hand in the Supabase SQL editor is pasted in full, as plain text, in the reply at the moment the migration is created. A file path or a "see the repo" pointer is never enough on its own. Long SQL is split across messages rather than summarised. The status file notes each migration as pending until he confirms it is applied.
