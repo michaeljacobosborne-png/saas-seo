@@ -1098,7 +1098,7 @@ function NewArticleWizard() {
           <Loader2 className="w-10 h-10 animate-spin text-[var(--copper-lt)] mx-auto mb-5" />
           {generatingStatus === 'expanding' ? (
             <>
-              <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-2">Article came in short — running a second research pass to fill it out…</h3>
+              <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-2">Article came in short — deepening the thin sections…</h3>
               <p className="text-sm text-[var(--cream-faint)] max-w-xs mx-auto">Pulling related questions from DataForSEO and expanding with real substance.</p>
             </>
           ) : (
@@ -1121,7 +1121,7 @@ function NewArticleWizard() {
           </h2>
           <p className="text-sm text-[var(--cream-dim)] mb-7 max-w-sm mx-auto">
             {generatingStatus === 'expanded'
-              ? 'A second research pass added real substance to hit your target word count.'
+              ? 'A second pass deepened the thin sections. It adds explanation, never new figures or sources.'
               : 'Your article is ready. View the full content and its scores.'}
           </p>
           <div className="flex items-center justify-center gap-3">

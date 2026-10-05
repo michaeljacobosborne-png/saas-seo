@@ -8,6 +8,7 @@ import { marked } from 'marked'
 import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
 import { draftFixes } from '@/lib/draft-fixes'
+import { extractApplicableContent } from '@/lib/agent-messages'
 import { SCORE_LABELS } from '@/lib/score-labels'
 import { DraftScores } from './_components/DraftScores'
 import type ArticleEditorType from './ArticleEditor'
@@ -37,17 +38,6 @@ const STYLE_BADGES: Record<string, string> = {
   abstract: 'bg-pink-50 text-pink-700',
   '3d-render': 'bg-emerald-50 text-emerald-700',
   'flat-design': 'bg-amber-50 text-amber-700',
-}
-
-function extractApplicableContent(content: string): string | null {
-  const codeMatch = content.match(/```[\w]*\n?([\s\S]+?)```/)
-  if (codeMatch) return codeMatch[1].trim()
-  const bqLines = content.split('\n').filter((l) => l.startsWith('> '))
-  if (bqLines.length >= 2) return bqLines.map((l) => l.replace(/^>\s?/, '')).join('\n')
-  // Fallback: treat the full response as applicable if it's substantial
-  const trimmed = content.trim()
-  if (trimmed.length > 100) return trimmed
-  return null
 }
 
 function mapToFixInstruction(label: string, keyword: string): string | null {
