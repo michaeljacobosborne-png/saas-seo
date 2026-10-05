@@ -6,6 +6,17 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 30. Blog tables are a custom block rendered as semantic table markup, not a plugin
+**Date:** 2026-10-05 (approved by Michael)
+**Decision:** The Sanity post body has a custom `table` object (caption, header row, rows of plain-text cells). The blog renders it as real HTML: `<table>`, `<caption>`, `<thead>` with `<th scope="col">`, `<tbody>`. The drafting pipeline (`npm run draft`) converts markdown tables into this block instead of flattening them.
+**Drivers:**
+- Both finished blog drafts needed a comparison table, and one had to be degraded into a list because the body accepted only block, image and faq.
+- Our engine credits tables under extractability ("Lists, tables and data") and reads `<th>` cells as its evidence. Table plugins commonly render a grid of divs that looks like a table but is not one, so neither AI systems nor our engine can extract it.
+- We tell practitioners to use tables for extractability, so ours have to be the real thing.
+- Verified by test: the rendered block is detected by `extractPage` and credited by `scoreRetrievability`.
+**Do not:** swap in a table plugin or a div-based renderer without re-running that test. Cells are plain text by design; links inside cells are dropped with a warning.
+**Revisit if:** writers need links or formatting inside cells. Extend the cell type then, keeping the semantic markup.
+
 ## 28. The SEO and Readability panels keep only checks with a real basis
 **Date:** 2026-10-04 (Michael, from signed-in pass findings 5 and 10)
 **Decision:** Audit every check in the editor's SEO and Readability panels and sort them into two piles:

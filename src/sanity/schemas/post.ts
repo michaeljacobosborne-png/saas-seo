@@ -130,6 +130,60 @@ export const post = defineType({
             prepare: ({ title }) => ({ title: title || 'FAQ', subtitle: 'FAQ' }),
           },
         }),
+        // Table (docs/DECISIONS.md 30): a custom object, not a plugin, because it
+        // must render as semantic <table><thead><th> markup. A real table is
+        // extractable by AI systems and credited by our own engine; a grid of divs
+        // that merely looks like a table is neither. Cells are plain text.
+        defineArrayMember({
+          name: 'table',
+          title: 'Table',
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'caption',
+              title: 'Caption',
+              type: 'string',
+              description: 'Optional. Says what the table compares; rendered as <caption>.',
+            }),
+            defineField({
+              name: 'header',
+              title: 'Header row',
+              type: 'array',
+              of: [{ type: 'string' }],
+              validation: (rule) => rule.required().min(2),
+            }),
+            defineField({
+              name: 'rows',
+              title: 'Rows',
+              type: 'array',
+              of: [
+                defineArrayMember({
+                  name: 'tableRow',
+                  title: 'Row',
+                  type: 'object',
+                  fields: [defineField({ name: 'cells', title: 'Cells', type: 'array', of: [{ type: 'string' }] })],
+                  preview: {
+                    select: { cells: 'cells' },
+                    prepare: ({ cells }) => ({ title: ((cells as string[] | undefined) ?? []).join(' | ') || 'Empty row' }),
+                  },
+                }),
+              ],
+              validation: (rule) =>
+                rule.required().min(1).custom((rows, context) => {
+                  const width = ((context.parent as { header?: string[] })?.header ?? []).length
+                  const bad = ((rows ?? []) as { cells?: string[] }[]).findIndex((r) => (r.cells ?? []).length !== width)
+                  return bad === -1 ? true : `Row ${bad + 1} has a different number of cells from the header row (${width}).`
+                }),
+            }),
+          ],
+          preview: {
+            select: { header: 'header', caption: 'caption' },
+            prepare: ({ header, caption }) => ({
+              title: caption || ((header as string[] | undefined) ?? []).join(' | ') || 'Table',
+              subtitle: 'Table',
+            }),
+          },
+        }),
       ],
     }),
     defineField({

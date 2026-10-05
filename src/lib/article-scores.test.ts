@@ -19,7 +19,8 @@ ${'Setup takes an afternoon for most small teams, according to Acme onboarding d
 describe('SEO basics (decision 28)', () => {
   it('has no invented thresholds left', () => {
     const s = computeSEO(CONTENT, { meta_description: 'x'.repeat(130), url_slug: 'payroll-software', secondary_keywords: ['wages'] }, 'payroll software', { title: 'Payroll software for small teams', metaDescription: '' })
-    expect(Object.keys(s.breakdown)).toEqual([...SEO_BASICS_KEYS])
+    expect(Object.keys(s.breakdown).every((k) => (SEO_BASICS_KEYS as readonly string[]).includes(k))).toBe(true)
+    expect(s.breakdown.meta_length).toBeUndefined()
     const labels = Object.values(s.breakdown).map((c) => (c as { label: string }).label).join(' ')
     expect(labels).not.toMatch(/H2 headings|target 2-4|Word count|1800|density|first 100 words|slug|Secondary|FAQ/i)
   })

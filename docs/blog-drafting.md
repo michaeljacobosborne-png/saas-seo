@@ -108,10 +108,29 @@ characters; the script warns if it spots any.
 
 Put fences at the top level, not nested inside a list or quote.
 
+### Tables
+
+Write a normal GFM markdown table. It becomes a real `table` object (header row
+plus data rows) and renders as semantic `<table>`/`<thead>`/`<th>` markup, which
+is what AI systems and our own engine can extract (DECISIONS 30).
+
+```markdown
+| Criterion | Why it matters |
+|---|---|
+| Direct answer | Engines lift the opening |
+```
+
+- The first row is the header. Rows with fewer cells are padded, and extra cells
+  are dropped to the header's width.
+- Cells are plain text: links, bold and code inside cells are kept as text, with
+  a warning.
+- Put tables at the top level, not inside a list or quote; the run fails if a
+  table cannot be placed.
+
 ### Known gaps
 
-- **Fenced code blocks** — the `post` schema's body accepts `block`, `image` and
-  `faq` only; there is no `code` type, and the renderer has no code component.
+- **Fenced code blocks** — the `post` schema's body accepts `block`, `image`,
+  `faq` and `table` only; there is no `code` type, and the renderer has no code component.
   A fenced block is converted to a plain paragraph with a loud warning rather
   than being dropped or written in a form Studio would reject. Proper support
   needs a `code` type added to `src/sanity/schemas/post.ts` *and* a matching

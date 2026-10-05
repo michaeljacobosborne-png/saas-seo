@@ -24,6 +24,7 @@ import { JSDOM } from 'jsdom'
 import matter from 'gray-matter'
 import { marked } from 'marked'
 import { config as loadEnv } from 'dotenv'
+import { extractTables, reinsertTables } from '../src/sanity/lib/tables'
 
 loadEnv({ path: '.env.local', quiet: true })
 loadEnv({ path: '.env', quiet: true })
@@ -164,7 +165,7 @@ function normaliseHeadings(html: string, title: string): string {
 }
 
 /**
- * The post schema's body array accepts `block`, `image` and `faq` only — there
+ * The post schema's body array accepts `block`, `image`, `faq` and `table` only — there
  * is no `code` type, and PortableTextBody has no `code` renderer. A fenced code
  * block is therefore kept as readable text rather than dropped, and flagged
  * loudly, because the alternative is a block Studio rejects and the page can't
@@ -251,10 +252,24 @@ function markdownToBlocks(md: string, title: string): unknown[] {
   html = normaliseHeadings(html, title)
   html = degradeCodeBlocks(html)
 
-  const blocks = htmlToBlocks(html, blockContentType, {
+  // Tables become the post body's `table` object (DECISIONS 30) rather than
+  // being flattened into paragraphs by htmlToBlocks.
+  const parse = (h: string) => new JSDOM(h).window.document
+  const lifted = extractTables(html, parse, keyGenerator)
+  html = lifted.html
+  for (const w of lifted.warnings) warn(w)
+
+  const converted = htmlToBlocks(html, blockContentType, {
     keyGenerator,
-    parseHtml: (h) => new JSDOM(h).window.document,
+    parseHtml: parse,
   }) as unknown[]
+  const { blocks, placed } = reinsertTables(converted, lifted.tables)
+  if (placed.size !== lifted.tables.length) {
+    fail(
+      `${lifted.tables.length - placed.size} table(s) could not be placed in the body.`,
+      'Put tables at the top level, not inside a list or quote.',
+    )
+  }
 
   // Stored faithfully, but PortableTextBody has no component for these, so they
   // render as unstyled text. Warn once rather than per occurrence.
@@ -494,7 +509,8 @@ async function main() {
   console.log(`  Published  ${publishedAt}`)
   console.log(`  Excerpt    ${excerpt ? `${excerpt.length}/${EXCERPT_MAX} chars` : '— none —'}`)
   console.log(`  Categories ${categoryRefs.length || '— none —'}`)
-  console.log(`  Body       ${blockCount} blocks, ${faqs.length} FAQ`)
+  const tableCount = body.filter((b) => (b as { _type?: string })._type === 'table').length
+  console.log(`  Body       ${blockCount} blocks, ${faqs.length} FAQ, ${tableCount} table(s)`)
   console.log(`  Draft id   ${draftId}`)
   console.log(
     `  Mode       ${existingDraft ? 'UPDATE existing draft' : 'CREATE new draft'}` +

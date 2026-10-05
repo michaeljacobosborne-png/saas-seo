@@ -110,8 +110,9 @@ export function computeSEO(
     passed: !!meta,
   }
 
-  // Not scored: Google truncates by pixel width, not a fixed count, so this only warns.
-  breakdown.meta_length = {
+  // Not scored: Google truncates by pixel width, not a fixed count, so this only
+  // warns. Nothing to say about the length of a description that is not set.
+  if (meta) breakdown.meta_length = {
     label: meta.length > 160
       ? `Meta description is ${meta.length} characters; search results may cut it off after about 160`
       : `Meta description length: ${meta.length} characters`,

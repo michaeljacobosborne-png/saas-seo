@@ -87,6 +87,43 @@ const components: PortableTextComponents = {
         </figure>
       )
     },
+    // Semantic table (DECISIONS 30): <table>, <caption>, <thead> with <th scope="col">,
+    // <tbody>. Never a div grid: a real table is what AI systems and our own
+    // engine can extract. Scrolls inside its own box on a phone.
+    table: ({ value }) => {
+      const header: string[] = value?.header ?? []
+      const rows: { _key?: string; cells?: string[] }[] = value?.rows ?? []
+      if (!header.length) return null
+      return (
+        <div className="my-8 overflow-x-auto rounded-xl border border-[var(--border)]">
+          <table className="w-full border-collapse text-left text-[0.95rem]">
+            {value?.caption && (
+              <caption className="caption-top px-4 pt-3 pb-2 text-left text-sm text-[var(--cream-faint)]">{value.caption}</caption>
+            )}
+            <thead className="bg-[var(--ink-card)]">
+              <tr>
+                {header.map((h, i) => (
+                  <th key={i} scope="col" className="px-4 py-3 font-semibold text-[var(--cream)] border-b border-[var(--border)]">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, ri) => (
+                <tr key={r._key ?? ri} className="border-b border-[var(--border)] last:border-b-0">
+                  {(r.cells ?? []).map((c, ci) => (
+                    <td key={ci} className="px-4 py-3 align-top text-[var(--cream-dim)]">
+                      {c}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    },
     faq: ({ value }) => (
       <details className="group my-3 rounded-lg border border-[var(--border)] bg-[var(--ink-card)] p-4 open:bg-[var(--ink-card)]">
         <summary className="cursor-pointer list-none font-semibold text-[var(--cream)] flex justify-between items-center gap-3">
