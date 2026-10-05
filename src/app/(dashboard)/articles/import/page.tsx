@@ -60,7 +60,7 @@ interface ContentGap {
 
 interface ScoreResult {
   seo: { score: number }
-  readability: { score: number }
+  readability?: { score: number }
   /** Real-engine draft report; absent only if it failed to build. */
   draft?: DraftReport
 }
@@ -73,12 +73,6 @@ interface AnalyzeResult {
 }
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
-
-function ScoreColor({ score }: { score: number }) {
-  if (score >= 80) return 'text-green-400'
-  if (score >= 60) return 'text-[var(--copper-lt)]'
-  return 'text-[#f87171]'
-}
 
 function SeverityBadge({ severity }: { severity: Suggestion['severity'] }) {
   const map = {
@@ -295,7 +289,7 @@ export default function ImportArticlePage() {
         <div>
           <h1 className="text-2xl font-bold text-[var(--cream)]">Import & Analyze Article</h1>
           <p className="text-sm text-[var(--cream-dim)] mt-1">
-            Paste an existing article to score it across SEO, readability, GEO, and AEO — and get AI-powered suggestions to improve it.
+            Paste an existing article to score how retrievable and citable it is — and get AI-powered suggestions to improve it.
           </p>
         </div>
       </div>
@@ -476,23 +470,7 @@ export default function ImportArticlePage() {
           {/* GEO/AEO readiness from the real engine: Retrievable and Citable (decisions 13–15). */}
           {result.scores.draft && <DraftScores draft={result.scores.draft} keyword={targetKeyword} />}
 
-          <div className="grid grid-cols-2 gap-4">
-            {([
-              { label: 'SEO', score: result.scores.seo.score },
-              { label: 'Readability', score: result.scores.readability.score },
-            ] as const).map(({ label, score }) => (
-              <div
-                key={label}
-                className="rounded-xl p-5 text-center border border-[rgba(184,115,51,0.2)]"
-                style={{ background: 'var(--ink-card)' }}
-              >
-                <div className={`text-3xl font-bold tabular-nums ${ScoreColor({ score })}`}>
-                  {score}
-                </div>
-                <div className="text-xs text-[var(--cream-dim)] mt-1 font-medium">{label}</div>
-              </div>
-            ))}
-          </div>
+          {/* The SEO and Readability numbers were removed (decision 28). */}
 
           {/* Suggestions */}
           {result.suggestions.length > 0 && (

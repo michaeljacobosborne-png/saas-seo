@@ -14,7 +14,6 @@
 import type { ArticleScores } from '@/lib/supabase/types'
 import {
   computeSEO,
-  computeReadability,
   computeGEO,
   computeAEO,
 } from '@/lib/article-scoring'
@@ -40,6 +39,8 @@ export interface ArticleScoreInput {
   /** For the draft report. `articleId` null for content not yet saved. */
   articleId: string | null
   title?: string | null
+  /** The article's own meta description field (not the brief's). */
+  metaDescription?: string | null
   brandName?: string | null
   siteUrl?: string | null
   author?: DraftAuthor | null
@@ -47,8 +48,8 @@ export interface ArticleScoreInput {
 }
 
 export function buildArticleScores(input: ArticleScoreInput): ArticleScores {
-  const seo = computeSEO(input.content, input.brief, input.targetKeyword)
-  const readability = computeReadability(input.content)
+  // Readability was removed (decision 28): its targets had no basis.
+  const seo = computeSEO(input.content, input.brief, input.targetKeyword, { title: input.title, metaDescription: input.metaDescription })
   const geo = computeGEO(input.content)
   const aeo = computeAEO(input.content)
 
@@ -71,7 +72,6 @@ export function buildArticleScores(input: ArticleScoreInput): ArticleScores {
 
   return {
     seo,
-    readability,
     geo,
     aeo,
     ...(draft ? { draft } : {}),

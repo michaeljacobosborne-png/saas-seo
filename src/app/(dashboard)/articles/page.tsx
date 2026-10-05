@@ -140,8 +140,7 @@ export default async function ArticlesPage() {
                     <td className="px-4 py-3">
                       {scores ? (
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>SEO</span>
-                          <ScorePill score={scores.seo?.score ?? 0} />
+                          {/* The old SEO number is gone (decision 28): only Retrievable is a score. */}
                           <span className="text-xs" style={{ color: 'var(--cream-faint)' }}>{SCORE_LABELS.retrievable}</span>
                           {/* The real engine's draft score. Withheld or not yet computed shows a dash, never 0. */}
                           {scores.draft && !scores.draft.retrievability?.scoreWithheld ? (

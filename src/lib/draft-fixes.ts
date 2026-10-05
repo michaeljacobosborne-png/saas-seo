@@ -56,7 +56,9 @@ export function draftFixes(draft: DraftReport, keyword: string, brandName?: stri
   for (const g of draft.retrievability.groups) {
     if (!g.scored) continue
     for (const c of g.checks) {
-      if (!c.scored || c.status === 'good') continue
+      // Short of full marks gets a fix, even when rated good: the projection lists
+      // every check that can still add points, and each needs its Fix button.
+      if (!c.scored || c.score >= c.maxScore) continue
       const make = CHECK_INSTRUCTIONS[c.id]
       if (make) fixes.push({ id: c.id, label: c.name, instruction: make(keyword), priority: c.maxScore - c.score })
     }

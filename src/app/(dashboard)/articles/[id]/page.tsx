@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Article, ArticleScores } from '@/lib/supabase/types'
 import { draftFixes } from '@/lib/draft-fixes'
 import { extractApplicableContent } from '@/lib/agent-messages'
+import { SEO_BASICS_KEYS } from '@/lib/article-scoring'
 import { SCORE_LABELS } from '@/lib/score-labels'
 import { DraftScores } from './_components/DraftScores'
 import type ArticleEditorType from './ArticleEditor'
@@ -20,7 +21,6 @@ import {
 
 const ArticleEditor = dynamic<React.ComponentProps<typeof ArticleEditorType>>(() => import('./ArticleEditor'), { ssr: false })
 
-const COPPER = '#B87333'
 
 type AgentMessage = { role: 'user' | 'assistant'; content: string }
 
@@ -40,51 +40,14 @@ const STYLE_BADGES: Record<string, string> = {
   'flat-design': 'bg-amber-50 text-amber-700',
 }
 
-function mapToFixInstruction(label: string, keyword: string): string | null {
-  const l = label.toLowerCase()
-  if (l.startsWith('target keyword in h1'))
-    return `Rewrite the H1 to naturally include the primary keyword "${keyword}"`
-  if (l.startsWith('target keyword in first 100'))
-    return `Rewrite the introduction paragraph to include the primary keyword "${keyword}" in the first two sentences`
-  if (l.startsWith('target keyword in meta'))
-    return `Write a meta description that naturally includes "${keyword}", between 120-155 characters`
-  if (l.startsWith('meta description length'))
-    return `Rewrite the meta description to be between 120-155 characters while including "${keyword}"`
-  if (l.startsWith('h2 headings'))
-    return `Add or restructure H2 headings so the article has 2-4 major sections`
-  if (l.startsWith('word count') && l.includes('1800'))
-    return `Add a detailed 'Key Takeaways' section with 4-5 bullet points to extend the article`
-  if (l.startsWith('faq section'))
-    return `Add a ## Frequently Asked Questions section with 4-5 ### H3 questions and answers about "${keyword}"`
-  if (l.startsWith('definitional'))
-    return `Add a clear one-sentence definition of "${keyword}" near the start of the introduction`
-  if (l.startsWith('structured h2'))
-    return `Add an additional H2 section to give the article at least 3 major sections`
-  if (l.startsWith('data/stat'))
-    return `Where a section makes a claim that needs evidence, add a real, sourced figure only if the article already has one; otherwise insert a visible [ADD EVIDENCE: what is needed] placeholder. Never invent a figure or source`
-  if (l.startsWith('faq h3'))
-    return `Add a ## Frequently Asked Questions section with at least 3 ### H3 questions and answers about "${keyword}"`
-  if (l.startsWith('direct-answer'))
-    return `Add a short direct-answer paragraph (40-80 words) near the top that directly answers what "${keyword}" means or how it works`
-  if (l.startsWith('lists or numbered'))
-    return `Add a bulleted list or numbered steps in one of the main sections`
-  if (l.startsWith('key takeaways') || l.startsWith('total word count'))
-    return `Add a ## Key Takeaways section at the end with 4-5 bullet points summarizing the main points`
-  return null
-}
-
 function getScoreFailures(scores: ArticleScores, keyword: string): Array<{ label: string; instruction: string }> {
   type Item = { label: string; instruction: string; priority: number }
   const items: Item[] = []
 
-  for (const c of Object.values(scores.seo.breakdown)) {
-    if (!c.passed) {
-      const instruction = mapToFixInstruction(c.label, keyword)
-      if (instruction) items.push({ label: c.label, instruction, priority: c.max })
-    }
-  }
-  // GEO/AEO suggestions come from the real engine's draft report now. The old
-  // regex breakdowns are no longer shown, so they must not drive fixes either.
+  // Top issues come from the engine's draft report only (finding 4). The SEO
+  // basics are the title and meta description, which live outside the article
+  // body, so a body fix cannot address them; the old SEO checks that did drive
+  // fixes (H2 count 2–4, word count) contradicted Retrievable and were removed.
   if (scores.draft) {
     for (const f of draftFixes(scores.draft, keyword, scores.draft.brandName)) {
       items.push({ label: f.label, instruction: f.instruction, priority: f.priority })
@@ -122,19 +85,6 @@ function FixButton({ onFix }: { onFix: () => void }) {
     <button onClick={handleClick} className="shrink-0 text-xs font-semibold text-[var(--copper)] hover:text-[#A0622A] transition-colors whitespace-nowrap">
       Fix →
     </button>
-  )
-}
-
-function SEOCriteriaRow({ label, passed, points, max, onFix }: { label: string; passed: boolean; points: number; max: number; onFix?: () => void }) {
-  return (
-    <div className="flex items-center gap-2.5 py-1.5">
-      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${passed ? 'bg-green-100' : 'bg-[var(--ink-deep)]'}`}>
-        <div className={`w-2 h-2 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-300'}`} />
-      </div>
-      <span className={`text-xs flex-1 ${passed ? 'text-[var(--cream-dim)]' : 'text-[var(--cream-faint)]'}`}>{label}</span>
-      {!passed && onFix && <FixButton onFix={onFix} />}
-      <span className="text-xs tabular-nums font-medium text-[var(--cream-dim)] shrink-0">{points}/{max}</span>
-    </div>
   )
 }
 
@@ -1433,54 +1383,36 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { label: 'SEO', score: scores.seo.score },
-                    { label: 'Readability', score: scores.readability.score },
-                  ].map(({ label, score }) => (
-                    <div key={label} className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4 text-center">
-                      <div className="text-2xl font-bold mb-1" style={{ color: COPPER }}>{score}</div>
-                      <div className="text-xs font-semibold text-[var(--cream-faint)] uppercase tracking-wide">{label}</div>
-                      <div className="mt-2 w-full bg-[var(--ink-deep)] rounded-full h-1.5">
-                        <div
-                          className={`h-1.5 rounded-full ${score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-400' : 'bg-red-400'}`}
-                          style={{ width: `${score}%` }}
-                        />
-                      </div>
+                {/* SEO basics (decision 28): verifiable checks only, pass/fail, no
+                    0–100 number. Older rows may carry removed checks (H2 count,
+                    word count, density…); only the current keys are shown. */}
+                {(() => {
+                  const basics = SEO_BASICS_KEYS.map((k) => scores.seo.breakdown[k]).filter(Boolean)
+                  return (
+                    <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
+                      <h3 className="font-semibold text-[var(--cream)] text-sm">SEO basics</h3>
+                      <p className="mt-0.5 mb-3 text-xs text-[var(--cream-faint)]">
+                        Checks with a clear basis only. Word-count, heading-count and keyword-density targets were removed because nothing supports them.
+                      </p>
+                      {basics.length ? (
+                        <ul className="space-y-2">
+                          {basics.map((c) => (
+                            <li key={c.label} className="flex items-start gap-2 text-xs">
+                              {c.passed ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-green-500" />
+                              ) : (
+                                <AlertCircle className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${c.max === 0 ? 'text-amber-400' : 'text-red-400'}`} />
+                              )}
+                              <span className="text-[var(--cream-dim)]">{c.label}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-[var(--cream-faint)]">Re-score to see the SEO basics for this draft.</p>
+                      )}
                     </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[var(--cream)] text-sm">SEO Breakdown</h3>
-                      <span className="font-bold text-base" style={{ color: COPPER }}>{scores.seo.score}/100</span>
-                    </div>
-                    <div className="divide-y divide-gray-50">
-                      {Object.values(scores.seo.breakdown).map((c, i) => {
-                        const instruction = mapToFixInstruction(c.label, article.target_keyword ?? '')
-                        return (
-                          <SEOCriteriaRow key={i} label={c.label} passed={c.passed} points={c.points} max={c.max}
-                            onFix={!c.passed && instruction ? () => sendPatchMode(instruction) : undefined}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[var(--cream)] text-sm">Readability</h3>
-                      <span className="font-bold text-base" style={{ color: COPPER }}>{scores.readability.score}/100</span>
-                    </div>
-                    <div className="divide-y divide-gray-50">
-                      {Object.values(scores.readability.breakdown).map((c, i) => (
-                        <div key={i} className="py-1.5 text-xs text-[var(--cream-dim)]">{c.label}</div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                  )
+                })()}
 
               </div>
             )}

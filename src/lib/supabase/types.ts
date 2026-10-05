@@ -79,7 +79,8 @@ export interface ArticleScoreCriteria {
 
 export interface ArticleScores {
   seo: { score: number; breakdown: Record<string, ArticleScoreCriteria> }
-  readability: { score: number; breakdown: Record<string, { label: string; value: number }> }
+  /** Removed 2026-10-05 (decision 28). Present on older rows only; never displayed. */
+  readability?: { score: number; breakdown: Record<string, { label: string; value: number }> }
   geo: { score: number; breakdown: Record<string, { label: string; passed: boolean }> }
   aeo: { score: number; breakdown: Record<string, { label: string; passed: boolean }> }
   // ranking_prediction and traffic_prediction were removed 2026-10-04: a

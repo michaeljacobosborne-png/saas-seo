@@ -4,6 +4,7 @@ import type { ArticleScores } from '@/lib/supabase/types'
 import { ghlUpsertContact, ghlAddTags } from '@/lib/ghl'
 import { logUsageEvent } from '@/lib/usage'
 import { draftWeakAreas } from '@/lib/agent-weak-areas'
+import { SEO_BASICS_KEYS } from '@/lib/article-scoring'
 import { applyFixEdits, MAX_EDITS, numberBlocks, splitBlocks, stripAgentArtefacts, type FixEdit } from '@/lib/targeted-fix'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -25,8 +26,10 @@ export const maxDuration = 60
 type Message = { role: 'user' | 'assistant'; content: string }
 
 function buildFailedList(breakdown: Record<string, { label: string; passed?: boolean }>): string {
-  const failed = Object.values(breakdown)
-    .filter((c) => c.passed === false)
+  // Current SEO basics only: stored rows can still carry removed checks
+  // (H2 count 2–4, word count) that contradict Retrievable (decision 28).
+  const failed = SEO_BASICS_KEYS.map((k) => breakdown[k])
+    .filter((c) => c && c.passed === false)
     .map((c) => `- ${c.label}`)
   return failed.length ? failed.join('\n') : '(none)'
 }
@@ -163,7 +166,7 @@ export async function POST(
 
   const weakAreasSection = scores ? `
 WEAK AREAS TO PRIORITIZE (translate into specific editorial actions — do NOT recite verbatim):
-SEO gaps:
+SEO basics not met (title and meta description are edited outside the body):
 ${buildFailedList(scores.seo.breakdown)}
 ${draftWeakAreas(scores)}` : `
 SCORING CONTEXT: Article not yet scored. Focus purely on the content above.`

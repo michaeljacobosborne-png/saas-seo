@@ -59,118 +59,71 @@ export function stripMarkdown(md: string): string {
     .trim()
 }
 
+/**
+ * SEO basics (decision 28, signed-in pass findings 5 and 10).
+ *
+ * Only checks with a real basis remain, as a pass/fail checklist with no 0–100
+ * number. Removed as invented thresholds:
+ * - H2 count 2–4 (it contradicted Retrievable, which wants 6+)
+ * - word count 1800–2500
+ * - keyword in the first 100 words
+ * - keyword density under 3%
+ * - URL slug keyword
+ * - secondary keyword coverage
+ * - FAQ section present
+ * - every Readability metric
+ *
+ * The meta description is read from the article's own field, not the brief; the
+ * old check scored an empty field 10/10 from the brief's copy. `score` remains
+ * for stored-row compatibility only and is not shown.
+ */
+export const SEO_BASICS_KEYS = ['kw_in_title', 'meta_present', 'meta_length'] as const
+
 export function computeSEO(
   content: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   brief: Record<string, any>,
   targetKeyword: string,
+  page: { title?: string | null; metaDescription?: string | null } = {},
 ) {
   content = normalizeForScoring(content)
-  const kw = targetKeyword.toLowerCase()
-  let score = 0
+  const kw = targetKeyword.toLowerCase().trim()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const breakdown: Record<string, any> = {}
 
-  // +15 Target keyword in H1
-  // Generated drafts no longer carry a body H1 (the template renders the title),
-  // so fall back to the title the brief chose.
-  const h1 = (content.match(/^#\s+(.+)$/m)?.[1] ?? brief?.title ?? (brief?.h1_options as string[] | undefined)?.[0] ?? '').toLowerCase()
-  const kwInH1 = h1.includes(kw)
-  breakdown.kw_in_h1 = { label: 'Target keyword in H1', points: kwInH1 ? 15 : 0, max: 15, passed: kwInH1 }
-  score += kwInH1 ? 15 : 0
+  // The title the template renders as the H1; a body H1 only if there is no title.
+  const title = (page.title ?? content.match(/^#\s+(.+)$/m)?.[1] ?? brief?.title ?? (brief?.h1_options as string[] | undefined)?.[0] ?? '').trim()
+  const kwInTitle = !!kw && title.toLowerCase().includes(kw)
+  breakdown.kw_in_title = {
+    label: kw ? `Target keyword "${targetKeyword}" in the title` : 'Target keyword in the title (no keyword set)',
+    points: kwInTitle ? 1 : 0,
+    max: 1,
+    passed: kwInTitle,
+  }
 
-  // +10 Target keyword in first 100 words
-  const first100 = content.split(/\s+/).slice(0, 100).join(' ').toLowerCase()
-  const kwInFirst100 = first100.includes(kw)
-  breakdown.kw_in_intro = { label: 'Target keyword in first 100 words', points: kwInFirst100 ? 10 : 0, max: 10, passed: kwInFirst100 }
-  score += kwInFirst100 ? 10 : 0
+  // Google uses the meta description as a snippet candidate when it is present.
+  const meta = (page.metaDescription ?? '').trim()
+  breakdown.meta_present = {
+    label: meta ? 'Meta description is set' : 'No meta description is set (use Auto-generate above the editor)',
+    points: meta ? 1 : 0,
+    max: 1,
+    passed: !!meta,
+  }
 
-  // +10 Target keyword in meta description
-  const metaDesc = String(brief?.meta_description ?? '').toLowerCase()
-  const kwInMeta = metaDesc.includes(kw)
-  breakdown.kw_in_meta = { label: 'Target keyword in meta description', points: kwInMeta ? 10 : 0, max: 10, passed: kwInMeta }
-  score += kwInMeta ? 10 : 0
+  // Not scored: Google truncates by pixel width, not a fixed count, so this only warns.
+  breakdown.meta_length = {
+    label: meta.length > 160
+      ? `Meta description is ${meta.length} characters; search results may cut it off after about 160`
+      : `Meta description length: ${meta.length} characters`,
+    points: 0,
+    max: 0,
+    passed: meta.length <= 160,
+    warning: true,
+  }
 
-  // +5 Meta description 120-155 chars
-  const metaLen = String(brief?.meta_description ?? '').length
-  const metaGoodLen = metaLen >= 120 && metaLen <= 155
-  breakdown.meta_length = { label: `Meta description length (${metaLen} chars, target 120-155)`, points: metaGoodLen ? 5 : 0, max: 5, passed: metaGoodLen }
-  score += metaGoodLen ? 5 : 0
-
-  // +10 2-4 H2 headings
-  const h2Count = (content.match(/^##\s+/gm) ?? []).length
-  const goodH2 = h2Count >= 2 && h2Count <= 4
-  breakdown.h2_count = { label: `H2 headings: ${h2Count} (target 2-4)`, points: goodH2 ? 10 : 0, max: 10, passed: goodH2 }
-  score += goodH2 ? 10 : 0
-
-  // +up to 15 Secondary keywords present
-  const secondaryKws = (brief?.secondary_keywords as string[] ?? [])
-  const presentCount = secondaryKws.filter((sk) => content.toLowerCase().includes(sk.toLowerCase())).length
-  const secPts = secondaryKws.length > 0 ? Math.round((presentCount / secondaryKws.length) * 15) : 0
-  breakdown.secondary_kws = { label: `Secondary keywords present: ${presentCount}/${secondaryKws.length}`, points: secPts, max: 15, passed: presentCount > 0 }
-  score += secPts
-
-  // +10 Word count 1800-2500
-  const wc = countWords(content)
-  const goodWc = wc >= 1800 && wc <= 2500
-  breakdown.word_count = { label: `Word count: ${wc} (target 1800-2500)`, points: goodWc ? 10 : 0, max: 10, passed: goodWc }
-  score += goodWc ? 10 : 0
-
-  // +10 FAQ section present
-  const hasFAQ = /^#{1,3}\s*(faq|frequently asked questions)/im.test(content)
-  breakdown.faq = { label: 'FAQ section present', points: hasFAQ ? 10 : 0, max: 10, passed: hasFAQ }
-  score += hasFAQ ? 10 : 0
-
-  // +5 URL slug includes target keyword
-  const slug = String(brief?.url_slug ?? '').toLowerCase()
-  const kwSlug = kw.replace(/\s+/g, '-')
-  const kwInSlug = slug.includes(kwSlug) || slug.includes(kw.replace(/\s+/g, ''))
-  breakdown.url_slug = { label: 'URL slug includes target keyword', points: kwInSlug ? 5 : 0, max: 5, passed: kwInSlug }
-  score += kwInSlug ? 5 : 0
-
-  // +10 No keyword stuffing (density < 3%)
-  const totalWords = countWords(content)
-  const escapedKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const kwOccurrences = (content.toLowerCase().match(new RegExp(escapedKw, 'g')) ?? []).length
-  const density = totalWords > 0 ? kwOccurrences / totalWords : 0
-  const notStuffed = density < 0.03
-  breakdown.kw_density = { label: `Keyword density: ${(density * 100).toFixed(1)}% (target < 3%)`, points: notStuffed ? 10 : 0, max: 10, passed: notStuffed }
-  score += notStuffed ? 10 : 0
-
-  return { score: Math.min(100, score), breakdown }
-}
-
-export function computeReadability(content: string) {
-  content = normalizeForScoring(content)
-  let score = 100
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const breakdown: Record<string, any> = {}
-  const plain = stripMarkdown(content)
-
-  // Average sentence length
-  const sentences = plain.split(/[.!?]+/).filter((s) => s.trim().split(/\s+/).length > 3)
-  const avgLen = sentences.length > 0
-    ? sentences.reduce((sum, s) => sum + s.trim().split(/\s+/).length, 0) / sentences.length
-    : 0
-  breakdown.avg_sentence_len = { label: `Avg sentence length: ${avgLen.toFixed(1)} words (target 15-20)`, value: avgLen }
-  if (avgLen > 25) score -= 25
-  else if (avgLen > 20) score -= 10
-
-  // Passive voice
-  const passiveHits = (plain.match(/\b(was|were|is|are|been|being|be)\s+\w+ed\b/gi) ?? []).length
-  breakdown.passive_voice = { label: `Passive voice instances: ${passiveHits} (target < 5)`, value: passiveHits }
-  if (passiveHits > 10) score -= 20
-  else if (passiveHits > 5) score -= 10
-
-  // Paragraph density
-  const totalWords = countWords(plain)
-  const paras = content.split(/\n\n+/).filter((p) => p.trim().length > 50)
-  const avgParaWords = paras.length > 0 ? totalWords / paras.length : 0
-  breakdown.para_density = { label: `Avg paragraph length: ${avgParaWords.toFixed(0)} words (target ~100)`, value: avgParaWords }
-  if (avgParaWords > 150) score -= 15
-  else if (avgParaWords > 120) score -= 5
-
-  return { score: Math.max(0, Math.min(100, score)), breakdown }
+  const scored = Object.values(breakdown).filter((c) => c.max > 0)
+  const score = scored.length ? Math.round((scored.filter((c) => c.passed).length / scored.length) * 100) : 0
+  return { score, breakdown }
 }
 
 export function computeGEO(content: string) {
