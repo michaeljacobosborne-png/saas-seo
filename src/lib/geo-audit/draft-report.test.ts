@@ -299,3 +299,18 @@ describe('projected Retrievable (decision 29)', () => {
     expect(src).not.toMatch(/month|week|traffic|rank|position|likel|cited|citation/i)
   })
 })
+
+describe('the leaked SUMMARY line cannot raise Direct answers (the 7 → 10 jump)', () => {
+  const longOpener = `${'This opening paragraph runs long on purpose and keeps adding clauses about the topic. '.repeat(5)}`.trim()
+  const html = `<h1>Mastering AI Optimization</h1><p>${longOpener}</p><h2>What is AI optimization?</h2><p>${para('AI optimization')}</p>`
+  const leaked = `<p>SUMMARY: Added "Byline SEO" attribution to key claim-making sentences across the article so quoted passages carry the brand name with them.</p>${html}`
+  const answers = (md: string) =>
+    buildDraftReport({ markdown: md, articleId: 'x', title: 'T', brandName: 'Byline SEO', now: NOW })
+      .retrievability.groups.flatMap((g) => g.checks).find((c) => c.id === 'extract-answers')!
+
+  it('scores the leaked draft exactly as the clean one', () => {
+    expect(longOpener.length).toBeGreaterThan(300)
+    expect(answers(leaked).score).toBe(answers(html).score)
+    expect(answers(leaked).detail).toMatch(/above the ~300/)
+  })
+})
