@@ -1387,7 +1387,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     0–100 number. Older rows may carry removed checks (H2 count,
                     word count, density…); only the current keys are shown. */}
                 {(() => {
-                  const basics = SEO_BASICS_KEYS.map((k) => scores.seo.breakdown[k]).filter(Boolean)
+                  // Rows scored before decision 28 lack kw_in_title; their meta_length
+                  // still carries the old "target 120-155" wording, so show none of it.
+                  const current = 'kw_in_title' in scores.seo.breakdown
+                  const basics = current ? SEO_BASICS_KEYS.map((k) => scores.seo.breakdown[k]).filter(Boolean) : []
                   return (
                     <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-5">
                       <h3 className="font-semibold text-[var(--cream)] text-sm">SEO basics</h3>

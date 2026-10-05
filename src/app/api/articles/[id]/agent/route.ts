@@ -28,6 +28,7 @@ type Message = { role: 'user' | 'assistant'; content: string }
 function buildFailedList(breakdown: Record<string, { label: string; passed?: boolean }>): string {
   // Current SEO basics only: stored rows can still carry removed checks
   // (H2 count 2–4, word count) that contradict Retrievable (decision 28).
+  if (!('kw_in_title' in breakdown)) return '(re-score to see SEO basics)'
   const failed = SEO_BASICS_KEYS.map((k) => breakdown[k])
     .filter((c) => c && c.passed === false)
     .map((c) => `- ${c.label}`)
