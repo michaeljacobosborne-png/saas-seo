@@ -350,7 +350,7 @@ export default function KeywordsPage() {
               <h2 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: 'var(--cream-faint)' }}>
                 {folderName}
               </h2>
-              <div className="border rounded-xl overflow-hidden" style={{ background: 'var(--ink)', borderColor: 'var(--border)' }}>
+              <div className="border rounded-xl overflow-x-auto" style={{ background: 'var(--ink)', borderColor: 'var(--border)' }}>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--ink-card)' }}>

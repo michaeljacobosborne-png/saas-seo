@@ -1007,16 +1007,17 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div className={`flex gap-0 h-full min-h-screen ${agentOpen ? 'pr-0' : ''}`}>
       {/* Main content */}
-      <div className={`flex-1 min-w-0 p-8 transition-all duration-300 ${agentOpen ? 'max-w-none' : 'max-w-4xl'}`}>
+      <div className={`flex-1 min-w-0 p-4 sm:p-8 transition-all duration-300 ${agentOpen ? 'max-w-none' : 'max-w-4xl'}`}>
         {/* Header: nav row + full-width title row */}
         <div className="mb-6">
-          {/* Row 1: back link + action buttons */}
-          <div className="flex items-center justify-between mb-4">
+          {/* Row 1: back link + action buttons. On a phone the buttons wrap onto
+              their own rows instead of running off-screen (signed-in pass finding 12). */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <Link href="/articles" className="flex items-center gap-1.5 text-sm text-[var(--cream-faint)] hover:text-[var(--cream-dim)] transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Articles
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleDuplicate}
                 disabled={duplicating}
@@ -1681,7 +1682,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Agent panel */}
       {agentOpen && (
-        <div className="w-96 shrink-0 border-l border-[rgba(184,115,51,0.2)] bg-[var(--ink)] flex flex-col" style={{ height: '100vh', position: 'sticky', top: 0 }}>
+        // A 384px side panel does not fit a 375px phone: there it covers the
+        // screen (closed with its X), and sits beside the article from sm up.
+        <div className="fixed inset-0 z-40 w-full h-[100dvh] sm:sticky sm:inset-auto sm:top-0 sm:z-auto sm:w-96 sm:h-screen shrink-0 border-l border-[rgba(184,115,51,0.2)] bg-[var(--ink)] flex flex-col">
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(184,115,51,0.15)] shrink-0">
             <div className="flex items-center gap-2.5">

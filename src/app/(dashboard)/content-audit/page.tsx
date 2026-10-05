@@ -380,10 +380,10 @@ export default function DashboardAuditPage() {
   )
 
   return (
-    <div className="p-8 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-2">
-        <div>
+    <div className="p-4 sm:p-8 max-w-4xl">
+      {/* Header: stacks on a phone so the actions stay on screen. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-2">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <BarChart2 className="w-5 h-5 text-[var(--copper-lt)]" />
             <h1 className="text-2xl font-bold text-[var(--cream)]">Content Audit</h1>

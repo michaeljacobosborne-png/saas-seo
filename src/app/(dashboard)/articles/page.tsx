@@ -90,15 +90,15 @@ export default async function ArticlesPage() {
           </Link>
         </div>
       ) : (
-        <div className="border rounded-xl overflow-hidden" style={{ background: 'var(--ink)', borderColor: 'var(--border)' }}>
+        <div className="border rounded-xl overflow-x-auto" style={{ background: 'var(--ink)', borderColor: 'var(--border)' }}>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--ink-card)' }}>
                 <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Article</th>
-                <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Status</th>
-                <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Words</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Status</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Words</th>
                 <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Scores</th>
-                <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Created</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Created</th>
                 <th className="text-right px-4 py-3 font-medium" style={{ color: 'var(--cream-dim)' }}>Actions</th>
               </tr>
             </thead>
@@ -125,7 +125,7 @@ export default async function ArticlesPage() {
                         )}
                       </Link>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden sm:table-cell px-4 py-3">
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.className}`}>
                           <StatusIcon className={`w-3 h-3 ${statusCfg.spin ? 'animate-spin' : ''}`} />
@@ -134,7 +134,7 @@ export default async function ArticlesPage() {
                         <PublishButton articleId={article.id} initialStatus={article.status} />
                       </div>
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-xs" style={{ color: 'var(--cream-dim)' }}>
+                    <td className="hidden sm:table-cell px-4 py-3 tabular-nums text-xs" style={{ color: 'var(--cream-dim)' }}>
                       {article.word_count ? article.word_count.toLocaleString() : '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -156,7 +156,7 @@ export default async function ArticlesPage() {
                         <span className="text-xs" style={{ color: 'var(--cream-dim)' }}>Not scored</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--cream-faint)' }}>
+                    <td className="hidden sm:table-cell px-4 py-3 text-xs" style={{ color: 'var(--cream-faint)' }}>
                       {new Date(article.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">

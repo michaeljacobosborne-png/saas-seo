@@ -239,7 +239,7 @@ export default function SavedKeywordsPage() {
 
               {/* Keywords table */}
               {openFolders.has(folder) && (
-                <table className="w-full text-sm border-t border-[rgba(184,115,51,0.15)]">
+                <div className="overflow-x-auto"><table className="w-full text-sm border-t border-[rgba(184,115,51,0.15)]">
                   <thead>
                     <tr className="bg-[var(--ink-card)]">
                       <th className="text-left px-4 py-2.5 font-medium text-[var(--cream-dim)]">Keyword</th>
@@ -315,7 +315,7 @@ export default function SavedKeywordsPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               )}
             </div>
           ))}

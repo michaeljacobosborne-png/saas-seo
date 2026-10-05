@@ -538,10 +538,10 @@ export default function BrandPage() {
   const p = existingProfile!
 
   return (
-    <div className="p-8 max-w-2xl">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
+    <div className="p-4 sm:p-8 max-w-2xl">
+      {/* Header: stacks on a phone so the title keeps its width and the buttons stay on screen. */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-8">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-[var(--cream)]">Brand Profile</h1>
           <p className="mt-1 text-sm text-[var(--cream-dim)]">
             Your persistent brand memory — the AI uses this to write content that sounds like you.
@@ -554,7 +554,7 @@ export default function BrandPage() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setShowEditModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[var(--cream-dim)] border border-[rgba(184,115,51,0.25)] rounded-lg hover:bg-[var(--ink-card)] transition-colors"

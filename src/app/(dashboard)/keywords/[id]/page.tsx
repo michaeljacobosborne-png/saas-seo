@@ -581,7 +581,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
             ))}
           </div>
 
-          <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
+          <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[rgba(184,115,51,0.15)] bg-[var(--ink-card)]">
