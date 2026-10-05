@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { checkArticleLimit, logUsageEvent } from '@/lib/usage'
 import { interpretSeedQuery, BrandContext } from '@/lib/keyword-intent'
 import { getKeywordIdeas } from '@/lib/dataforseo'
+import { buildBriefPrompt } from '@/lib/generator/prompts'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -135,47 +136,25 @@ export async function POST(request: Request) {
   const avoidPhrasesStr = asConstraintList(brand.avoid_phrases)
   const competitorsStr = asConstraintList(brand.competitors)
 
-  const prompt = `You are an SEO content strategist for ${brand.brand_name}${brand.industry ? `, a ${brand.industry} company` : ''}, targeting ${brand.target_audience ?? 'their ideal audience'}.
-
-Brand voice: ${brand.brand_voice ?? 'professional'}
-Tone notes: ${brand.tone_notes ?? 'none'}
-Competitors: ${(brand.competitors as string[])?.join(', ') || 'none'}
-Brand keywords: ${(brand.primary_keywords as string[])?.join(', ') || 'none'}
-${brand.expertise_notes ? `\nExpertise: ${brand.expertise_notes}` : ''}
-${brand.signature_angles ? `Content angles: ${brand.signature_angles}` : ''}
-${avoidTopicsStr ? `NEVER write about or reference: ${avoidTopicsStr}` : ''}
-${avoidPhrasesStr ? `NEVER use these phrases or terms: ${avoidPhrasesStr}` : ''}
-${competitorsStr ? `COMPETITOR NAMES — do not name these brands in the article unless the brand explicitly permits comparisons: ${competitorsStr}` : ''}
-
-${isDirectMode ? `Article topic: "${directTopic}"\n` : ''}Keywords for this article:
-${kwLines}
-
-Generate a comprehensive SEO content brief. Return JSON only, no markdown:
-{
-  "target_keyword": "single best keyword to rank for from the list",
-  "secondary_keywords": ["8-12 related terms to include naturally — mix from the list and related concepts"],
-  "h1_options": ["Option 1 — compelling, specific, keyword-forward", "Option 2", "Option 3"],
-  "meta_description": "155 chars max, includes target keyword, strong hook",
-  "url_slug": "clean-keyword-rich-slug",
-  "outline": [
-    {
-      "heading": "H2 heading — must make a claim or imply a verdict, NOT just label a topic. BAD: 'Factors to Consider'. GOOD: 'The Factor That Actually Determines Which One to Buy'. BAD: 'Types of X'. GOOD: 'Only Two Types of X Are Worth Your Time'.",
-      "heading_level": "H2",
-      "notes": "State the argument this section will make. One sentence: what does this section conclude? Then: what evidence or examples support it? What does the reader believe at the end of this section that they didn't believe at the start?",
-      "word_count_target": 250
-    }
-  ],
-  "word_count_target": 2100,
-  "tone_notes": "specific writing guidance combining brand voice and keyword intent",
-  "competitor_gaps": ["angle competitors likely miss", "angle 2", "angle 3"],
-  "serp_intent": "informational"
-}
-
-Rules: outline must include an FAQ section (H2) with 3-5 H3 questions and a Key Takeaways H2. Total outline word_count_targets should sum to word_count_target.
-
-If serp_intent is "commercial" or "comparison", the outline MUST include a section titled something like "What We Found After Testing" or "Our Evaluation: How We Ranked These" — framed as original research or testing, even if based on secondary sources. This framing transforms perceived authority.
-
-OUTLINE RULE: Every H2 heading must pass this test — could this heading appear on a Wikipedia article or a generic AI article? If yes, rewrite it as a specific claim, verdict, or surprising finding. Generic topic headings are forbidden.`
+  // Generator audit 2026-10-02: the prompt lives in src/lib/generator/prompts.ts
+  // so its rules are explicit and tested.
+  const prompt = buildBriefPrompt({
+    brand: {
+      name: brand.brand_name,
+      industry: brand.industry,
+      audience: brand.target_audience,
+      voice: brand.brand_voice,
+      tone: brand.tone_notes,
+      primaryKeywords: asConstraintList(brand.primary_keywords),
+      expertiseNotes: brand.expertise_notes,
+      signatureAngles: brand.signature_angles,
+      avoidTopics: avoidTopicsStr,
+      avoidPhrases: avoidPhrasesStr,
+      competitors: competitorsStr,
+    },
+    keywordLines: kwLines,
+    directTopic: isDirectMode ? directTopic : null,
+  })
 
   let brief: Record<string, unknown>
   let briefUsage: { input: number; output: number } | null = null
@@ -185,7 +164,7 @@ OUTLINE RULE: Every H2 heading must pass this test — could this heading appear
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
       temperature: 0.3,
-      max_tokens: 1400,
+      max_tokens: 2000,
     })
     briefUsage = completion.usage
       ? { input: completion.usage.prompt_tokens, output: completion.usage.completion_tokens }

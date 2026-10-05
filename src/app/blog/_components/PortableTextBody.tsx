@@ -103,6 +103,30 @@ const components: PortableTextComponents = {
   },
 }
 
+/**
+ * The page renders the post title as its one H1. Generated posts used to start
+ * their body with "# Title" too, which doubled the H1 (generator audit
+ * 2026-10-02, 4 of 5 posts). Drop a body H1 that opens the post, and demote
+ * any other body H1 to H2, so existing content renders with one H1.
+ */
+export function withoutBodyH1(blocks: PortableTextBlock[]): PortableTextBlock[] {
+  const out: PortableTextBlock[] = []
+  let first = true
+  for (const b of blocks ?? []) {
+    if (b._type === 'block' && b.style === 'h1') {
+      if (first) {
+        first = false
+        continue
+      }
+      out.push({ ...b, style: 'h2' })
+      continue
+    }
+    first = false
+    out.push(b)
+  }
+  return out
+}
+
 export function PortableTextBody({ value }: { value: PortableTextBlock[] }) {
-  return <PortableText value={value} components={components} />
+  return <PortableText value={withoutBodyH1(value)} components={components} />
 }

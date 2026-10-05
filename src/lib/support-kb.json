@@ -111,10 +111,10 @@
         "pass 1 pass 2",
         "expansion pass"
       ],
-      "agent_response": "When the first generation pass produces a draft that's under 85% of your target word count, Byline automatically runs a second pass. It first identifies 3–4 subtopics that need more depth (using GPT-4o-mini), then queries DataForSEO for related keyword data on those angles, and finally runs GPT-4o again to expand the article with real content on those topics. This is why generation sometimes takes longer — two-pass articles can take 90+ seconds total. Growth and Team plans also get a 'polish pass' that generates 3 alternative intros and conclusions and picks the strongest ones.",
+      "agent_response": "After the first draft is written, Byline checks it before handing it over. If the draft is well short of your target length, a second pass deepens the thin sections with explanation (never with invented figures or examples). Growth and Multi-Brand plans also get a polish pass on the paragraph after the opening answer and on the close. Then every figure, source, quote or case study is checked against the evidence you supplied for the article: anything without a source becomes a visible [ADD EVIDENCE: …] note for you to fill. Finally the draft is scored on structure and given one targeted revision. That is why generation can take a minute or two.",
       "escalate_to_human": false,
       "escalation_reason": "",
-      "internal_notes": "Two-pass logic is in /api/articles/generate-draft. Pass 2 triggers when countWords(content) < Math.floor(targetWordCount * 0.85). Polish pass (intro/conclusion alternatives) runs after Pass 2 for Growth (price_1Td2ZGB6USGnItproo97FT39) and Agency/Team price IDs. Route maxDuration is 120s."
+      "internal_notes": "Pipeline is src/lib/generator/pipeline.ts, called from /api/articles/generate-draft (maxDuration 300). Expansion runs under 70% of target. Evidence guard: src/lib/generator/evidence-guard.ts. Per-article evidence comes from the 'Evidence for this article' field and is stored in brief.user_evidence; brief.generation_report records what was replaced. Rule (Michael, 2026-10-04): only real citable information or information the user supplied for that piece."
     },
     {
       "id": "kb_006",

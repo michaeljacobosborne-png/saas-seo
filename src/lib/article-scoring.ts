@@ -72,7 +72,9 @@ export function computeSEO(
   const breakdown: Record<string, any> = {}
 
   // +15 Target keyword in H1
-  const h1 = (content.match(/^#\s+(.+)$/m)?.[1] ?? '').toLowerCase()
+  // Generated drafts no longer carry a body H1 (the template renders the title),
+  // so fall back to the title the brief chose.
+  const h1 = (content.match(/^#\s+(.+)$/m)?.[1] ?? brief?.title ?? (brief?.h1_options as string[] | undefined)?.[0] ?? '').toLowerCase()
   const kwInH1 = h1.includes(kw)
   breakdown.kw_in_h1 = { label: 'Target keyword in H1', points: kwInH1 ? 15 : 0, max: 15, passed: kwInH1 }
   score += kwInH1 ? 15 : 0

@@ -148,6 +148,9 @@ function NewArticleWizard() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [brief, setBrief] = useState<Record<string, any> | null>(null)
   const [targetWordCount, setTargetWordCount] = useState<WordCountOption>(1200)
+  // Facts the writer supplies for this article: the only figures, sources and
+  // examples the generator may use. Everything else becomes [ADD EVIDENCE: …].
+  const [evidence, setEvidence] = useState('')
   const [generatingStatus, setGeneratingStatus] = useState<'generating' | 'expanding' | 'expanded' | null>(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
@@ -434,7 +437,7 @@ function NewArticleWizard() {
     const res = await fetch('/api/articles/generate-draft', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ articleId, target_word_count: targetWordCount }),
+      body: JSON.stringify({ articleId, target_word_count: targetWordCount, evidence }),
     })
     clearInterval(pollId)
 
@@ -1057,6 +1060,23 @@ function NewArticleWizard() {
               </div>
             )
           })()}
+
+          <div className="mt-4 bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
+            <label htmlFor="article-evidence" className="block text-xs font-semibold text-[var(--cream-faint)] uppercase tracking-wide mb-1">
+              Evidence for this article <span className="normal-case font-normal">(optional)</span>
+            </label>
+            <p className="text-xs text-[var(--cream-dim)] mb-3">
+              Figures, results, quotes or sources you can stand behind, with links. The draft uses only these. Anywhere it needs evidence you haven&apos;t given, it leaves a visible [ADD EVIDENCE: …] for you to fill.
+            </p>
+            <textarea
+              id="article-evidence"
+              value={evidence}
+              onChange={(e) => setEvidence(e.target.value)}
+              rows={4}
+              placeholder={'e.g. "We audited 40 client sites in March 2026; 62% had no direct answer in the first paragraph." or a stat with its source URL'}
+              className="w-full text-sm border border-[rgba(184,115,51,0.2)] rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-2 focus:ring-[#B87333] bg-[var(--ink-deep)] text-[var(--cream)] placeholder-[var(--cream-faint)]"
+            />
+          </div>
 
           <div className="mt-6 flex items-center justify-between">
             <p className="text-xs text-[var(--cream-faint)]">SERP intent: <span className="font-medium text-[var(--cream-dim)]">{brief.serp_intent}</span></p>

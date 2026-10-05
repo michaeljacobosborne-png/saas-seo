@@ -122,11 +122,11 @@ export function stripAgentArtefacts(markdown: string): string {
 }
 
 /** Why an edit must not be applied, or null when it is acceptable. */
-export function integrityProblem(original: string, replacement: string, brandName?: string | null): string | null {
-  const before = new Set(figuresIn(original))
+export function integrityProblem(original: string, replacement: string, brandName?: string | null, allowedFigures: string[] = []): string | null {
+  const before = new Set([...figuresIn(original), ...allowedFigures.flatMap((t) => figuresIn(t))])
   const added = figuresIn(replacement).filter((f) => !before.has(f))
   if (added.length) return `adds figures that were not in the original text (${added.join(', ')}); a figure needs a real source, so use an [ADD EVIDENCE: …] placeholder instead`
-  const had = new Set(firstPartyAttributions(original, brandName).map((s) => s.toLowerCase()))
+  const had = new Set([original, ...allowedFigures].flatMap((t) => firstPartyAttributions(t, brandName)).map((s) => s.toLowerCase()))
   const claims = firstPartyAttributions(replacement, brandName).filter((s) => !had.has(s.toLowerCase()))
   if (claims.length) return `presents a claim as first-party research ("${claims[0]}"); attributing an unsourced claim to anyone is fabrication`
   return null
@@ -134,7 +134,11 @@ export function integrityProblem(original: string, replacement: string, brandNam
 
 // ── Apply ────────────────────────────────────────────────────────────────────
 
-export function applyFixEdits(content: string, edits: FixEdit[], opts: { brandName?: string | null; maxEdits?: number } = {}): FixResult {
+export function applyFixEdits(
+  content: string,
+  edits: FixEdit[],
+  opts: { brandName?: string | null; maxEdits?: number; /** Texts whose figures an edit may use: evidence the writer supplied. */ evidence?: string[] } = {},
+): FixResult {
   const blocks = splitBlocks(content)
   const md = new Marked({ gfm: true })
   const maxEdits = opts.maxEdits ?? MAX_EDITS
@@ -152,7 +156,7 @@ export function applyFixEdits(content: string, edits: FixEdit[], opts: { brandNa
     if (!edit.markdown) { reject('is empty'); continue }
     if (edit.op === 'replace' && seen.has(edit.block)) { reject('edits the same block twice'); continue }
     const original = edit.op === 'replace' ? blockText(blocks[edit.block]) : ''
-    const problem = integrityProblem(original, edit.markdown, opts.brandName)
+    const problem = integrityProblem(original, edit.markdown, opts.brandName, opts.evidence)
     if (problem) { reject(problem); continue }
     const html = (md.parse(edit.markdown, { async: false }) as string).trim()
     if (edit.op === 'replace') {

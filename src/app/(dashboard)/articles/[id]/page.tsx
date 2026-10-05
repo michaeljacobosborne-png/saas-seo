@@ -71,7 +71,7 @@ function mapToFixInstruction(label: string, keyword: string): string | null {
   if (l.startsWith('structured h2'))
     return `Add an additional H2 section to give the article at least 3 major sections`
   if (l.startsWith('data/stat'))
-    return `Add a data point, statistic, or research finding to each major section`
+    return `Where a section makes a claim that needs evidence, add a real, sourced figure only if the article already has one; otherwise insert a visible [ADD EVIDENCE: what is needed] placeholder. Never invent a figure or source`
   if (l.startsWith('faq h3'))
     return `Add a ## Frequently Asked Questions section with at least 3 ### H3 questions and answers about "${keyword}"`
   if (l.startsWith('direct-answer'))
