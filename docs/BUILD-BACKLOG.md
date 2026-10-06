@@ -2,7 +2,9 @@
 
 Created 2026-10-05. Ordered by priority; nothing starts until the item above it is done unless noted. The reasoning behind the items lives in `docs/DECISIONS.md`. Day-to-day progress is in Michael's status file (`Documents\byline-status.md`).
 
-**Authoritative copy:** `master` on GitHub (`michaeljacobosborne-png/saas-seo`). Locally that is the worktree `C:\dev\byline-crawler`. `C:\dev\Byline` is on an older feature branch (`geo-analyzer-accuracy`) and does NOT have these docs. A readable mirror of the decision log is kept at `C:\Users\ozzy5\Documents\byline-DECISIONS.md`.
+**Authoritative copy:** `master` on GitHub (`michaeljacobosborne-png/saas-seo`). Locally that is **`C:\dev\Byline`, on `master`**: the only working folder since the 2026-10-06 consolidation (the old worktrees were removed after their branches were pushed). Run `git pull` there before starting. A readable mirror of the decision log is kept at `C:\Users\ozzy5\Documents\byline-DECISIONS.md`.
+
+Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemini AI-citation checking: a product decision, see the commit message) and `park/recovered-stash` (June WordPress-publishing work).
 
 ## 1. Group 1: integrity (signed-in pass, 2026-10-04)
 - Done and live:
@@ -18,29 +20,22 @@ Created 2026-10-05. Ordered by priority; nothing starts until the item above it 
 - A repeated 429 with `x-ratelimit-used: 0` is labelled "rate limited, not a policy block". Label it as a refusal.
 - These affect prospect reports and anything published from the crawler check.
 
-## 3. Group 4: mobile
-- Done in code: article toolbar, agent panel, headers, tables at 375px. Push and live verification pending.
+## 2b. Blog drafts (content/blog)
+- `which-ai-crawlers-your-site-actually-serves.md`: the Reddit section states the 30 September reading as fact. Correct it before publishing; the 2026-10-05 re-run showed the 200s were a JavaScript challenge and the 429s a zero-quota refusal.
+- `one-ai-visibility-score-cannot-be-true.md`: the per-engine Otterly list can be restored as a table now that tables convert. Tested: it becomes one table block.
+
+## 3. Group 4: mobile: DONE, live (cb0cb4c), verified at 375px.
 
 ## 4. Group 2: coherence
-- SEO/Readability panel audit (decision 28). The two piles have been reported; awaiting approval of the piles, the additions, and whether SEO becomes a pass/fail checklist with no number.
-- Agent "top issues" should come from the weakest Retrievable/Citable items, not the old SEO breakdown.
-- Direct answers evidence must quote the paragraph it describes.
-- Folded in:
-  - Heading hierarchy shows +4 in the projection with no Fix button.
-  - The brief meta description came out at 99 characters.
-  - A competitor-gap note becomes a heading verbatim.
+- DONE, live (71450e4, cc31b9b): SEO panel reduced to SEO basics (decision 28), Readability removed, agent top issues from the draft report only, Heading hierarchy Fix button.
+- Open: Direct answers evidence must quote the paragraph it describes; the brief meta description came out at 99 characters; a competitor-gap note became a heading verbatim.
 
-## 5. Sanity tables (approved by Michael)
-- Build a custom table object in the post body schema (header row + data rows), not the plugin.
-- Render it as semantic `<table><thead><th>`, never a div grid.
-- Convert markdown tables in the drafting pipeline into the block.
-- Verify by running a published page through our engine: the table must be credited under extractability.
-- Record the reasoning in DECISIONS.md.
+## 5. Sanity tables: DONE, live (02c18aa, DECISIONS 30). Final check pending: run a published post that has a table through save-audit.
 
 ## 6. Group 3: presentation and data
 - The card shows 78/100 next to "45 of 100".
-- An empty meta description field scores 10/10 (the check reads the brief, not the field).
-- Readability scores 100 while missing its own targets (resolved by item 4).
+- (Fixed in 71450e4: empty meta description no longer passes.)
+- (Resolved: Readability removed.)
 - Wrong keyword shown on the dashboard.
 - Word count differs between the list and the panel.
 - /articles/new briefly shows "Brand profile missing".
