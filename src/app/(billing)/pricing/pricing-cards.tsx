@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
 import { analytics } from '@/lib/analytics'
-import TestimonialsSection from '@/app/_components/TestimonialsSection'
 
 interface FounderSpots {
   available: boolean
@@ -269,7 +268,6 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       )}
 
       {/* Social proof — trust signals right before the price */}
-      <TestimonialsSection />
 
       {/* Pricing section */}
       <div className="px-6 pb-20">

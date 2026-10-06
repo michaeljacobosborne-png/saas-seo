@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Search, FileText, Sparkles, Check, X } from 'lucide-react'
 import type { Metadata } from 'next'
-import TestimonialsSection from './_components/TestimonialsSection'
 import NavLinks from './_components/NavLinks'
 import FounderBanner from './_components/FounderBanner'
 import { ORG_ID, SITE_URL, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
@@ -336,7 +335,6 @@ export default function HomePage() {
       </section>
 
       {/* ── Social proof ── */}
-      <TestimonialsSection />
 
       <FounderBanner />
 
