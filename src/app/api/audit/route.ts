@@ -294,7 +294,7 @@ export async function POST(request: Request) {
           send({
             type: 'error',
             error: blocked
-              ? "This site is blocking automated requests (bot protection), so we couldn't read its pages to run the audit."
+              ? "Our requests to this site were refused, so we couldn't read enough of its pages to run the audit. That is how the site responded to our server, not a finding about its pages. Try a specific section URL, or try again later."
               : "Couldn't crawl enough pages — try a specific section URL (e.g. /blog) instead of the homepage.",
           })
           controller.close()

@@ -343,7 +343,7 @@ export default function DashboardGeoAnalyzer() {
           GEO Analyzer
         </h1>
         <p className="text-sm" style={{ color: 'var(--cream-faint)' }}>
-          Score how likely ChatGPT, Gemini, and Perplexity are to cite your content. Results save automatically.
+          Check how ready a page is to be read, lifted and credited by AI search: crawler access, structure and attribution, scored on the page itself with the evidence shown. It does not measure whether any AI system cites you. Results save automatically.
         </p>
       </div>
 

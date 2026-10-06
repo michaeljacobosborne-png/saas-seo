@@ -6,6 +6,21 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 31. A refused page request is our limitation, not a finding; the engine fetches over node:https with an honest user agent
+**Date:** 2026-10-06 (aira.net run that blocked Michael's outbound)
+**Decision:**
+- The engine's requests (page, robots.txt, llms.txt, crawler probe) go over `node:https` (`src/lib/geo-audit/http.ts`), not Node's built-in fetch.
+- The content fetch keeps the honest `BylineAuditBot` user agent. The crawler probe keeps presenting each crawler's own user agent.
+- A refused page request (401, 403, 429, 5xx) no longer ends the audit. robots.txt and the probe are still reported. Everything that needs the page is "unable to assess", including Citable, and the score is withheld.
+- All copy describes what happened to our request ("Our request for this page was refused"), never the site's policy ("blocking automated requests").
+**Drivers (tested 2026-10-06 against aira.net, one machine, one IP):**
+- Node fetch got 403 with every header and user-agent combination, including a full Chrome set.
+- curl and `node:https` with the same BylineAuditBot user agent got 200. So the refusal was of Node's fetch client signature, not of our IP or user agent.
+- Over `node:https`, a Chrome user agent got 403. Cloudflare bot management treats a browser user agent without a browser TLS fingerprint as impersonation. Presenting as an "ordinary browser" from a server is therefore worse than identifying honestly, and was rejected for that reason.
+- A GPTBot user agent from our IP also got 403: unverified-bot handling. That is why the probe's baseline and "unknown" handling matter on Cloudflare sites.
+- With these changes the local run produced a full report (Retrievable 62, Citable Adequate) where it had returned nothing.
+**Revisit if:** production (Vercel egress) still gets refused where a local run is served. That would be IP reputation and needs a different answer, such as the render/fetch service path.
+
 ## 30. Blog tables are a custom block rendered as semantic table markup, not a plugin
 **Date:** 2026-10-05 (approved by Michael)
 **Decision:** The Sanity post body has a custom `table` object (caption, header row, rows of plain-text cells). The blog renders it as real HTML: `<table>`, `<caption>`, `<thead>` with `<th scope="col">`, `<tbody>`. The drafting pipeline (`npm run draft`) converts markdown tables into this block instead of flattening them.

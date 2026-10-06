@@ -229,7 +229,7 @@ export default function HomePage() {
               <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Generate an article that actually fits</h3>
               <p className="text-[#A89070] text-sm leading-relaxed">
                 Choose your target word count. Byline generates a fully structured, SEO-optimized article
-                matched to the keyword&apos;s search intent — then scores it across SEO, readability, GEO, and AEO.
+                matched to the keyword&apos;s search intent — then checks it for how retrievable and citable it is before you publish.
               </p>
             </div>
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
@@ -428,7 +428,7 @@ export default function HomePage() {
             <div className="col-span-2 sm:col-span-1">
               <p className="text-[#B87333] font-semibold text-base mb-3">Byline</p>
               <p className="text-[#7A6555] text-sm leading-relaxed">
-                AI-powered content that ranks in search and gets cited by AI engines.
+                Content built to be found in search and easy for AI engines to read, quote and credit.
               </p>
             </div>
 

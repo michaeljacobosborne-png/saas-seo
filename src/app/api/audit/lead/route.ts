@@ -372,10 +372,10 @@ export async function POST(request: Request) {
         <tr><td style="padding:32px;">
           <h2 style="color:#1c1917;font-size:20px;margin:0 0 16px;">${isAo ? `Your AO Analysis for ${domain || 'your site'}` : 'Your Byline analysis is ready'}</h2>
           ${isAo ? `
-          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">We analyzed <strong style="color:#1c1917;">${domain || 'your site'}</strong> for AI engine visibility — how often ChatGPT, Gemini, and Perplexity cite your content vs. competitors.</p>
-          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 24px;">Byline's AO scoring is built into every article it generates, so your content is optimised to get cited — not just ranked.</p>
+          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">We checked <strong style="color:#1c1917;">${domain || 'your site'}</strong> for how ready its content is to be read and quoted by AI search: crawler access, direct answers, structure and attribution, with the evidence for each finding. It is an assessment of the page, not a measurement of whether any AI system cites you.</p>
+          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 24px;">Byline checks every article it writes against the same measures before it publishes.</p>
           ` : `
-          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">Thanks for trying Byline. We generate long-form articles optimised for traditional search <em>and</em> AI engines like ChatGPT, Gemini, and Perplexity — so your content gets cited, not just ranked.</p>
+          <p style="color:#57534e;font-size:14px;line-height:1.6;margin:0 0 16px;">Thanks for trying Byline. We write long-form articles structured for traditional search <em>and</em> for AI search like ChatGPT, Gemini and Perplexity: easy to read, lift and attribute to you, and checked before they publish.</p>
           `}
           <ul style="color:#57534e;font-size:14px;line-height:1.6;padding-left:20px;margin:0 0 24px;">
             <li style="margin-bottom:8px;">GEO + AO scoring on every article before it publishes</li>

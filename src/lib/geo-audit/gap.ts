@@ -56,25 +56,32 @@ export function diagnoseGap(retrievability: Retrievability, citability: Citabili
     }
   }
 
+  // Name the group that actually scored lowest. The copy used to say "start with
+  // access" even when Access was 30/30 (prospect-report readiness, 2026-10-04).
+  const weakest = weakestGroup(retrievability)
+
   if (!highR && highC) {
     return {
       quadrant: 'low-retrievable-high-citable',
-      headline: 'Credible, but hard to reach',
+      headline: 'Credible, but hard to lift',
       diagnosis:
-        `Attribution signals are ${citability.label.toLowerCase()} — there is enough here to credit you if the content is used. ` +
-        `Retrievability is ${retrievability.score}/100, so the obstacle is access, parsing or structure rather than credibility.`,
-      nextStep: 'Start with the lowest-scoring retrievability group: crawler access first, then whether content is readable without JavaScript.',
+        `Attribution signals are ${citability.label.toLowerCase()}: there is enough here to credit you if the content is used. ` +
+        `Retrievability is ${retrievability.score}/100, and the weakest part is ${weakest ? `${weakest.name.toLowerCase()} (${weakest.score}/${weakest.max})` : 'structure'}, not credibility.`,
+      nextStep: weakest ? `Start with ${weakest.name.toLowerCase()}: ${GROUP_ADVICE[weakest.id]}` : 'Start with the lowest-scoring retrievability group.',
     }
   }
 
   if (!highR && !highC) {
     return {
       quadrant: 'low-both',
-      headline: 'Start with access',
+      headline: weakest ? `Start with ${weakest.name.toLowerCase()}` : 'Start with retrievability',
       diagnosis:
         `Retrievability is ${retrievability.score}/100 and attribution signals are ${citability.label.toLowerCase()}. ` +
-        `Fixing attribution on content an engine cannot reach or parse has no effect, so the order matters.`,
-      nextStep: 'Fix retrievability first — access, then parsing, then structure. Attribution work pays off only once the content can be read.',
+        (weakest ? `The weakest retrievability group is ${weakest.name.toLowerCase()} at ${weakest.score}/${weakest.max}. ` : '') +
+        'Attribution work pays off most once the content is easy to lift, so the order matters.',
+      nextStep: weakest
+        ? `Fix ${weakest.name.toLowerCase()} first: ${GROUP_ADVICE[weakest.id]} Then add attribution to the sections that make claims.`
+        : 'Fix retrievability first, then add attribution to the sections that make claims.',
     }
   }
 
@@ -87,6 +94,26 @@ export function diagnoseGap(retrievability: Retrievability, citability: Citabili
     nextStep:
       'On-page work has taken this about as far as it goes. What an on-page tool cannot tell you is whether engines actually surface this content — that needs repeated live sampling, not another page audit.',
   }
+}
+
+const GROUP_ADVICE: Record<string, string> = {
+  access: 'make sure AI search crawlers are permitted and the page is indexable.',
+  parseability: 'serve the content in the HTML rather than only after JavaScript runs, and keep structured data valid.',
+  chunkability: 'give each section a clear heading and enough self-contained prose to be quoted on its own.',
+  extractability: 'open with a short direct answer, phrase some headings as questions, and use lists or tables where they fit.',
+}
+
+/** The scored retrievability group with the lowest share of its assessable points. */
+function weakestGroup(r: Retrievability): { id: string; name: string; score: number; max: number } | null {
+  let best: { id: string; name: string; score: number; max: number; ratio: number } | null = null
+  for (const g of r.groups) {
+    if (!g.scored) continue
+    const max = g.checks.filter((c) => c.scored).reduce((s, c) => s + c.maxScore, 0)
+    if (!max) continue
+    const ratio = g.score / max
+    if (!best || ratio < best.ratio) best = { id: g.id, name: g.name, score: g.score, max, ratio }
+  }
+  return best
 }
 
 /**

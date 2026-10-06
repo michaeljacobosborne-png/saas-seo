@@ -267,13 +267,32 @@ describe('runAudit — incomplete extraction', () => {
 })
 
 describe('runAudit — failed scraping', () => {
-  it('raises a clear error for a 403', async () => {
-    await expect(
-      runAudit('https://blocked.example/', 'geo', {
-        ...BASE_OPTIONS,
-        fetchImpl: stubFetch({}, { failWith: 403 }),
-      }),
-    ).rejects.toThrow(/blocking automated requests/i)
+  // aira.net, 2026-10-06: the page refused our request while readers were served.
+  // The run must still report robots.txt and crawler access, mark everything that
+  // needs the page as unable to assess, withhold the score, and never phrase our
+  // refusal as the site "blocking automated requests".
+  const refusingSite = (async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    if (url.endsWith('/robots.txt')) return new Response('User-agent: *\nAllow: /\n', { status: 200, headers: { 'content-type': 'text/plain' } })
+    if (url.endsWith('/llms.txt')) return new Response('Not found', { status: 404, headers: { 'content-type': 'text/html' } })
+    return new Response('<html><body>403 Forbidden</body></html>', { status: 403, headers: { 'content-type': 'text/html' } })
+  }) as typeof fetch
+
+  it('returns a partial report, not a dead end, when the page refuses our request (403)', async () => {
+    const report = await runAudit('https://refusing.example/', 'geo', { ...BASE_OPTIONS, crawl: false, fetchImpl: refusingSite })
+    expect(report.scoreWithheld).toBe(true)
+    expect(report.withheldReason).toMatch(/Our request for this page was refused \(HTTP 403\)/)
+    expect(JSON.stringify(report)).not.toMatch(/blocking automated requests/i)
+
+    const checks = report.retrievability.groups.flatMap((g) => g.checks)
+    const byId = (id: string) => checks.find((c) => c.id === id)!
+    // robots.txt is a separate request and still scores.
+    expect(byId('access-crawlers').state).not.toBe('unverified')
+    // Nothing that needs the page is claimed: no "no server-rendered text", no HTTP 403 as the page's status.
+    for (const id of ['access-indexing', 'access-reachable', 'parse-server-text', 'parse-structured-data', 'parse-dom', 'chunk-hierarchy', 'extract-answers']) {
+      expect(byId(id).state).toBe('unverified')
+    }
+    expect(report.citability.signals.every((s) => s.band === 'unverified')).toBe(true)
   })
 
   it('raises a clear error for a 404', async () => {
@@ -296,11 +315,21 @@ describe('runAudit — failed scraping', () => {
     expect(String(error.message)).toMatch(/could not be resolved/i)
   })
 
-  it('does not produce a report object at all when the fetch fails', async () => {
-    const result = await runAudit('https://blocked.example/', 'geo', {
+  it('still reports what it can when the site answers with a server error', async () => {
+    const report = await runAudit('https://blocked.example/', 'geo', {
       ...BASE_OPTIONS,
+      crawl: false,
       fetchImpl: stubFetch({}, { failWith: 500 }),
-    }).catch(() => null)
+    })
+    expect(report.scoreWithheld).toBe(true)
+    expect(report.withheldReason).toMatch(/HTTP 500/)
+  })
+
+  it('does not produce a report object at all when the host cannot be reached', async () => {
+    const boom = (async () => {
+      throw new Error('getaddrinfo ENOTFOUND nope.invalid')
+    }) as typeof fetch
+    const result = await runAudit('https://nope.invalid/', 'geo', { ...BASE_OPTIONS, fetchImpl: boom }).catch(() => null)
     expect(result).toBeNull()
   })
 })
@@ -379,6 +408,8 @@ describe('runAudit — chain of custody and access', () => {
     const report = await runAudit(COMMA_URL, 'geo', { ...BASE_OPTIONS, crawl: false, fetchImpl: stubWithRobots() })
 
     expect(report.chainOfCustody.fetchedAt).toBe(NOW.toISOString())
+    // DECISIONS 31: the content fetch identifies honestly. A browser user agent
+    // sent from a server is refused as impersonation by Cloudflare bot management.
     expect(report.chainOfCustody.userAgent).toMatch(/BylineAuditBot/)
     expect(report.chainOfCustody.renderMode).toBe('raw')
     expect(report.chainOfCustody.finalUrl).toBe(COMMA_URL)

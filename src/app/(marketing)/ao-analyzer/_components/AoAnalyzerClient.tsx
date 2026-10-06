@@ -501,11 +501,12 @@ export default function AoAnalyzerClient() {
                   style={playfair}
                   className="text-xl font-bold leading-snug mb-2 text-[#F7F3EC]"
                 >
-                  Want to start winning AI-generated answers?
+                  Want content that is built to be quoted?
                 </h2>
                 <p className="text-sm text-[#A89070] mb-5 leading-relaxed">
-                  Byline generates publish-ready articles structured to win featured snippets and
-                  appear in AI answers — matched to how your site already sounds.
+                  Byline writes publish-ready articles with direct answers, question headings and
+                  clean structure, matched to how your site already sounds, and checks each draft
+                  before you publish.
                 </p>
                 <Link
                   href={`/signup?plan=free&ref=ao_analyzer${emailSubmitted ? `&email=${encodeURIComponent(email)}` : ''}`}
@@ -534,7 +535,7 @@ export default function AoAnalyzerClient() {
               Answer Optimization (AO) is the practice of structuring your content so it can be
               directly extracted and shown as a featured snippet in Google, or quoted in an
               AI-generated answer from tools like ChatGPT and Perplexity. Where traditional SEO
-              gets you onto a results page, AO gets you into the answer itself.
+              aims at a results page, AO aims at the answer itself.
             </p>
             <p>
               AO-optimized content starts with a direct, concise answer to the question the page
@@ -557,8 +558,8 @@ export default function AoAnalyzerClient() {
               direct concise answers, scannable formatting, and FAQ coverage. It targets featured
               snippets in Google and position-zero placements in AI answers. Generative Engine
               Optimization (GEO) focuses on entity and authority signals — schema markup, author
-              bios, citable data, and brand clarity — that make AI models trust and cite your site
-              as a source. The best content strategies apply both: AO to win individual answer
+              bios, citable data, and brand clarity — that let AI systems identify your site and
+              attribute what they quote to it. The best content strategies apply both: AO to win individual answer
               placements, GEO to build the authority that makes your site a go-to reference across
               many queries.
             </p>

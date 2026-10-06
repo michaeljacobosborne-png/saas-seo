@@ -19,8 +19,8 @@ import { scoreRetrievability } from './score-retrievability'
 import { assessCitability } from './assess-citability'
 import { diagnoseGap } from './gap'
 import { verifyByline } from './byline'
-import { findBandInconsistencies, findScoreInconsistencies } from './scoring'
-import { ENGINE_VERSION, type AuditReport, type ChainOfCustody, type InspectedPage } from './types'
+import { bandCounts, findBandInconsistencies, findScoreInconsistencies } from './scoring'
+import { BAND_LABELS, ENGINE_VERSION, type AuditReport, type ChainOfCustody, type InspectedPage } from './types'
 
 export * from './types'
 export { extractPage } from './extract'
@@ -79,14 +79,23 @@ export async function runAudit(
   onProgress('Fetching the page…', 1, AUDIT_STEPS)
   const fetched = await fetchPage(url, fetchOptions)
 
-  if (!fetched.ok) {
+  // A site that answered our page request with a refusal (401, 403, 429, 5xx)
+  // still has a robots.txt and can still be probed, so the run continues and
+  // reports what it could establish (aira.net, 2026-10-06). Ending the audit
+  // turned a limit on our side into a dead end. Nothing to report only when the
+  // URL could not be reached at all, does not exist, or is not a web page.
+  const refusedStatus =
+    !fetched.ok && fetched.status !== null && (fetched.status === 401 || fetched.status === 403 || fetched.status === 429 || fetched.status >= 500)
+      ? fetched.status
+      : null
+  if (!fetched.ok && refusedStatus === null) {
     throw new AuditError(fetched.note ?? 'Could not fetch that URL.', fetched.status)
   }
   if (fetched.renderedBy) notes.push(`Page content was obtained via the ${fetched.renderedBy} renderer.`)
 
   // ── 2. Extract, and validate the extraction before scoring anything ─────────
   onProgress('Reading the page content…', 2, AUDIT_STEPS)
-  const home = extractPage(fetched.html, fetched.finalUrl)
+  const home = extractPage(refusedStatus === null ? fetched.html : '', fetched.finalUrl)
 
   // ── 2a. Crawler access. robots.txt, llms.txt and the live probe together. ───
   //
@@ -151,11 +160,15 @@ export async function runAudit(
     url,
     finalUrl: fetched.finalUrl,
     status: fetched.status,
-    ok: true,
+    ok: refusedStatus === null,
     wordCount: home.wordCount,
     renderedBy: fetched.renderedBy,
     note: fetched.note,
   })
+
+  if (refusedStatus !== null) {
+    return refusedReport({ type, url, finalUrl: fetched.finalUrl, now, home, pagesInspected, notes, chainOfCustody, access, probe, status: refusedStatus })
+  }
 
   if (!home.hasMeaningfulContent) {
     // Access is still fully assessable here, and on a JS-only page it is the
@@ -340,6 +353,83 @@ function incompleteReport(args: {
         title: 'This page could not be read well enough to audit',
         description: `${reason} Re-run against a page that serves its content in HTML, or make the key content server-rendered so crawlers can read it without running scripts.`,
         impact: 'Content a crawler cannot read cannot be quoted by anything.',
+      },
+    ],
+    quickWins: [],
+    tool: type,
+    url,
+    finalUrl,
+    analyzedAt: now.toISOString(),
+    engineVersion: ENGINE_VERSION,
+    rawScore: retrievability.rawScore,
+    assessedMaxScore: retrievability.assessedMaxScore,
+    totalMaxScore: retrievability.totalMaxScore,
+    scoreWithheld: true,
+    withheldReason: reason,
+    confidence: 'low',
+    incomplete: true,
+    pagesInspected,
+    notes,
+    chainOfCustody,
+    access,
+    retrievability: { ...retrievability, scoreWithheld: true, withheldReason: reason },
+    citability,
+    gap,
+  }
+}
+
+/**
+ * Our request for the page was refused, so we hold no HTML. What robots.txt and
+ * the crawler probe established is reported and scored. Everything that needs
+ * the page is "unable to assess", and the score is withheld. The wording
+ * describes our request, never the site's policy: a refusal of our server is
+ * not evidence that readers or AI crawlers are refused.
+ */
+function refusedReport(args: {
+  type: 'geo' | 'ao'
+  url: string
+  finalUrl: string
+  now: Date
+  home: ExtractedPage
+  pagesInspected: InspectedPage[]
+  notes: string[]
+  chainOfCustody: ChainOfCustody
+  access: AccessReport
+  probe: ReturnType<typeof crossReferenceRobots> | null
+  status: number
+}): AuditReport {
+  const { type, url, finalUrl, now, home, pagesInspected, notes, chainOfCustody, access, probe, status } = args
+  const browserServed = probe && !probe.baselineFailed
+  const reason =
+    `Our request for this page was refused (HTTP ${status}), so its content could not be read and content-dependent checks are marked unable to assess. ` +
+    (browserServed
+      ? 'An ordinary browser request from the same network was served, so the refusal applies to how our audit request was handled, not to readers.'
+      : 'This describes how the site responded to our server, not whether readers or AI crawlers can see the page.') +
+    ' robots.txt and the AI crawler probe are separate requests and are reported below.'
+
+  const retrievability = scoreRetrievability({ home, access, now, crawlerAccess: probe, fetchRefusedReason: reason })
+  const signals = assessCitability({ home, keyPages: [], now }).signals.map((s) => ({
+    ...s,
+    band: 'unverified' as const,
+    state: 'unverified' as const,
+    detail: 'The page could not be read on this run, so this signal could not be assessed.',
+    evidence: [],
+  }))
+  const citability = { band: 'unverified' as const, label: BAND_LABELS.unverified, signals, counts: bandCounts(signals) }
+  const gap = diagnoseGap(retrievability, citability)
+  const factors = retrievability.groups.flatMap((g) => g.checks)
+  notes.push(reason)
+
+  return {
+    score: 0,
+    grade: 'N/A',
+    breakdown: factors,
+    recommendations: [
+      {
+        priority: 'high',
+        title: 'The page content could not be read on this run',
+        description: `${reason} Try the run again, or audit a different page on the same site.`,
+        impact: 'Crawler access is reported; the content checks need the page itself.',
       },
     ],
     quickWins: [],

@@ -69,10 +69,24 @@ describe('Gap — quadrants', () => {
     expect(g.nextStep).toMatch(/retrievability group|crawler access/i)
   })
 
-  it('low on both starts with access and says why order matters', () => {
+  it('low on both says why order matters', () => {
     const g = diagnoseGap(retr(25), cit('absent'))
     expect(g.quadrant).toBe('low-both')
-    expect(g.diagnosis).toMatch(/has no effect/i)
+    expect(g.diagnosis).toMatch(/order matters/i)
+  })
+
+  it('names the weakest group, never "access" when access is full (aira.net, 2026-10-06)', () => {
+    const group = (id: string, name: string, score: number, max: number) => ({
+      id, name, score, maxScore: max, deduction: max - score, scored: true, status: 'good', label: '',
+      checks: [{ id: `${id}-x`, name, state: 'present', score, maxScore: max, scored: true, status: 'good', label: '', detail: '', evidence: [] }],
+    })
+    const r = {
+      ...retr(62),
+      groups: [group('access', 'Access', 30, 30), group('parseability', 'Parseability', 18, 25), group('chunkability', 'Chunkability', 9, 25), group('extractability', 'Extractability', 5, 20)],
+    } as unknown as Retrievability
+    const g = diagnoseGap(r, cit('adequate'))
+    expect(g.headline).toBe('Start with extractability')
+    expect(`${g.headline} ${g.diagnosis} ${g.nextStep}`).not.toMatch(/start with access|access first/i)
   })
 
   it('high on both admits the limits of an on-page tool', () => {

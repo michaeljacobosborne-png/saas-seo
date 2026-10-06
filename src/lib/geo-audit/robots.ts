@@ -20,6 +20,7 @@
  */
 
 import { MAX_ROBOTS_BYTES } from './limits'
+import { httpFetch } from './http'
 
 // ── Taxonomy ──────────────────────────────────────────────────────────────────
 
@@ -370,7 +371,7 @@ export async function fetchRobotsTxt(
   pageUrl: string,
   opts: { fetchImpl?: typeof fetch; timeoutMs?: number; userAgent?: string } = {},
 ): Promise<RobotsFetchResult> {
-  const { fetchImpl = fetch, timeoutMs = 8_000, userAgent } = opts
+  const { fetchImpl = httpFetch, timeoutMs = 8_000, userAgent } = opts
 
   let robotsUrl: string
   try {
@@ -465,7 +466,7 @@ export async function fetchLlmsTxt(
   pageUrl: string,
   opts: { fetchImpl?: typeof fetch; timeoutMs?: number } = {},
 ): Promise<LlmsTxtResult> {
-  const { fetchImpl = fetch, timeoutMs = 6_000 } = opts
+  const { fetchImpl = httpFetch, timeoutMs = 6_000 } = opts
 
   let url: string
   try {

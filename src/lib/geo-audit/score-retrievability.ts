@@ -49,6 +49,13 @@ export interface RetrievabilityInput {
    */
   contentReadable?: boolean
   /**
+   * Set when our request for the page itself was refused, so we hold no HTML at
+   * all. Everything that depends on the page (indexing directives, canonical,
+   * rendering, structure, content) becomes `unverified` with `fetchRefusedReason`.
+   * robots.txt and the crawler probe are separate requests and still score.
+   */
+  fetchRefusedReason?: string | null
+  /**
    * Live crawler probe results, when the run performed one.
    *
    * robots.txt is a declaration; this is enforcement. When present it decides
@@ -76,13 +83,15 @@ const GROUP_NAMES: Record<RetrievabilityGroupId, string> = {
 }
 
 export function scoreRetrievability(input: RetrievabilityInput): Retrievability {
-  const readable = input.contentReadable !== false
+  const refused = input.fetchRefusedReason ?? null
+  const readable = input.contentReadable !== false && !refused
   const unreadableReason =
+    refused ??
     'The page did not yield enough readable text to judge its content structure. This describes what we could read, not a fault in the page.'
 
   const groups: RetrievabilityGroup[] = [
     buildGroup('access', scoreAccess(input)),
-    buildGroup('parseability', scoreParseability(input)),
+    buildGroup('parseability', refused ? unverifiedChecks(PARSE_CHECKS, refused) : scoreParseability(input)),
     buildGroup(
       'chunkability',
       readable ? scoreChunkability(input) : unverifiedChecks(CHUNK_CHECKS, unreadableReason),
@@ -119,6 +128,11 @@ const EXTRACT_CHECKS: [string, string, number][] = [
   ['extract-answers', 'Direct answers', 10],
   ['extract-questions', 'Question coverage', 6],
   ['extract-density', 'Lists, tables and data', 4],
+]
+const PARSE_CHECKS: [string, string, number][] = [
+  ['parse-server-text', 'Server-rendered content', 12],
+  ['parse-structured-data', 'Structured data validity', 8],
+  ['parse-dom', 'Markup cleanliness', 5],
 ]
 
 function unverifiedChecks(defs: [string, string, number][], reason: string): Factor[] {
@@ -267,10 +281,14 @@ function reportTrainingProbe(probe: CrawlerAccessReport): Factor | null {
   return b.build()
 }
 
-function scoreAccess({ home, access, crawlerAccess }: RetrievabilityInput): Factor[] {
+function scoreAccess({ home, access, crawlerAccess, fetchRefusedReason }: RetrievabilityInput): Factor[] {
   const crawlers = new FactorBuilder('access-crawlers', 'AI crawler access', 14)
   const indexing = new FactorBuilder('access-indexing', 'Indexing directives', 10)
   const reachable = new FactorBuilder('access-reachable', 'Fetch and canonical', 6)
+  // Without the page we cannot see its meta robots, canonical or the status a
+  // crawler would get, so those two are unverified rather than read off our
+  // refused request. Crawler access stands on robots.txt and the probe.
+  const pageUnread = !!fetchRefusedReason
 
   if (!access) {
     crawlers.unverified('Crawler access was not assessed on this run.')
@@ -346,6 +364,15 @@ function scoreAccess({ home, access, crawlerAccess }: RetrievabilityInput): Fact
         crawlers.note(ev(crawlerAccess.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`))
       }
     }
+  }
+
+  if (pageUnread) {
+    indexing.unverified(fetchRefusedReason!)
+    reachable.unverified(fetchRefusedReason!)
+    const training = crawlerAccess ? reportTrainingProbe(crawlerAccess) : null
+    const out = [crawlers.build(), indexing.build(), reachable.build()]
+    if (training) out.push(training)
+    return out
   }
 
   if (access.directives.noindex) {

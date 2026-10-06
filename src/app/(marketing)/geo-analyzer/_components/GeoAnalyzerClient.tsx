@@ -200,7 +200,7 @@ export default function GeoAnalyzerClient() {
             style={playfair}
             className="text-[40px] sm:text-[52px] font-bold leading-[1.08] tracking-tight text-[#1C1917] mb-6"
           >
-            Is Your Site Invisible to AI?
+            Can AI Search Read Your Site?
           </h1>
           <p className="text-lg text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-10">
             See how ready your content is to be read, understood and quoted by ChatGPT, Gemini and
@@ -465,11 +465,12 @@ export default function GeoAnalyzerClient() {
               {/* Post-analysis CTA */}
               <div className="bg-[#1C1917] rounded-2xl p-6 sm:p-8 text-[#F7F3EC]">
                 <h2 style={playfair} className="text-xl font-bold leading-snug mb-2 text-[#F7F3EC]">
-                  Want AI to start recommending your content?
+                  Want content that is ready to be quoted?
                 </h2>
                 <p className="text-sm text-[#A89070] mb-5 leading-relaxed">
-                  Byline generates publish-ready, GEO-optimized articles that are structured to get
-                  cited by ChatGPT, Gemini, and Perplexity.
+                  Byline writes publish-ready articles structured to be easy for AI search to read,
+                  lift and credit, and checks each draft against these same measures before you
+                  publish.
                 </p>
                 <Link
                   href={`/signup?plan=free&ref=geo_analyzer${emailSubmitted ? `&email=${encodeURIComponent(email)}` : ''}`}
@@ -493,9 +494,9 @@ export default function GeoAnalyzerClient() {
           <div className="space-y-4 text-[#57534E] text-[17px] leading-relaxed mb-12">
             <p>
               Generative Engine Optimization (GEO) is the practice of structuring your website so
-              that AI tools like ChatGPT, Gemini, and Perplexity are more likely to cite and
-              recommend your content. As more search behavior shifts to AI-generated answers, showing
-              up in those answers — not just in blue links — is becoming critical for visibility.
+              that AI tools like ChatGPT, Gemini, and Perplexity can read it, lift answers from it
+              and attribute those answers to you. As more search behavior shifts to AI-generated
+              answers, being usable in those answers, not just in blue links, matters more.
             </p>
             <p>
               Unlike traditional SEO which targets search ranking algorithms, GEO targets the large

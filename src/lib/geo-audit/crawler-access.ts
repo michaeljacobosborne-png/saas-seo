@@ -30,6 +30,7 @@
  */
 
 import { CRAWLERS, type CrawlerClass, type CrawlerSpec, type ParsedRobots, isAllowed } from './robots'
+import { httpFetch } from './http'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -462,7 +463,7 @@ export async function probeCrawlerAccess(
   opts: ProbeOptions = {},
 ): Promise<CrawlerAccessReport> {
   const timeoutMs = opts.timeoutMs ?? 12_000
-  const fetchImpl = opts.fetchImpl ?? fetch
+  const fetchImpl = opts.fetchImpl ?? httpFetch
   const tokens = opts.tokens ?? DEFAULT_PROBE_TOKENS
   const now = opts.now ?? new Date()
 

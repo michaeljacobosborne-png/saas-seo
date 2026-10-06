@@ -4,14 +4,14 @@ import AoAnalyzerClient from './_components/AoAnalyzerClient'
 export const metadata: Metadata = {
   title: 'Free AO Analyzer — Answer Optimization Score | Byline',
   description:
-    'Check your Answer Optimization score. See how well your content is structured to win featured snippets and appear in AI-generated answers.',
+    'Check your Answer Optimization score. See how well your content is structured for answer extraction: direct answers, question headings and scannable structure, checked on the page itself.',
   alternates: {
     canonical: 'https://app.bylineseo.com/ao-analyzer',
   },
   openGraph: {
     title: 'Free AO Analyzer — Answer Optimization Score',
     description:
-      'See how well your content is structured to win featured snippets and appear in AI-generated answers. Free Answer Optimization score.',
+      'See how well your content is structured for answer extraction: direct answers, question headings and scannable structure, checked on the page itself. Free Answer Optimization score.',
     url: 'https://app.bylineseo.com/ao-analyzer',
     type: 'website',
   },
@@ -29,7 +29,7 @@ const jsonLd = {
   url: 'https://app.bylineseo.com/ao-analyzer',
   applicationCategory: 'BusinessApplication',
   description:
-    'Free tool that checks your Answer Optimization score. Analyzes how well your content is structured to win featured snippets and appear in AI-generated answers.',
+    'Free tool that checks your Answer Optimization score. Analyzes how well your content is structured for answer extraction: direct answers, question headings and scannable structure, checked on the page itself.',
   offers: {
     '@type': 'Offer',
     price: '0',

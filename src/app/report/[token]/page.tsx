@@ -281,10 +281,10 @@ function GeoReport({ result, domain, auditDate }: { result: GeoAuditResult; doma
       {/* CTA */}
       <div style={{ background: '#1C1917', borderRadius: 16, padding: '32px', textAlign: 'center' }}>
         <h2 style={{ ...playfair, fontSize: 22, fontWeight: 700, color: '#F7F3EC', marginBottom: 12 }}>
-          Want AI to start recommending your content?
+          Want content that is ready to be quoted?
         </h2>
         <p style={{ fontSize: 15, color: '#A89070', marginBottom: 24, lineHeight: 1.6 }}>
-          Byline generates publish-ready, GEO-optimized articles structured to get cited by ChatGPT, Gemini, and Perplexity.
+          Byline writes publish-ready articles structured to be easy for AI search to read, lift and credit, and checks each draft against these same measures before you publish.
         </p>
         <Link href="/pricing" style={{ display: 'inline-block', background: '#B87333', color: '#fff', padding: '14px 28px', borderRadius: 12, fontWeight: 600, fontSize: 15, textDecoration: 'none' }}>
           See plans →

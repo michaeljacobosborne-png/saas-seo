@@ -14,6 +14,7 @@
  */
 
 import { MAX_FETCH_BYTES, formatBytes, truncationDisclosure, type Truncation } from './limits'
+import { httpFetch } from './http'
 
 export type RenderMode = 'raw' | 'rendered'
 
@@ -71,8 +72,18 @@ export const FREE_TIER_NO_RENDER: RenderEntitlement = {
 }
 
 /**
- * The user agent we send. Identifies Byline honestly and points at the policy
- * page, so a site owner who sees it in their logs can find out what it is.
+ * The user agent the audit's content fetch sends (DECISIONS 31). It identifies
+ * Byline honestly and points at the policy page.
+ *
+ * Deliberately NOT a browser user agent. Tested against aira.net (Cloudflare),
+ * 2026-10-06, over node:https from one IP:
+ * - this string: 200
+ * - a Chrome user agent: 403
+ * - a GPTBot user agent: 403
+ * Bot management recognises a browser user agent arriving without a browser's TLS
+ * fingerprint as impersonation and refuses it, so pretending to be a reader gets
+ * refused where an honest bot is served. The refusals that killed audits came
+ * from Node's fetch client, fixed in ./http.ts, not from this string.
  */
 export const BYLINE_USER_AGENT =
   'Mozilla/5.0 (compatible; BylineAuditBot/1.0; +https://bylineseo.com/robot)'
@@ -134,7 +145,7 @@ export function looksLikeEmptyShell(html: string): boolean {
 export async function fetchPage(rawUrl: string, opts: FetchOptions = {}): Promise<FetchedPage> {
   const {
     timeoutMs = 12_000,
-    fetchImpl = fetch,
+    fetchImpl = httpFetch,
     renderFallback = getRenderFallback(),
     renderMode = 'raw',
     entitlement = FREE_TIER_NO_RENDER,
@@ -305,11 +316,13 @@ async function tryFetch(
 }
 
 function describeStatus(status: number): string {
-  if (status === 403) return 'That site is blocking automated requests (HTTP 403).'
+  // Worded as what happened to OUR request. A refusal of our server is not
+  // evidence about readers or AI crawlers, so it is never phrased as the site's policy.
+  if (status === 403) return 'Our request for this page was refused (HTTP 403). This is how the site responded to our server, not a finding about the page.'
   if (status === 404) return 'That page was not found (HTTP 404).'
-  if (status === 401) return 'That page requires authentication (HTTP 401), so a crawler cannot read it either.'
-  if (status === 429) return 'That site is rate-limiting requests (HTTP 429). Try again in a few minutes.'
-  if (status >= 500) return `That site returned a server error (HTTP ${status}).`
+  if (status === 401) return 'That page asked our request for a login (HTTP 401), so its content could not be read.'
+  if (status === 429) return 'The site asked our request to slow down (HTTP 429). Try again in a few minutes.'
+  if (status >= 500) return `The site returned a server error to our request (HTTP ${status}).`
   return `The server returned HTTP ${status}.`
 }
 
