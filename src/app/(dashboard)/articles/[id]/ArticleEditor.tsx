@@ -77,6 +77,7 @@ interface ArticleEditorProps {
   articleId: string
   initialContent: string
   getTextRef: React.MutableRefObject<(() => string) | null>
+  getHtmlRef?: React.MutableRefObject<(() => string) | null>        // current editor HTML — used by patch mode to avoid stale DB reads
   getWordCountRef?: React.MutableRefObject<(() => number) | null>
   replaceContentRef?: React.MutableRefObject<((markdown: string) => void) | null>  // full replace (auto mode)
   applyContentRef?: React.MutableRefObject<((markdown: string) => void) | null>   // insert at cursor (review mode)
@@ -85,7 +86,7 @@ interface ArticleEditorProps {
   onSelectionChange?: (text: string, from: number, to: number) => void
 }
 
-export default function ArticleEditor({ articleId, initialContent, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef, onSelectionChange }: ArticleEditorProps) {
+export default function ArticleEditor({ articleId, initialContent, getTextRef, getHtmlRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef, onSelectionChange }: ArticleEditorProps) {
   const supabase = createClient()
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
@@ -143,6 +144,9 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
   useEffect(() => {
     if (editor) {
       getTextRef.current = () => editor.getText()
+      if (getHtmlRef) {
+        getHtmlRef.current = () => editor.getHTML()
+      }
       if (getWordCountRef) {
         getWordCountRef.current = () => editor.storage.characterCount?.words?.() ?? 0
       }
@@ -173,13 +177,14 @@ export default function ArticleEditor({ articleId, initialContent, getTextRef, g
     }
     return () => {
       getTextRef.current = null
+      if (getHtmlRef) getHtmlRef.current = null
       if (getWordCountRef) getWordCountRef.current = null
       if (replaceContentRef) replaceContentRef.current = null
       if (applyContentRef) applyContentRef.current = null
       if (applyAtRangeRef) applyAtRangeRef.current = null
       if (appendContentRef) appendContentRef.current = null
     }
-  }, [editor, getTextRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef])
+  }, [editor, getTextRef, getHtmlRef, getWordCountRef, replaceContentRef, applyContentRef, applyAtRangeRef, appendContentRef])
 
 
   if (!editor) return null

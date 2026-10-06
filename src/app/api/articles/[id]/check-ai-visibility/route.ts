@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { isConfigured, checkCitation } from '@/lib/perplexity'
+import * as perplexity from '@/lib/perplexity'
+import * as googleAi from '@/lib/google-ai'
 
 export async function POST(
   _request: Request,
@@ -11,9 +12,9 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (!isConfigured()) {
+  if (!perplexity.isConfigured() && !googleAi.isConfigured()) {
     return NextResponse.json(
-      { error: 'service_unavailable', message: 'Perplexity API not configured' },
+      { error: 'service_unavailable', message: 'No AI citation API configured' },
       { status: 503 }
     )
   }
@@ -71,26 +72,13 @@ export async function POST(
     )
   }
 
-  // Call Perplexity to check if this article's keyword cites our domain
-  const result = await checkCitation(article.target_keyword, domain)
+  // Run Perplexity and Gemini checks in parallel
+  const [perplexityResult, geminiResult] = await Promise.all([
+    perplexity.isConfigured() ? perplexity.checkCitation(article.target_keyword, domain) : Promise.resolve(null),
+    googleAi.isConfigured() ? googleAi.checkCitation(article.target_keyword, domain) : Promise.resolve(null),
+  ])
+
   const checkedAt = new Date().toISOString()
-
-  const serviceClient = createServiceClient()
-
-  // Write the raw citation check result to article_ai_citations
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (serviceClient as any)
-    .from('article_ai_citations')
-    .insert({
-      article_id: article.id,
-      user_id: user.id,
-      engine: 'perplexity',
-      keyword: article.target_keyword,
-      cited: result.cited,
-      citation_url: result.citationUrl,
-      sources: result.sources,
-      checked_at: checkedAt,
-    })
 
   // Compute current week's Monday as week_start
   const now = new Date()
@@ -100,31 +88,105 @@ export async function POST(
   weekStart.setUTCDate(now.getUTCDate() - daysSinceMonday)
   const weekStartDate = weekStart.toISOString().slice(0, 10) // YYYY-MM-DD
 
-  // Upsert the weekly summary row
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (serviceClient as any)
-    .from('article_ai_visibility')
-    .upsert(
-      {
+  const serviceClient = createServiceClient()
+
+  const engineResults: Array<{
+    engine: string
+    cited: boolean
+    citationUrl: string | null
+    sources: string[]
+    checkedAt: string
+  }> = []
+
+  if (perplexityResult !== null) {
+    // Write the raw citation check result to article_ai_citations
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (serviceClient as any)
+      .from('article_ai_citations')
+      .insert({
         article_id: article.id,
         user_id: user.id,
         engine: 'perplexity',
-        week_start: weekStartDate,
-        checks_run: 1,
-        citations_found: result.cited ? 1 : 0,
-        updated_at: checkedAt,
-      },
-      {
-        onConflict: 'article_id,engine,week_start',
-        ignoreDuplicates: false,
-      }
-    )
+        keyword: article.target_keyword,
+        cited: perplexityResult.cited,
+        citation_url: perplexityResult.citationUrl,
+        sources: perplexityResult.sources,
+        checked_at: checkedAt,
+      })
 
-  return NextResponse.json({
-    cited: result.cited,
-    citationUrl: result.citationUrl,
-    sources: result.sources,
-    engine: 'perplexity',
-    checkedAt,
-  })
+    // Upsert the weekly summary row
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (serviceClient as any)
+      .from('article_ai_visibility')
+      .upsert(
+        {
+          article_id: article.id,
+          user_id: user.id,
+          engine: 'perplexity',
+          week_start: weekStartDate,
+          checks_run: 1,
+          citations_found: perplexityResult.cited ? 1 : 0,
+          updated_at: checkedAt,
+        },
+        {
+          onConflict: 'article_id,engine,week_start',
+          ignoreDuplicates: false,
+        }
+      )
+
+    engineResults.push({
+      engine: 'perplexity',
+      cited: perplexityResult.cited,
+      citationUrl: perplexityResult.citationUrl,
+      sources: perplexityResult.sources,
+      checkedAt,
+    })
+  }
+
+  if (geminiResult !== null) {
+    // Write the raw citation check result to article_ai_citations
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (serviceClient as any)
+      .from('article_ai_citations')
+      .insert({
+        article_id: article.id,
+        user_id: user.id,
+        engine: 'google_aio',
+        keyword: article.target_keyword,
+        cited: geminiResult.cited,
+        citation_url: geminiResult.citationUrl,
+        sources: geminiResult.sources,
+        checked_at: checkedAt,
+      })
+
+    // Upsert the weekly summary row
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (serviceClient as any)
+      .from('article_ai_visibility')
+      .upsert(
+        {
+          article_id: article.id,
+          user_id: user.id,
+          engine: 'google_aio',
+          week_start: weekStartDate,
+          checks_run: 1,
+          citations_found: geminiResult.cited ? 1 : 0,
+          updated_at: checkedAt,
+        },
+        {
+          onConflict: 'article_id,engine,week_start',
+          ignoreDuplicates: false,
+        }
+      )
+
+    engineResults.push({
+      engine: 'google_aio',
+      cited: geminiResult.cited,
+      citationUrl: geminiResult.citationUrl,
+      sources: geminiResult.sources,
+      checkedAt,
+    })
+  }
+
+  return NextResponse.json({ results: engineResults })
 }

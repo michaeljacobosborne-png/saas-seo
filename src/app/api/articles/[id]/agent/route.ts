@@ -44,12 +44,13 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { messages, mode, selectedText, fixInstruction, userInstruction } = await request.json() as {
+  const { messages, mode, selectedText, fixInstruction, userInstruction, currentContent } = await request.json() as {
     messages: Message[]
     mode?: 'review' | 'assist' | 'auto' | 'patch'
     selectedText?: string
     fixInstruction?: string
     userInstruction?: string   // optional focus instructions for auto mode
+    currentContent?: string    // current editor HTML (patch mode) — avoids stale DB reads when fixes are applied back-to-back
   }
 
   // Free tier: gate assist mode and enforce 3-turn cap on review
@@ -156,7 +157,10 @@ export async function POST(
   const contentGaps: Array<{ keyword: string; folder: string }> = contentGapsResult.data ?? []
 
   const scores = article.scores as ArticleScores | null
-  const fullContent = article.content ?? ''
+  // Patch mode sends the live editor HTML to avoid stale DB reads when multiple
+  // fixes are applied before the 1.5 s autosave fires. Fall back to DB content
+  // for all other modes (review / assist / auto) which don't have this problem.
+  const fullContent = (mode === 'patch' && currentContent) ? currentContent : (article.content ?? '')
 
   const weakAreasSection = scores ? `
 WEAK AREAS TO PRIORITIZE (translate into specific editorial actions — do NOT recite verbatim):

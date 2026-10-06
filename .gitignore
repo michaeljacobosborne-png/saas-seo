@@ -56,3 +56,6 @@ src_app_*.txt
 # archives and exported site builds
 *.zip
 byline-site - branded/
+
+# local-only security audit — must never be committed
+SECURITY-AUDIT.md
