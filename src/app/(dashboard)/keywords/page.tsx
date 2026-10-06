@@ -327,20 +327,20 @@ export default function KeywordsPage() {
         </div>
       ) : projects.length === 0 ? (
         <div className="border-2 border-dashed rounded-2xl p-12 text-center" style={{ borderColor: 'var(--border)' }}>
-          <div className="inline-flex p-3 bg-violet-50 rounded-xl mb-4">
-            <Search className="w-6 h-6 text-violet-500" />
+          <div className="inline-flex p-3 rounded-xl mb-4" style={{ background: 'rgba(184,115,51,0.08)' }}>
+            <Search className="w-6 h-6" style={{ color: 'var(--copper-lt)' }} />
           </div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--cream-dim)' }}>No projects yet</h3>
-          <p className="text-sm mb-4" style={{ color: 'var(--cream-dim)' }}>
-            Start a conversation with the AI research assistant to discover targeted keywords.
+          <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--cream)' }}>No keywords yet</h3>
+          <p className="text-sm max-w-sm mx-auto mb-5" style={{ color: 'var(--cream-dim)' }}>
+            Start by searching for a topic in your niche. We&apos;ll surface high-value keywords and cluster them for you.
           </p>
           <button
             onClick={openDiscover}
             className="inline-flex items-center gap-2 px-4 py-2 text-[var(--cream)] text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
             style={{ background: 'var(--copper)' }}
           >
-            <Plus className="w-4 h-4" />
-            New Research
+            <Search className="w-4 h-4" />
+            Run keyword search →
           </button>
         </div>
       ) : (

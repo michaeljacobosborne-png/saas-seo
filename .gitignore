@@ -59,3 +59,12 @@ byline-site - branded/
 *.tar.gz
 claude-backup.zip
 cowork-audit*
+
+# local-only security audit; must never be committed
+SECURITY-AUDIT.md
+
+# Stale Cowork deploy notes in C:\dev\Byline. They contain a live Vercel deploy
+# hook URL, so a careless git add -A must never pick them up.
+ACTION_REQUIRED.txt
+COMMIT_NOW.md
+DEPLOY.ps1

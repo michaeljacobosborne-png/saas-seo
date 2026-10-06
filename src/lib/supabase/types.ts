@@ -1,5 +1,15 @@
 export type BrandVoice = 'professional' | 'friendly' | 'authoritative' | 'conversational' | 'witty' | 'inspirational'
 
+/** brand_profiles.voice_fingerprint (migration 20260705_brand_voice_fingerprint). */
+export type VoiceFingerprint = {
+  style_summary: string
+  phrases: string[]
+  sample: string
+  avoid: string
+  posts_analyzed: number
+  crawled_at: string
+}
+
 export interface Subscription {
   id: string
   user_id: string

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState, KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { BrandProfile } from '@/lib/supabase/types'
+import type { BrandProfile, VoiceFingerprint } from '@/lib/supabase/types'
+import { VoiceSetupWidget } from '@/components/VoiceSetupWidget'
 import BrandOnboarding from './_components/BrandOnboarding'
 import {
   Loader2, Send, X, Plus, Building2, Target, MessageSquare,
@@ -113,6 +114,9 @@ export default function BrandPage() {
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null)
   // False until the author migration is applied: then the row carries the keys.
   const [authorSupported, setAuthorSupported] = useState(false)
+  // Voice Personality (paid only): wiring re-applied from Michael's parked work, 2026-10-06.
+  const [accountType, setAccountType] = useState<string | null>(null)
+  const [voiceFingerprint, setVoiceFingerprint] = useState<VoiceFingerprint | null>(null)
   const [isUpdate, setIsUpdate] = useState(false)
 
   // Chat state
@@ -152,10 +156,19 @@ export default function BrandPage() {
       .eq('user_id', user.id)
       .maybeSingle()
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: acct } = await (supabase as any)
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    setAccountType(acct?.account_type ?? null)
+
     if (data) {
       const profile = data as ProfileRow
       setExistingProfile(profile)
       setAuthorSupported('author_name' in data)
+      setVoiceFingerprint(((data as { voice_fingerprint?: VoiceFingerprint | null }).voice_fingerprint) ?? null)
       setEditForm({
         brand_name: profile.brand_name,
         website_url: profile.website_url ?? '',
@@ -692,6 +705,14 @@ export default function BrandPage() {
           )}
         </div>
       </div>
+
+      {/* Voice Personality: paid only, separate from onboarding */}
+      <VoiceSetupWidget
+        websiteUrl={p.website_url ?? null}
+        isPaid={accountType === 'paid'}
+        existingFingerprint={voiceFingerprint}
+        onSaved={(fp) => setVoiceFingerprint(fp)}
+      />
 
       {/* Edit modal */}
       {showEditModal && (
