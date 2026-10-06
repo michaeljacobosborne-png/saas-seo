@@ -3,23 +3,23 @@ import GeoAnalyzerClient from './_components/GeoAnalyzerClient'
 import { ORG_ID } from '@/lib/structured-data'
 
 export const metadata: Metadata = {
-  title: 'Free GEO Analyzer — Check Your AI Citation Score | Byline',
+  title: 'Free GEO Analyzer — Can AI Search Read Your Site? | Byline',
   description:
-    'See how likely ChatGPT, Gemini, and Perplexity are to recommend your site. Get your free Generative Engine Optimization score in 30 seconds.',
+    'Check how ready your site is for AI search to reach, parse and quote: crawler access, structure and attribution, scored on the page with evidence for every finding. It does not measure whether any AI system cites you.',
   alternates: {
     canonical: 'https://app.bylineseo.com/geo-analyzer',
   },
   openGraph: {
-    title: 'Free GEO Analyzer — Check Your AI Citation Score',
+    title: 'Free GEO Analyzer — Can AI Search Read Your Site?',
     description:
-      'See how likely ChatGPT, Gemini, and Perplexity are to recommend your site. Free Generative Engine Optimization score in 30 seconds.',
+      'Check how ready your site is for AI search to reach, parse and quote, with evidence for every finding. Free, in about 30 seconds.',
     url: 'https://app.bylineseo.com/geo-analyzer',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free GEO Analyzer — Check Your AI Citation Score',
-    description: 'See how likely AI chatbots are to recommend your site. Free GEO score in 30 seconds.',
+    title: 'Free GEO Analyzer — Can AI Search Read Your Site?',
+    description: 'How ready is your site for AI search to read and quote? Free check, evidence included.',
   },
 }
 

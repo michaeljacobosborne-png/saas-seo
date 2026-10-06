@@ -41,7 +41,7 @@ function FreeToolsDropdown() {
             className="block px-4 py-2.5 text-sm text-[#A89070] hover:text-[#F7F3EC] hover:bg-white/5 transition-colors"
           >
             GEO Analyzer
-            <span className="block text-xs text-[#57534E] mt-0.5">AI citation score</span>
+            <span className="block text-xs text-[#57534E] mt-0.5">AI search readiness</span>
           </Link>
           <Link
             href="/ao-analyzer"
