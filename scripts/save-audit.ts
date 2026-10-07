@@ -27,17 +27,21 @@ async function main() {
   }
   // Imported after dotenv so the engine sees the keys.
   const { runAudit } = await import('../src/lib/geo-audit')
-  const { normaliseUrl } = await import('../src/lib/geo-audit/fetch')
+  const { normaliseUrl, BYLINE_USER_AGENT } = await import('../src/lib/geo-audit/fetch')
   const { probeCrawlerAccess } = await import('../src/lib/geo-audit/crawler-access')
+  const { fetchRobotsTxt } = await import('../src/lib/geo-audit/robots')
 
   const url = normaliseUrl(rawUrl)
   const now = new Date()
+  // robots.txt first, so each probe row can show what the site declares beside
+  // what the origin did (the divergence is the practitioner-relevant finding).
+  const robots = await fetchRobotsTxt(url, { userAgent: BYLINE_USER_AGENT }).then((r) => r.parsed ?? null, () => null)
   const [outcome, probe] = await Promise.all([
     runAudit(url, rawTool, { now, onProgress: (m) => console.error(`  ${m}`) }).then(
       (report) => ({ report, error: null as string | null }),
       (err: unknown) => ({ report: null, error: err instanceof Error ? err.message : String(err) }),
     ),
-    probeCrawlerAccess(url, { now }).catch(() => null),
+    probeCrawlerAccess(url, { now, robots }).catch(() => null),
   ])
 
   // Date, time to the second, and the page path, so two runs on one domain in
@@ -127,7 +131,7 @@ async function main() {
     ...(probe
       ? [
           `Baseline browser request: HTTP ${probe.baseline.status ?? 'no response'}${probe.baselineFailed ? ' (FAILED, so every row is unknown)' : ''}`,
-          ...probe.probes.map((p) => `- ${p.token} (${p.class}): HTTP ${p.status ?? '—'}, ${p.blockKind}, robots ${p.robotsVerdict}. ${p.evidence}`),
+          ...probe.probes.map((p) => `- ${p.token} (${p.class}): HTTP ${p.status ?? '—'}, ${p.blockKind}, robots ${p.robotsVerdict}${p.attributable ? '' : ', NOT attributable'}${p.divergence ? `, DIVERGENCE ${p.divergence}` : ''}. ${p.evidence}`),
           ...probe.caveats.map((c) => `> ${c}`),
         ]
       : ['Probe did not complete.']),

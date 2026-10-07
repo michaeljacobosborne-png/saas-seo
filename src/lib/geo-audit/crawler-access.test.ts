@@ -130,6 +130,33 @@ describe('probeCrawlerAccess — block classification', () => {
     expect(p.contentServed).toBe(false)
   })
 
+  it('does not call a full page with a reCAPTCHA contact form a challenge', async () => {
+    // screamingfrog.co.uk, 2026-10-07: a 200 KB real page carrying a reCAPTCHA
+    // script was reported as "a bot challenge, not the page" for every row.
+    const big = '<html><head><script src="https://www.google.com/recaptcha/api.js"></script></head><body>' + 'x'.repeat(60_000) + '</body></html>'
+    const r = await run(() => ({ status: 200, body: big }))
+    expect(r.baselineFailed).toBe(false)
+    for (const p of r.probes) {
+      expect(p.blockKind).toBe('none')
+      expect(p.contentServed).toBe(true)
+    }
+  })
+
+  it('still catches a small Turnstile-only challenge page', async () => {
+    const r = await run((ua) =>
+      ua.includes('GPTBot')
+        ? { status: 200, body: '<html><body><div class="cf-turnstile"></div><script src="https://challenges.example/turnstile/v0/api.js"></script></body></html>' }
+        : { status: 200, body: PAGE },
+    )
+    expect(byToken(r, 'GPTBot').blockKind).toBe('bot-management')
+  })
+
+  it('does not report a divergence when the baseline was refused too', async () => {
+    const r = await run(() => ({ status: 200, body: CHALLENGE }), 'User-agent: *\nAllow: /')
+    expect(r.baselineFailed).toBe(true)
+    for (const p of r.probes) expect(p.divergence).toBeNull()
+  })
+
   it('does not call a rate limit a block', async () => {
     const r = await run((ua) =>
       ua.includes('ClaudeBot') ? { status: 429, headers: { 'retry-after': '60' } } : { status: 200, body: PAGE },

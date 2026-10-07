@@ -11,6 +11,7 @@
 
 import { probeCrawlerAccess, summarise, isPolicyBlock } from '../src/lib/geo-audit/crawler-access'
 import { fetchRobotsTxt } from '../src/lib/geo-audit/robots'
+import { BYLINE_USER_AGENT } from '../src/lib/geo-audit/fetch'
 
 const KIND_LABEL: Record<string, string> = {
   none: 'served',
@@ -35,7 +36,7 @@ async function main() {
 
   let robots = null
   try {
-    const r = await fetchRobotsTxt(new URL(url).origin)
+    const r = await fetchRobotsTxt(url, { userAgent: BYLINE_USER_AGENT })
     robots = r.parsed ?? null
   } catch {
     robots = null

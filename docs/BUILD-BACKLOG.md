@@ -19,6 +19,13 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
 - A 200 whose body is a JavaScript challenge is reported as "served". Detect challenge pages (same body as the baseline challenge, a self-submitting form, no content).
 - A repeated 429 with `x-ratelimit-used: 0` is labelled "rate limited, not a policy block". Label it as a refusal.
 - These affect prospect reports and anything published from the crawler check.
+- FIXED 2026-10-07: the opposite error. reCAPTCHA/hCaptcha/Turnstile markers labelled full pages with a protected contact form "a bot challenge, not the page" (screamingfrog.co.uk, varn.co.uk, withcandour.co.uk: every row, baseline included). Those markers now count only on a response under 30 KB. Divergence is no longer reported when the baseline was refused too. Any prospect reading from before this fix that says "bot challenge" must be re-run.
+- Open (found 2026-10-07, outreach audits):
+  - Some origins (aira.net, zelst.co.uk) serve or refuse a crawler UA depending on the other request headers: 200 with Accept/Accept-Language, 403 without. The probe's verdict is therefore about our request shape, not the crawler. Report such rows as unconfirmed, or probe twice with different header sets and report only what agrees.
+  - Named authorship missed named staff on varn.co.uk/about-us (CEO and Comms Director named in text) and reported "absent".
+  - Brand-claim proximity matches the Organization's legal name ("Candour Agency Ltd", "Zelst Limited") rather than the brand, so it reports "absent" when the brand is in the copy.
+  - Original evidence counted the agency's own CEO quote as "named client feedback" (varn.co.uk).
+  - Proprietary terms picked "Continue Reading" and "San Diego" (screamingfrog.co.uk): UI strings and place names need excluding.
 
 ## 2b. Blog drafts (content/blog)
 - `which-ai-crawlers-your-site-actually-serves.md`: the Reddit section states the 30 September reading as fact. Correct it before publishing; the 2026-10-05 re-run showed the 200s were a JavaScript challenge and the 429s a zero-quota refusal.

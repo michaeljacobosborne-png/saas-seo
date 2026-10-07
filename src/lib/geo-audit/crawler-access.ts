@@ -210,12 +210,20 @@ const EDGE_SIGNATURES: { vendor: string; header: string; match?: RegExp }[] = [
 const CHALLENGE_MARKERS = [
   /just a moment/i,
   /checking your browser/i,
-  /cf-challenge|cf_chl_opt|turnstile/i,
-  /hcaptcha|recaptcha/i,
+  /cf-challenge|cf_chl_opt/i,
   /enable javascript and cookies to continue/i,
   /attention required/i,
   /access denied.*(?:ray id|reference)/i,
 ]
+
+/**
+ * Widget names that also appear on ordinary pages (a contact form protected by
+ * reCAPTCHA or Turnstile). They indicate a challenge only on a small response
+ * that is plausibly nothing but the challenge; on a full page they were
+ * labelling real content as "a bot challenge, not the page".
+ */
+const WEAK_CHALLENGE_MARKERS = [/hcaptcha|recaptcha|turnstile/i]
+const CHALLENGE_PAGE_MAX_BYTES = 30_000
 
 function detectEdge(headers: Headers): string | null {
   for (const sig of EDGE_SIGNATURES) {
@@ -266,7 +274,10 @@ function classify(r: RawResult): {
   const edgeVendor = r.headers ? detectEdge(r.headers) : null
   const mitigated = r.headers?.get('cf-mitigated') ?? null
   const retryAfter = r.headers?.get('retry-after') ?? null
-  const challenged = CHALLENGE_MARKERS.some((re) => re.test(r.body))
+  const smallBody = !r.truncated && r.bytes < CHALLENGE_PAGE_MAX_BYTES
+  const challenged =
+    CHALLENGE_MARKERS.some((re) => re.test(r.body)) ||
+    (smallBody && WEAK_CHALLENGE_MARKERS.some((re) => re.test(r.body)))
 
   // 2xx that is actually a challenge page. Cloudflare serves these with 200 or
   // 403 depending on configuration, so status alone is not enough.
@@ -506,9 +517,10 @@ export async function probeCrawlerAccess(
         : 'disallowed'
     }
 
-    // Divergence is only meaningful when we know both halves.
+    // Divergence is only meaningful when we know both halves. A refusal the
+    // baseline also got is not the origin treating this crawler differently.
     let divergence: CrawlerProbe['divergence'] = null
-    if (robotsVerdict === 'allowed' && !c.contentServed && isPolicyBlock(c.blockKind)) {
+    if (robotsVerdict === 'allowed' && !c.contentServed && isPolicyBlock(c.blockKind) && !baselineFailed) {
       divergence = 'robots-allows-origin-blocks'
     } else if (robotsVerdict === 'disallowed' && c.contentServed) {
       divergence = 'robots-blocks-origin-serves'
