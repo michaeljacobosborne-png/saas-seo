@@ -38,7 +38,7 @@ const jsonLd = {
   },
   publisher: { '@type': 'Organization', '@id': ORG_ID, name: 'Byline' },
   featureList: [
-    'AI crawler access test',
+    'AI crawler access check, with baseline request',
     'Extractability and chunking analysis',
     'Entity and structured data checks',
     'Evidence-backed GEO readiness score',

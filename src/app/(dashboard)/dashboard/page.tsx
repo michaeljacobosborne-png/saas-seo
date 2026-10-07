@@ -426,8 +426,8 @@ export default async function DashboardPage() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)] mb-3">Quick actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { href: '/keywords', icon: Search, title: 'Start keyword research', desc: 'Discover high-value keywords to target.' },
-              { href: '/articles/new', icon: Sparkles, title: 'Create article', desc: 'Generate an SEO-optimized draft.' },
+              { href: '/keywords', icon: Search, title: 'Start keyword research', desc: 'Search volume and difficulty from DataForSEO.' },
+              { href: '/articles/new', icon: Sparkles, title: 'Create article', desc: 'Generate a draft, scored before you publish.' },
               { href: '/content-audit', icon: BarChart2, title: 'Run content audit', desc: 'Score and improve existing content.' },
             ].map(({ href, icon: Icon, title, desc }) => (
               <Link

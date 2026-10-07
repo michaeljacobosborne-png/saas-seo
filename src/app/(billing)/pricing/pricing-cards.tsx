@@ -25,7 +25,7 @@ const PLANS = [
   {
     id: 'starter' as Plan,
     name: 'Starter',
-    tagline: 'Everything you need to start ranking.',
+    tagline: 'Everything you need to write and score your first drafts.',
     cta: 'Start with Starter',
     monthlyPrice: 49,
     annualPrice: 470,
@@ -34,7 +34,7 @@ const PLANS = [
       'AI keyword discovery agent',
       '8 articles per month',
       '10 keyword sessions per month',
-      'SEO, Readability, GEO + AEO scoring',
+      'Retrievable score and Citable band, with evidence',
       'Agent review mode',
       'Global keyword cache',
       'Email support',
@@ -89,7 +89,7 @@ const FAQS = [
   },
   {
     q: 'Is the agent really different from just using ChatGPT?',
-    a: "Yes. ChatGPT has no access to your article, your scores, your keyword data, or your brand profile. Byline's agent has all of that in context — it knows what's actually wrong and where, and can apply the fix without you leaving the editor.",
+    a: "Yes. ChatGPT has no access to your article, your scores, your keyword data, or your brand profile. Byline's agent has all of that in context, including the findings the scorer flagged and where, and can apply the fix without you leaving the editor.",
   },
   {
     q: 'Do you offer a free trial?',
@@ -176,7 +176,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       {/* Hero */}
       <div className="px-6 pt-16 pb-10 text-center">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 max-w-2xl mx-auto leading-tight">
-          Content that ranks. An agent that fixes it.
+          Scored from your page. An agent that fixes it.
         </h1>
         <p className="text-[#A89070] text-lg max-w-xl mx-auto leading-relaxed">
           Byline combines AI keyword research, SEO-optimized article generation, and a real editorial agent that rewrites your content — not just scores it.
@@ -416,13 +416,13 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           <h2 className="text-2xl font-bold mb-8">Why not just use Surfer or Frase?</h2>
           <div className="space-y-5 text-[#A89070] leading-relaxed text-[15px]">
             <p>
-              Surfer SEO gives you a score and a list of keywords to add. Frase gives you a content brief. Both tell you what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, identifies specific sentences and sections that are underperforming, and rewrites them — directly inside your editor, with one click.
+              Surfer SEO gives you a score and a list of keywords to add. Frase gives you a content brief. Both tell you what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, works from the sections the scorer flagged, and rewrites them — directly inside your editor, with one click.
             </p>
             <p>
-              The editorial agent runs on claude-sonnet — the model SEO professionals use when they need real editorial judgment, not generic writing tips. It&apos;s been trained on Byline&apos;s SEO framework — E-E-A-T signals, topical authority, AEO and GEO optimization — so its suggestions are grounded in what actually moves rankings.
+              The scores come from deterministic code that reads your page, with the evidence shown under each finding. The editorial agent runs on Claude Sonnet and writes the fix. It never sets a score.
             </p>
             <p>
-              And because Byline&apos;s keyword database is shared across all accounts, your research loads from cache on repeat queries — which means your results get faster the more you use the platform, and your API costs stay flat as the user base grows.
+              And because Byline&apos;s keyword database is shared across all accounts, your research loads from cache on repeat queries — which means your results get faster the more you use the platform.
             </p>
           </div>
         </div>
@@ -458,7 +458,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       {/* Bottom CTA */}
       <div className="px-6 py-16 text-center border-t border-[rgba(184,115,51,0.15)]">
         <h2 className="text-3xl font-bold mb-6 max-w-lg mx-auto leading-tight">
-          Start with a keyword. Leave with an article that ranks.
+          Start with a keyword. Leave with a draft you can check line by line.
         </h2>
         <Link
           href="/signup"

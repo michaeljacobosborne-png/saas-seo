@@ -40,7 +40,7 @@ export async function POST() {
 
     if ((count ?? 0) >= 1) {
       return NextResponse.json({
-        error: "You've used your free article. Upgrade to write unlimited articles.",
+        error: "You've used your free article. Paid plans include a monthly article allowance.",
         code: 'FREE_TIER_LIMIT',
       }, { status: 403 })
     }

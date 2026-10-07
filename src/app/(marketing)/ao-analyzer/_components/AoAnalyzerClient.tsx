@@ -208,11 +208,11 @@ export default function AoAnalyzerClient() {
             style={playfair}
             className="text-[40px] sm:text-[52px] font-bold leading-[1.08] tracking-tight text-[#1C1917] mb-6"
           >
-            Are You Winning AI-Generated Answers?
+            Can an answer be lifted from this page?
           </h1>
           <p className="text-lg text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-10">
-            Check your AO score — see how well your content is structured to appear in featured
-            snippets and AI answers.
+            Answer extraction is a structural property. Byline checks whether your page has a passage
+            that survives being pulled out of it, and shows you the passage it found.
           </p>
 
           <div className="max-w-xl mx-auto">
@@ -272,7 +272,7 @@ export default function AoAnalyzerClient() {
               {
                 num: '03',
                 heading: 'Get your optimization roadmap',
-                body: 'See exactly which factors are holding you back from featured snippets and AI answers, with a prioritized list of actionable fixes.',
+                body: 'Which factors scored, which did not, and the text or markup behind each one. Anything that could not be checked is labelled rather than scored as a zero.',
               },
             ].map((step) => (
               <div key={step.num}>
@@ -554,14 +554,20 @@ export default function AoAnalyzerClient() {
           </h2>
           <div className="text-[#57534E] text-[17px] leading-relaxed">
             <p>
-              Answer Optimization (AO) focuses on content structure — question-based headings,
-              direct concise answers, scannable formatting, and FAQ coverage. It targets featured
-              snippets in Google and position-zero placements in AI answers. Generative Engine
-              Optimization (GEO) focuses on entity and authority signals — schema markup, author
-              bios, citable data, and brand clarity — that let AI systems identify your site and
-              attribute what they quote to it. The best content strategies apply both: AO to win individual answer
-              placements, GEO to build the authority that makes your site a go-to reference across
-              many queries.
+              AO and GEO are two views of one problem. AO looks at whether a single passage can be
+              extracted cleanly. GEO looks at whether the whole page can be reached and parsed before
+              extraction is even possible.
+            </p>
+            <p className="mt-4">
+              Neither one is a placement. Featured snippet selection is Google&apos;s decision and answer
+              composition is the model&apos;s. Byline reports the condition of your page, which is the part
+              you control.
+            </p>
+            <p className="mt-4 text-sm text-[#78716C]">
+              This is an assessment of how ready your content is to be quoted in an answer. It is not a
+              measurement of how often AI tools or featured snippets currently surface it. Nobody outside
+              Google, OpenAI or Perplexity can measure that from your HTML, and a tool that offers to is
+              guessing. A higher score means fewer structural obstacles. It is not a prediction.
             </p>
           </div>
         </div>
@@ -574,11 +580,11 @@ export default function AoAnalyzerClient() {
             style={playfair}
             className="text-3xl sm:text-4xl font-bold text-[#F7F3EC] mb-4 leading-tight"
           >
-            Ready to start winning AI answers?
+            Ready to see what comes out of your page?
           </h2>
           <p className="text-lg text-[#A89070] mb-9 leading-relaxed">
-            Run a free AO analysis above — or sign up to generate your first answer-optimized
-            article in under 60 seconds.
+            Run a free AO analysis above — or sign up to generate a draft and score it before
+            you publish.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button

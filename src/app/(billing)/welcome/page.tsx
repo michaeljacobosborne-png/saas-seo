@@ -121,7 +121,7 @@ export default function WelcomePage() {
           You&apos;re in.
         </h1>
         <p className="text-base mb-8" style={{ color: '#A89070' }}>
-          Your Byline subscription is active. Time to start ranking.
+          Your Byline subscription is active. Start with a page you already worry about.
         </p>
 
         {timedOut ? (

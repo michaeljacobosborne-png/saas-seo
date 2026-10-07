@@ -2,17 +2,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Featured In — Byline',
-  description:
-    'Byline is recognized and featured across leading AI tool directories, SEO communities, and product discovery platforms.',
+  title: 'Listed on — Byline',
+  description: 'Byline is listed on dang.ai and Fazier.',
 }
 
 const playfair = { fontFamily: 'var(--font-playfair, "Playfair Display", serif)' }
-
-const comingSoonSlots = [
-  { label: 'Product Hunt' },
-  { label: 'Futurepedia' },
-]
 
 export default function FeaturedPage() {
   return (
@@ -44,30 +38,22 @@ export default function FeaturedPage() {
       {/* Hero */}
       <section className="px-6 pt-20 pb-16 text-center">
         <div className="max-w-3xl mx-auto">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B87333] mb-5">
-            Press &amp; Recognition
-          </p>
           <h1
             style={playfair}
             className="text-[40px] sm:text-[52px] font-bold leading-[1.08] tracking-tight text-[#1C1917] mb-6"
           >
-            As Seen In
+            Listed on
           </h1>
           <p className="text-lg text-[#57534E] leading-relaxed max-w-2xl mx-auto">
-            Byline is recognized by leading AI tool directories, SEO communities, and product discovery
-            platforms used by thousands of marketers and content teams.
+            Byline is listed on dang.ai and Fazier.
           </p>
         </div>
       </section>
 
-      {/* Badges grid */}
+      {/* Badges */}
       <section className="bg-[#F7F3EC] px-6 py-20">
-        <div className="max-w-5xl mx-auto">
-          <h2 style={playfair} className="text-2xl sm:text-3xl font-bold text-center text-[#1C1917] mb-12">
-            Featured &amp; Verified
-          </h2>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="grid gap-6 sm:grid-cols-2">
             {/* Dang.ai — live badge */}
             <div className="flex flex-col items-center justify-center rounded-2xl border border-[#E7E0D6] bg-white p-8 text-center gap-4">
               {/* eslint-disable-next-line react/jsx-no-target-blank */}
@@ -88,7 +74,7 @@ export default function FeaturedPage() {
                 />
               </a>
               <p className="text-xs text-[#998876]">
-                Listed on <a href="https://dang.ai" rel="dofollow noopener" target="_blank" className="underline hover:text-[#1C1917]">dang.ai</a> — the curated AI tools directory trusted by builders and marketers.
+                Listed on <a href="https://dang.ai" rel="dofollow noopener" target="_blank" className="underline hover:text-[#1C1917]">dang.ai</a>.
               </p>
             </div>
 
@@ -111,45 +97,10 @@ export default function FeaturedPage() {
                 />
               </a>
               <p className="text-xs text-[#998876]">
-                Featured on <a href="https://fazier.com/launches/bylineseo.com" rel="noopener" target="_blank" className="underline hover:text-[#1C1917]">fazier.com</a> — the AI product launch platform.
+                Listed on <a href="https://fazier.com/launches/bylineseo.com" rel="noopener" target="_blank" className="underline hover:text-[#1C1917]">fazier.com</a>.
               </p>
             </div>
-
-            {/* Coming soon placeholders */}
-            {comingSoonSlots.map(({ label }) => (
-              <div
-                key={label}
-                className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#D1C9BC] bg-white/60 p-8 text-center gap-3"
-              >
-                <div className="w-12 h-12 rounded-full border border-dashed border-[#D1C9BC] flex items-center justify-center">
-                  <span className="text-[#C4B8A7] text-lg font-light">+</span>
-                </div>
-                <p className="text-sm font-medium text-[#998876]">{label}</p>
-                <span className="text-[10px] uppercase tracking-widest text-[#C4B8A7] font-semibold">
-                  Coming soon
-                </span>
-              </div>
-            ))}
           </div>
-        </div>
-      </section>
-
-      {/* Why it matters */}
-      <section className="px-6 py-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 style={playfair} className="text-2xl sm:text-3xl font-bold text-[#1C1917] mb-6">
-            Trusted by SEO teams worldwide
-          </h2>
-          <p className="text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-10">
-            From indie creators to agency teams, Byline helps content professionals write SEO-optimized
-            articles that rank — and the tools community has taken notice.
-          </p>
-          <Link
-            href="/pricing"
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
-          >
-            Try Byline free
-          </Link>
         </div>
       </section>
 

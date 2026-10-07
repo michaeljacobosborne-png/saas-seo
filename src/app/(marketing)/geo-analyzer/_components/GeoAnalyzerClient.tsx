@@ -203,8 +203,9 @@ export default function GeoAnalyzerClient() {
             Can AI Search Read Your Site?
           </h1>
           <p className="text-lg text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-10">
-            See how ready your content is to be read, understood and quoted by ChatGPT, Gemini and
-            Perplexity — scored against your real page, with the evidence shown.
+            Scored from your page in code, with the evidence under every finding. Access, parseability,
+            chunkability, extractability, and whether a lifted passage would name you. Nothing here is a
+            measurement of what any AI system does with your content.
           </p>
 
           <div className="max-w-xl mx-auto">
@@ -499,11 +500,14 @@ export default function GeoAnalyzerClient() {
               answers, being usable in those answers, not just in blue links, matters more.
             </p>
             <p>
-              Unlike traditional SEO which targets search ranking algorithms, GEO targets the large
-              language models that generate conversational answers. These models favor content with
-              clear entity signals, citable facts, structured data, and demonstrated expertise.
-              Sites that optimize for these factors are significantly more likely to be referenced
-              when someone asks an AI a question in your niche.
+              Retrieval has prerequisites. A page an engine cannot fetch is not a candidate at all. Past
+              that, a page with no self-contained passage has nothing clean to lift, and a lifted passage
+              with no attribution anchor names nobody. Those are structural conditions on your page, and
+              they are what Byline checks.
+            </p>
+            <p>
+              What happens after that is model behaviour, and it is not observable from your HTML. Byline
+              does not estimate it.
             </p>
           </div>
 

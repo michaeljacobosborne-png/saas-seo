@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Search, FileText, Sparkles, Check, X } from 'lucide-react'
+import { Search, FileText, Sparkles, Check } from 'lucide-react'
 import type { Metadata } from 'next'
 import NavLinks from './_components/NavLinks'
 import FounderBanner from './_components/FounderBanner'
@@ -45,21 +45,12 @@ function PrimaryCta({ light = false }: { light?: boolean }) {
             : 'bg-[#B87333] text-[#F7F3EC] hover:bg-[#A0622A]'
         }`}
       >
-        Start writing content that ranks
+        Score your first draft
       </Link>
       <GuaranteeLine light={light} />
     </div>
   )
 }
-
-const COMPARISON_ROWS = [
-  { feature: 'Editorial agent that rewrites', byline: true, other: false },
-  { feature: 'Applies fixes to editor', byline: true, other: false },
-  { feature: 'Conversational keyword discovery', byline: true, other: false },
-  { feature: 'AEO + GEO scoring', byline: true, other: 'partial' as const },
-  { feature: 'Agent memory across sessions', byline: true, other: false },
-  { feature: 'Price', byline: 'From $49', other: 'From $89' },
-]
 
 const jsonLd = graph(organizationNode(), websiteNode(), personNode({ slug: 'michael-osborne' }), {
   '@type': 'SoftwareApplication',
@@ -108,11 +99,11 @@ export default function HomePage() {
       <section className="pt-20 pb-24 px-6 text-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-tight">
-            Content that ranks.<br className="hidden sm:block" /> An agent that fixes it.
+            Scored from your page.<br className="hidden sm:block" /> An agent that fixes it.
           </h1>
           <p className="text-xl text-[#A89070] max-w-2xl mx-auto mb-10 leading-relaxed">
-            Byline is the only SEO platform with an editorial agent that reads your article, identifies
-            what&apos;s holding it back, and rewrites the weak sections — directly inside your editor.
+            Byline scores your article in code, shows the evidence behind every finding, and its editorial
+            agent rewrites the flagged sections — directly inside your editor.
           </p>
           <PrimaryCta />
         </div>
@@ -137,54 +128,22 @@ export default function HomePage() {
       <section className="bg-[#231F1B] px-6 py-20">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold mb-10 text-[#F7F3EC]">Not another ChatGPT wrapper.</h2>
-          <div className="space-y-6 text-[#A89070] leading-relaxed text-[15px] mb-14">
+          <div className="space-y-6 text-[#A89070] leading-relaxed text-[15px]">
             <p>
               Surfer SEO gives you a score and a keyword list. Frase gives you a content brief. Both tell you
               what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, identifies
               the specific sentences holding you back, and rewrites them — directly inside your editor, with one click.
             </p>
             <p>
-              The agent runs on Claude Sonnet — the model SEO professionals reach for when they need real
-              editorial judgment, not generic writing tips. It&apos;s grounded in Byline&apos;s SEO framework: E-E-A-T
-              signals, topical authority, AEO and GEO optimization for AI search visibility.
+              The findings come from deterministic code that reads your page, with the evidence shown under each
+              one. The agent, which runs on Claude Sonnet, writes the fix. It never sets a score. Byline does not
+              measure AI visibility, and nothing that reads a page&apos;s HTML can.
             </p>
             <p>
               And because Byline&apos;s keyword database is shared across accounts, your research loads from cache
               on repeat queries. Your results get faster over time, and your cost-per-article stays flat as the
               platform grows.
             </p>
-          </div>
-          {/* Comparison table */}
-          <div className="rounded-2xl border border-[rgba(184,115,51,0.2)] overflow-hidden bg-[#1C1917] shadow-sm">
-            <div className="grid grid-cols-3 bg-[#2A2420] text-[#F7F3EC]">
-              <div className="px-5 py-4 text-sm font-semibold">Feature</div>
-              <div className="px-5 py-4 text-sm font-semibold text-[#D4954A]">Byline</div>
-              <div className="px-5 py-4 text-sm font-semibold text-[#A89070]">Surfer / Frase</div>
-            </div>
-            {COMPARISON_ROWS.map((row, i) => (
-              <div
-                key={row.feature}
-                className={`grid grid-cols-3 border-t border-[rgba(184,115,51,0.15)] ${i % 2 === 0 ? 'bg-[#1C1917]' : 'bg-[#231F1B]'}`}
-              >
-                <div className="px-5 py-3.5 text-sm text-[#A89070] flex items-center">{row.feature}</div>
-                <div className="px-5 py-3.5 text-sm font-medium text-[#B87333] flex items-center">
-                  {typeof row.byline === 'boolean' ? (
-                    row.byline
-                      ? <Check className="w-4 h-4 text-[#B87333]" />
-                      : <X className="w-4 h-4 text-[#A89070]" />
-                  ) : row.byline}
-                </div>
-                <div className="px-5 py-3.5 text-sm text-[#A89070] flex items-center">
-                  {typeof row.other === 'boolean' ? (
-                    row.other
-                      ? <Check className="w-4 h-4 text-emerald-500" />
-                      : <X className="w-4 h-4 text-[#A89070]" />
-                  ) : row.other === 'partial' ? (
-                    <span className="text-amber-500 text-xs font-medium">Partial</span>
-                  ) : row.other}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -193,7 +152,7 @@ export default function HomePage() {
       <section className="bg-[#231F1B] px-6 py-20">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-3 text-[#F7F3EC]">
-            From keyword to ranked article in under 30 minutes.
+            From keyword to scored draft in one workflow.
           </h2>
           <p className="text-center text-[#A89070] mb-14 max-w-xl mx-auto">
             One workflow. Research, generate, score, and fix — all without leaving Byline.
@@ -343,7 +302,7 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4 text-[#F7F3EC]">Simple pricing. Start small, scale when you&apos;re ready.</h2>
           <p className="text-[#A89070] mb-14 max-w-xl mx-auto">
-            Pick a plan and start publishing content that ranks. Upgrade or cancel anytime.
+            Pick a plan and score every draft before you publish it. Upgrade or cancel anytime.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Starter */}
@@ -374,7 +333,7 @@ export default function HomePage() {
                 $99<span className="text-base font-normal text-[#7A6555]">/mo</span>
               </div>
               <p className="text-sm text-[#A89070] leading-relaxed mb-6">
-                Full agent access, unlimited articles, Assist mode, and persistent memory.
+                Full agent access, 30 articles a month, Assist mode, and persistent memory.
               </p>
               <Link
                 href="/pricing"
@@ -411,7 +370,7 @@ export default function HomePage() {
       <section className="bg-[#B87333] px-6 py-20 text-center">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-[#F7F3EC] mb-8 leading-tight">
-            Start with a keyword. Leave with an article that ranks.
+            Start with a keyword. Leave with a draft you can check line by line.
           </h2>
           <PrimaryCta light />
         </div>
@@ -426,7 +385,7 @@ export default function HomePage() {
             <div className="col-span-2 sm:col-span-1">
               <p className="text-[#B87333] font-semibold text-base mb-3">Byline</p>
               <p className="text-[#7A6555] text-sm leading-relaxed">
-                Content built to be found in search and easy for AI engines to read, quote and credit.
+                Content structured for search and easy for AI engines to read, quote and credit.
               </p>
             </div>
 

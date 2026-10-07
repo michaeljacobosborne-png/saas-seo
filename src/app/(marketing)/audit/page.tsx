@@ -250,11 +250,12 @@ export default function PublicAuditPage() {
             style={playfair}
             className="text-[40px] sm:text-[52px] font-bold leading-[1.08] tracking-tight text-[#1C1917] mb-6"
           >
-            See Exactly Where Your Content Strategy Is Losing
+            Map what you have published against what you have not
           </h1>
           <p className="text-lg text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-10">
-            Byline maps your published content against real search demand and shows you the gaps your
-            competitors are filling — in under 60 seconds.
+            Byline reads your sitemap and groups what you have published, then suggests topics adjacent to
+            your coverage. The suggestions come from a model reading your page titles, so they are a starting
+            point for your own keyword research rather than a measurement.
           </p>
 
           {/* URL input form — the above-the-fold CTA */}
@@ -308,13 +309,13 @@ export default function PublicAuditPage() {
               },
               {
                 num: '02',
-                heading: 'We map content against search intent',
-                body: "Every page gets matched against real keyword clusters. We're not just counting words — we're analyzing whether your content covers the queries that actually drive traffic in your niche.",
+                heading: 'We group what you have published',
+                body: "A model reads your page titles and groups them into the topics you already cover. No search volume or competitor data is fetched for this step.",
               },
               {
                 num: '03',
-                heading: 'You get a prioritized gap report',
-                body: "The audit surfaces content topics with real search demand that your site doesn't cover. Each gap is scored by opportunity — so you know exactly what to build next.",
+                heading: 'You get suggested topics',
+                body: "Topics your published pages do not appear to cover. The ordering is the model's suggestion, not a measurement.",
               },
             ].map((step) => (
               <div key={step.num}>
@@ -341,18 +342,13 @@ export default function PublicAuditPage() {
               what a customer asked about last week, what a competitor wrote about last month.
             </p>
             <p>
-              Meanwhile, your competitors are methodically filling every intent cluster in your niche.
-              And Google is rewarding them for it.
+              A map of what you have already published is the first step. It shows which topics you cover
+              well and which adjacent ones you have never touched.
             </p>
             <p>
-              The content that drives compounding organic traffic isn&apos;t the content you think you
-              need. It&apos;s the 40–60 topics that sit one step outside your current coverage — the
-              adjacent questions your audience is already searching for that you&apos;ve never answered.
-            </p>
-            <p>
-              A content gap audit is the difference between a content calendar built on instinct and one
-              built on data. Most teams skip it because it&apos;s tedious to do manually. Byline does it
-              in under a minute.
+              Most teams skip it because it&apos;s tedious to do by hand. Byline builds the map from your
+              sitemap. Take the suggested topics into keyword research, where volume and difficulty are real,
+              before you commit to any of them.
             </p>
           </div>
         </div>
@@ -392,16 +388,11 @@ export default function PublicAuditPage() {
           {/* Results */}
           {status === 'done' && result && (
             <div className="space-y-6 mb-8">
-              {/* Trust signal */}
-              <p className="text-center text-xs text-[#998876]">
-                Analyzed 10,000+ URLs across 50+ niches.
-              </p>
-
               {/* Summary banner */}
               <div className="bg-[#B87333]/8 border border-[#E7E0D6] rounded-xl px-5 py-3">
                 <p className="text-sm text-[#1C1917]">
                   Scanned <strong>{result.pageCount}</strong> pages.
-                  Found <strong>{result.gaps?.length ?? 0}</strong> content gaps.
+                  <strong>{result.gaps?.length ?? 0}</strong> suggested topics.
                 </p>
               </div>
 
@@ -655,17 +646,17 @@ export default function PublicAuditPage() {
               {
                 icon: Zap,
                 heading: 'Quick Wins',
-                body: 'Low-competition content gaps you can start filling this week. Topics with real search demand and manageable competition scores.',
+                body: 'Topics close to pages you already have, suggested by a model. Check them in keyword research before you write.',
               },
               {
                 icon: Target,
                 heading: 'Strategic Opportunities',
-                body: 'High-value topics worth a full content build-out. These are the pieces that compound — articles that earn links and rank for dozens of long-tail variants.',
+                body: 'Topics adjacent to what you have already published, suggested by a model reading your page titles. Take them into keyword research before you commit to any of them.',
               },
               {
                 icon: Telescope,
-                heading: 'Competitive Intelligence',
-                body: 'See what your rivals rank for that you don’t. The audit cross-references your content map against common competitor signals to surface the clearest gaps.',
+                heading: 'Your content map',
+                body: 'Your published pages grouped by topic, so you can see where your coverage is deep and where it is thin. Read from your sitemap.',
               },
             ].map((card) => {
               const Icon = card.icon
@@ -690,10 +681,10 @@ export default function PublicAuditPage() {
       <section className="bg-[#1C1917] px-6 py-24 text-center">
         <div className="max-w-2xl mx-auto">
           <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-[#F7F3EC] mb-4 leading-tight">
-            Ready to turn gaps into traffic?
+            Start with your sitemap
           </h2>
           <p className="text-lg text-[#A89070] mb-9 leading-relaxed">
-            Run a free audit above — or sign up to generate your first article in under 60 seconds.
+            Run a free audit above — or sign up to generate a draft and score it before you publish.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button

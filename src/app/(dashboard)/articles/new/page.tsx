@@ -584,7 +584,7 @@ function NewArticleWizard() {
             </div>
             <h2 className="text-lg font-bold text-[var(--cream)] mb-2">Free article used</h2>
             <p className="text-sm text-[var(--cream-dim)] mb-6">
-              You&apos;ve used your free article. Upgrade to write unlimited articles.
+              You&apos;ve used your free article. Paid plans include a monthly article allowance.
             </p>
             <div className="flex flex-col gap-2">
               <Link

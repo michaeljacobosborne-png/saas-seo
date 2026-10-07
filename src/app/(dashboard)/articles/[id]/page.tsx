@@ -1442,7 +1442,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               <div>
                 <h3 className="text-sm font-semibold text-[var(--cream)]">Link Opportunities</h3>
                 <p className="text-xs text-[var(--cream-faint)] mt-0.5">
-                  Internal links boost topical authority. External citations build E-E-A-T trust signals.
+                  Internal links give a crawler a path to the page. Outbound source links give a claim traceable provenance, which the Citable band checks for.
                 </p>
               </div>
               <button

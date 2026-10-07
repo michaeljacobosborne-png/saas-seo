@@ -35,7 +35,7 @@ describe('DraftScores — two scores, named as the framework names them (decisio
 describe('DraftScores — publication-layer checks are never missing marks (decision 15)', () => {
   const section = html.slice(html.indexOf(AT_PUBLICATION_LABEL))
 
-  it('lists them under "Judged at publication" with a reason', () => {
+  it('lists them under "Checked at publication" with a reason', () => {
     expect(html).toContain(AT_PUBLICATION_LABEL)
     expect(section).toContain('AI crawler access')
     expect(section).toContain('Scored once this is live')

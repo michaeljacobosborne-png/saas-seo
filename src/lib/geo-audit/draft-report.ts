@@ -190,7 +190,7 @@ export function buildDraftReport(input: DraftInput): DraftReport {
   if (artefactsRemoved) notes.push(`${artefactsRemoved} line(s) of agent output (SUMMARY/PATCH headers) were found in the draft and not assessed. Remove them before publishing.`)
   if (preH1Removed) notes.push('Text above the H1 was not assessed: the published page opens at the H1.')
   if (!input.brandName) notes.push('No brand name is set on the brand profile, so brand-claim proximity could not be measured.')
-  notes.push('FAQ structured data is added by the template, so question coverage here is judged on headings alone.')
+  notes.push('FAQ structured data is added by the template, so question coverage here is checked on headings alone.')
 
   const afterPublication = [
     ...groups
@@ -233,7 +233,7 @@ export function contentHash(s: string): string {
  * not "unable to assess" in the sense of something going wrong: they are not
  * yet assessable, and the label says when they will be.
  */
-export const AT_PUBLICATION_LABEL = 'Judged at publication'
+export const AT_PUBLICATION_LABEL = 'Checked at publication'
 
 function unverifiedGroup(g: RetrievabilityGroup, reason: string): RetrievabilityGroup {
   const checks = g.checks

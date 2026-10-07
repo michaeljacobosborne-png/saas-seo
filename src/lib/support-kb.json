@@ -93,7 +93,7 @@
         "workflow for creating content",
         "steps to write an article"
       ],
-      "agent_response": "The full flow is: (1) Run keyword research to get a cluster of keywords. (2) Select the keywords you want to target and click 'Generate Brief' — this creates an SEO content brief with target keyword, secondary keywords, H1 options, meta description, URL slug, and a section-by-section outline. (3) From the brief, click 'Generate Article' to write the full draft. The generator uses the brief as its blueprint and your brand profile for voice and tone. Once the draft is ready, run scoring to see your SEO, GEO, AEO, and Readability scores.",
+      "agent_response": "The full flow is: (1) Run keyword research to get a cluster of keywords. (2) Select the keywords you want to target and click 'Generate Brief' — this creates an SEO content brief with target keyword, secondary keywords, H1 options, meta description, URL slug, and a section-by-section outline. (3) From the brief, click 'Generate Article' to write the full draft. The generator uses the brief as its blueprint and your brand profile for voice and tone. Once the draft is ready, run scoring to see its Retrievable score, its Citable band and the SEO basics checklist.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Brief generation is /api/articles/generate-brief using GPT-4o. Draft generation is /api/articles/generate-draft using GPT-4o with maxDuration=120. Brief requires: articleId, keywordProjectId, selectedKeywords, brandProfileId. Draft uses the brief.outline to structure writing."
@@ -139,7 +139,7 @@
       "id": "kb_007",
       "category": "product",
       "priority": "p2",
-      "title": "What the SEO score measures",
+      "title": "SEO basics checklist (the old SEO score was removed)",
       "trigger_phrases": [
         "what is SEO score",
         "how is SEO score calculated",
@@ -147,7 +147,7 @@
         "what does SEO score check",
         "improve SEO score"
       ],
-      "agent_response": "The SEO score (out of 100) checks 9 criteria: target keyword in the H1 (+15), keyword in the first 100 words (+10), keyword in the meta description (+10), meta description length between 120–155 characters (+5), 2–4 H2 headings (+10), secondary keywords present (+15 proportional), word count between 1800–2500 (+10), FAQ section present (+10), and keyword density under 3% (+10). Each criterion shows pass/fail in the score breakdown panel. The score updates when you click 'Score Article' — it doesn't update automatically after agent edits, so re-score after making changes.",
+      "agent_response": "SEO basics is a short pass/fail checklist with no number: whether the target keyword is in the title, whether a meta description is set (read from the meta description field above the editor), and a warning if the description runs past about 160 characters, where search results may cut it off. The old SEO score, with targets such as 2–4 H2 headings, 1800–2500 words and keyword density under 3%, was removed in October 2026 because those targets had no evidence behind them and one of them contradicted the Retrievable score. Re-score after editing to refresh the checklist.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Score logic is in /api/articles/score/route.ts, computeSEO function. Max is 100. H2 count target is 2–4 (not 3+), word count target is 1800–2500. Secondary keywords score is proportional: (present/total)*15."
@@ -156,7 +156,7 @@
       "id": "kb_008",
       "category": "product",
       "priority": "p2",
-      "title": "What the Readability score measures",
+      "title": "Readability score — removed",
       "trigger_phrases": [
         "readability score",
         "how is readability calculated",
@@ -164,10 +164,10 @@
         "passive voice score",
         "sentence length score"
       ],
-      "agent_response": "Readability starts at 100 and deductions are applied for: average sentence length over 20 words (−10) or over 25 words (−25), passive voice instances — more than 5 costs −10, more than 10 costs −20, and average paragraph length over 120 words (−5) or over 150 words (−15). The target is sentences averaging 15–20 words and paragraphs around 100 words. Byline's article generator is trained to avoid passive voice and vary sentence length, but agent edits can re-introduce problems — re-score after editing.",
+      "agent_response": "Byline no longer shows a Readability score. It was removed in October 2026 because its targets (sentence length, passive voice counts, paragraph length) had no evidence behind them, and it could contradict the Retrievable score. The Scores tab now shows Retrievable, Citable and a short SEO basics checklist. Byline's article generator is still prompted to vary sentence length and use active voice.",
       "escalate_to_human": false,
       "escalation_reason": "",
-      "internal_notes": "Logic in computeReadability in /api/articles/score/route.ts. Passive voice detection uses regex: /\\b(was|were|is|are|been|being|be)\\s+\\w+ed\\b/gi. Not perfect — misses some constructions. Sentence split uses /[.!?]+/ which can produce false splits on abbreviations."
+      "internal_notes": "Removed 2026-10-05 under DECISIONS 28 (SEO and Readability panels keep only checks with a basis). computeReadability no longer exists. Do not describe or reintroduce the old thresholds."
     },
     {
       "id": "kb_009",
@@ -184,7 +184,7 @@
         "retrievable score",
         "where did my GEO score go"
       ],
-      "agent_response": "Byline shows GEO and AEO readiness as two scores, Retrievable and Citable, the same as our free GEO analyzer. Retrievable is a number out of 100. For a draft it covers 45 of the 100 points we score on a live page: how the article is structured (one clear H1, enough H2 sections, sections that stand alone when quoted, sensible section length) and how cleanly an answer can be lifted from it (a direct opening answer, a plain definition, question-style headings, lists and tables). The other 55 points (crawler access, server rendering, structured data) depend on the published page, so they are listed under 'Judged at publication' and are not part of the draft score. They are never counted against you. Every finding shows the text it is based on. This is an assessment of content readiness. It does not measure whether any AI system has cited your article.",
+      "agent_response": "Byline shows GEO and AEO readiness as two scores, Retrievable and Citable, the same as our free GEO analyzer. Retrievable is a number out of 100. For a draft it covers 45 of the 100 points we score on a live page: how the article is structured (one clear H1, enough H2 sections, sections that stand alone when quoted, sensible section length) and how cleanly an answer can be lifted from it (a direct opening answer, a plain definition, question-style headings, lists and tables). The other 55 points (crawler access, server rendering, structured data) depend on the published page, so they are listed under 'Checked at publication' and are not part of the draft score. They are never counted against you. Every finding shows the text it is based on. This is an assessment of content readiness. It does not measure whether any AI system has cited your article.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Since 2026-10-01 the editor uses the real engine's draft report (src/lib/geo-audit/draft-report.ts, stored as articles.scores.draft by /api/articles/score via src/lib/article-scores.ts). Draft denominator = Chunkability 25 + Extractability 20 = 45; MIN_ASSESSED_SHARE 0.6 still applies inside it, so a very short draft shows '—' (withheld), never 0. Articles scored before 2026-10-01 show a Re-score prompt. The legacy regex computeGEO still runs and is stored but is no longer shown. Decisions 13–15 in docs/DECISIONS.md."
@@ -205,7 +205,7 @@
         "where did my AEO score go",
         "named authorship"
       ],
-      "agent_response": "Citable is the second of the two GEO/AEO readiness scores. It is a band (Strong, Adequate, Weak or Absent), not a number, because it is a judgement rather than a count. It answers one question: if a passage from your article is quoted, does anything in it carry attribution back to you? In a draft it looks at four things: your brand name inside the sections that make claims, original evidence (real figures, examples or methods of your own), terms that are distinctively yours, and a named author from your brand profile. Entity markup and publication dates depend on the published page, so they are judged after you publish. The named author is checked again on the live page, because a profile that names an author only counts if the byline actually appears on the article. Fix suggestions never ask you to add invented statistics or sources.",
+      "agent_response": "Citable is the second of the two GEO/AEO readiness scores. It is a band (Strong, Adequate, Weak or Absent), not a number, because it is a judgement rather than a count. It answers one question: if a passage from your article is quoted, does anything in it carry attribution back to you? In a draft it looks at four things: your brand name inside the sections that make claims, original evidence (real figures, examples or methods of your own), terms that are distinctively yours, and a named author from your brand profile. Entity markup and publication dates depend on the published page, so they are checked after you publish. The named author is checked again on the live page, because a profile that names an author only counts if the byline actually appears on the article. Fix suggestions never ask you to add invented statistics or sources.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Citability signals from src/lib/geo-audit/assess-citability.ts via draft-report.ts. Named authorship at draft time comes from brand_profiles.author_name/_credentials (migration 20261001_brand_author.sql; before it is applied the signal shows 'Not assessed'). Live audits verify the byline renders on the page (src/lib/geo-audit/byline.ts, decision 17). The legacy regex computeAEO is no longer shown."
@@ -275,7 +275,7 @@
         "auto fix article",
         "full article rewrite"
       ],
-      "agent_response": "Auto mode rewrites the entire article in one pass, applying all failing score criteria automatically. It analyzes every weak area from your SEO and Readability scores and the Retrievable and Citable gaps in your draft, then produces a complete revised article that preserves your voice and structure while fixing the issues. Auto mode is available on the Team plan. If you're on Growth or Starter, you'll see it locked in the UI. For most users, Assist mode (Growth plan) gives you more control anyway — you can target specific sections rather than wholesale-replacing the article.",
+      "agent_response": "Auto mode rewrites the entire article in one pass, applying all failing score criteria automatically. It works from the Retrievable and Citable gaps in your draft and the SEO basics checklist, then produces a complete revised article that preserves your voice and structure while fixing the issues. Auto mode is available on the Team plan. If you're on Growth or Starter, you'll see it locked in the UI. For most users, Assist mode (Growth plan) gives you more control anyway — you can target specific sections rather than wholesale-replacing the article.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "canAuto = plan === 'team' || plan === 'agency'. Returns 403 with 'Auto mode is available on the Team plan' message for others. Streams via Claude Sonnet 4.6 with max_tokens: 8192. System prompt includes full article content and all failing criteria."
@@ -564,7 +564,7 @@
         "audit my website",
         "check my existing content"
       ],
-      "agent_response": "The content audit tool (under Dashboard > Content Audit) lets you analyze existing published content — paste a URL or article text and get SEO and Readability scores plus the two GEO/AEO readiness scores, Retrievable and Citable, for it. It's useful for auditing content you wrote before using Byline, or for evaluating competitor content. The scoring logic is the same as for generated articles.",
+      "agent_response": "The content audit tool (under Dashboard > Content Audit) lets you analyze existing published content — paste a URL or article text and get the two GEO/AEO readiness scores, Retrievable and Citable, plus the SEO basics checklist. It's useful for auditing content you wrote before using Byline, or for evaluating competitor content. The scoring logic is the same as for generated articles.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Content audit route is /api/audit. The marketing page at /(marketing)/audit/page.tsx also has a public-facing audit tool. The dashboard version is at /content-audit."

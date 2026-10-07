@@ -294,7 +294,7 @@ export default function KeywordsPage() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--cream)' }}>Keyword Research</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>
-            Discover high-value keywords for your content strategy.
+            Search volume and difficulty from DataForSEO, grouped into topic clusters by a model.
           </p>
           <div className="flex gap-1 mt-3">
             <span className="px-3 py-1 text-xs font-medium rounded-full text-[var(--cream)]" style={{ background: 'var(--copper)' }}>
@@ -332,7 +332,7 @@ export default function KeywordsPage() {
           </div>
           <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--cream)' }}>No keywords yet</h3>
           <p className="text-sm max-w-sm mx-auto mb-5" style={{ color: 'var(--cream-dim)' }}>
-            Start by searching for a topic in your niche. We&apos;ll surface high-value keywords and cluster them for you.
+            Search a topic in your niche. Byline returns related keywords with search volume and difficulty from DataForSEO, grouped into clusters.
           </p>
           <button
             onClick={openDiscover}

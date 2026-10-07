@@ -392,12 +392,12 @@ export default function DashboardAuditPage() {
             {status === 'loading' ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--copper-lt)]" />
-                Recovering your audit…
+                Running your audit…
               </>
             ) : auditUrl ? (
               `Audit for ${auditUrl}`
             ) : (
-              'See exactly where your content strategy has gaps.'
+              'Map your published pages and see suggested topics you have not covered.'
             )}
           </p>
           {lastRun && (
@@ -429,7 +429,7 @@ export default function DashboardAuditPage() {
       {status === 'idle' && !result && (
         <div className="mb-8 rounded-xl px-5 py-4 border border-[rgba(184,115,51,0.18)]" style={{ background: 'var(--ink-card)' }}>
           <p className="text-sm text-[var(--cream-dim)] leading-relaxed">
-            Import your audit to see exactly where your content strategy has gaps. Byline scans your site, cross-references your published content against search demand in your niche, and surfaces the topics your competitors rank for that you haven&apos;t covered. You&apos;ll get a prioritized list of gaps with keyword suggestions — one click takes you straight into research, then into your article.
+            Byline reads your sitemap and groups what you have published, then suggests adjacent topics. The suggestions come from a model reading your page titles, so treat them as a starting point for your own research. No competitor ranking data is fetched and no search volume is attached. One click takes a topic into keyword research, where volume and difficulty are real.
           </p>
         </div>
       )}
@@ -471,10 +471,10 @@ export default function DashboardAuditPage() {
           <style>{`@keyframes audit-progress {0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}`}</style>
           <Loader2 className="w-10 h-10 animate-spin text-[var(--copper-lt)] mx-auto mb-4" />
           <p className="text-base font-semibold text-[var(--cream)]">
-            Recovering your audit…
+            Running your audit…
           </p>
           <p className="text-sm text-[var(--cream-dim)] mt-1">
-            {progress?.message ?? `Retrieving results for ${auditUrl}…`}
+            {progress?.message ?? `Crawling ${auditUrl}…`}
           </p>
 
           {/* Progress bar — determinate when we have step/total, else an animated indeterminate bar */}

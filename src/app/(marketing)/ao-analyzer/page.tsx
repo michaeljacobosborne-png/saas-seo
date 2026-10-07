@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Free AO Analyzer — Answer Optimization Score',
-    description: 'Check if your content is structured to win featured snippets and AI answer boxes. Free score.',
+    description: 'Check whether a clean answer can be extracted from your page. Scored from the page itself, with the evidence shown.',
   },
 }
 
@@ -37,8 +37,8 @@ const jsonLd = {
   },
   featureList: [
     'Answer Optimization scoring',
-    'Featured snippet opportunity analysis',
-    'AI answer box optimization',
+    'Answer extraction structure check',
+    'Direct answer and question coverage scoring',
     'Content structure recommendations',
     'Question-answer format analysis',
   ],

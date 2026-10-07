@@ -2,23 +2,23 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
 export const metadata: Metadata = {
-  title: 'Free SEO Audit Tool — Find What\'s Holding Your Content Back | Byline',
+  title: 'Free Content Map — See What You Have Published and What You Have Not | Byline',
   description:
-    'Run a free SEO audit on any URL. Discover keyword gaps, content issues, and exactly what you need to fix to rank higher. No sign-up required.',
+    'Map your published content from your sitemap and see suggested topics adjacent to your coverage. The suggestions are a starting point for keyword research, not a measurement. No sign-up required.',
   alternates: {
     canonical: 'https://app.bylineseo.com/audit',
   },
   openGraph: {
-    title: 'Free SEO Audit Tool — Find What\'s Holding Your Content Back',
+    title: 'Free Content Map — See What You Have Published and What You Have Not',
     description:
-      'Enter any URL and get a free SEO audit in seconds. Keyword gaps, content structure issues, and actionable fixes — powered by AI.',
+      'Enter your domain and Byline groups your published pages by topic, then suggests adjacent topics to research.',
     url: 'https://app.bylineseo.com/audit',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free SEO Audit Tool — Byline',
-    description: 'Find keyword gaps and content issues in seconds. Free, no sign-up required.',
+    title: 'Free Content Map — Byline',
+    description: 'Map your published content and see suggested topics to research. Free, no sign-up required.',
   },
 }
 

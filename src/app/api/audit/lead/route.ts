@@ -313,15 +313,15 @@ export async function POST(request: Request) {
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
         <tr><td style="background:#1c1917;padding:28px 32px;">
           <h1 style="color:#B87333;font-family:Georgia,serif;font-size:22px;margin:0;">Byline</h1>
-          <p style="color:#a8a29e;font-size:13px;margin:6px 0 0;">Your Content Gap Analysis</p>
+          <p style="color:#a8a29e;font-size:13px;margin:6px 0 0;">Your content map</p>
         </td></tr>
         <tr><td style="padding:32px;border-bottom:1px solid #f0ece4;">
-          <h2 style="color:#1c1917;font-size:20px;margin:0 0 8px;">Content gaps found for <span style="color:#B87333;">${domain || 'your site'}</span></h2>
-          <p style="color:#57534e;font-size:14px;margin:0;">We scanned ${pageCount > 0 ? `${pageCount} pages` : 'your site'} and found <strong style="color:#1c1917;">${gapCount} content gap${gapCount !== 1 ? 's' : ''}</strong> where competitors are ranking and you're not.</p>
+          <h2 style="color:#1c1917;font-size:20px;margin:0 0 8px;">Your content map for <span style="color:#B87333;">${domain || 'your site'}</span></h2>
+          <p style="color:#57534e;font-size:14px;margin:0;">We read ${pageCount > 0 ? `${pageCount} pages` : 'your sitemap'} and grouped what you have published. A model reading your page titles suggested ${gapCount} topic${gapCount !== 1 ? 's' : ''} next to your current coverage. They are a starting point for keyword research, not a measurement: no competitor ranking data or search volume is behind them.</p>
         </td></tr>
         ${topGaps.length > 0 ? `
         <tr><td style="padding:24px 32px 0;">
-          <h3 style="color:#1c1917;font-size:16px;margin:0 0 12px;">Top Gaps to Close</h3>
+          <h3 style="color:#1c1917;font-size:16px;margin:0 0 12px;">Suggested topics</h3>
           <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #f0ece4;border-radius:8px;overflow:hidden;">
             ${gapsHtml}
           </table>
@@ -333,10 +333,10 @@ export async function POST(request: Request) {
         </td></tr>` : ''}
         <tr><td style="padding:32px;text-align:center;border-top:1px solid #f0ece4;margin-top:24px;">
           <a href="https://bylineseo.com/audit/results/${resultId}" style="display:inline-block;background:#B87333;color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:bold;padding:14px 28px;border-radius:8px;text-decoration:none;margin-bottom:16px;">
-            View Your Full Gap Report →
+            View your full content map →
           </a>
           <p style="color:#a8a29e;font-size:12px;margin:16px 0 0;">
-            Want Byline to write articles that close these gaps automatically? <a href="https://bylineseo.com/pricing" style="color:#B87333;">Start free</a>
+            Byline can draft any of these and score the draft before you publish. <a href="https://bylineseo.com/pricing" style="color:#B87333;">See plans</a>
           </p>
         </td></tr>
         <tr><td style="background:#f7f3ec;padding:20px 32px;text-align:center;">
@@ -351,7 +351,7 @@ export async function POST(request: Request) {
         await ghlSendEmail({
           contactId,
           toEmail: email,
-          subject: `Your content gap report for ${domain || 'your site'} — ${gapCount} gaps found`,
+          subject: `Your content map for ${domain || 'your site'}`,
           html: contentAuditHtml,
           fromEmail: 'michael@lc.bylineseo.com',
         })
@@ -367,7 +367,7 @@ export async function POST(request: Request) {
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
         <tr><td style="background:#1c1917;padding:28px 32px;">
           <h1 style="color:#B87333;font-family:Georgia,serif;font-size:22px;margin:0;">Byline</h1>
-          <p style="color:#a8a29e;font-size:13px;margin:6px 0 0;">${isAo ? 'Your AI Optimization Analysis' : 'AI-powered content that ranks'}</p>
+          <p style="color:#a8a29e;font-size:13px;margin:6px 0 0;">${isAo ? 'Your AI Optimization Analysis' : 'Articles scored before they publish'}</p>
         </td></tr>
         <tr><td style="padding:32px;">
           <h2 style="color:#1c1917;font-size:20px;margin:0 0 16px;">${isAo ? `Your AO Analysis for ${domain || 'your site'}` : 'Your Byline analysis is ready'}</h2>
@@ -398,7 +398,7 @@ export async function POST(request: Request) {
           contactId,
           toEmail: email,
           subject: isAo
-            ? `Your AO Analysis for ${domain || 'your site'} — AI visibility insights`
+            ? `Your AO analysis for ${domain || 'your site'}: what came out of the page`
             : 'Welcome to Byline — your AI content platform',
           html: welcomeHtml,
           fromEmail: 'michael@lc.bylineseo.com',

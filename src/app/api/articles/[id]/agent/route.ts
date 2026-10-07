@@ -91,7 +91,7 @@ export async function POST(
     const turnsUsed = ((profile?.agent_turns_used as Record<string, number>) ?? {})[id] ?? 0
     if (turnsUsed >= 3) {
       return NextResponse.json({
-        error: "You've used your 3 free agent turns on this article. Upgrade to get unlimited agent access.",
+        error: "You've used your 3 free agent turns on this article. Paid plans remove the per-article turn limit.",
         code: 'FREE_TIER_LIMIT',
       }, { status: 403 })
     }

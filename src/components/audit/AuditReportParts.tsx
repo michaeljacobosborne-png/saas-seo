@@ -271,7 +271,7 @@ export function TwoScorePanel({ result }: { result: AnalysisResult }) {
         <div className="bg-white border border-[#E7E0D6] rounded-xl p-4">
           <div className="flex items-baseline justify-between mb-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-[#998876]">Retrievable</span>
-            <span className="text-[10px] uppercase tracking-wide text-[#998876]">Measured</span>
+            <span className="text-[10px] uppercase tracking-wide text-[#998876]">Scored from the page</span>
           </div>
           {withheld ? (
             <>

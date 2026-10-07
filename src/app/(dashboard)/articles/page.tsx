@@ -44,7 +44,7 @@ export default async function ArticlesPage() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--cream)' }}>Articles</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>
-            AI-generated SEO articles grounded in your brand profile and keyword research.
+            Drafts generated from your brand profile and keyword research, scored against the same rubric as a published page.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -78,7 +78,7 @@ export default async function ArticlesPage() {
           </div>
           <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--cream-dim)' }}>No articles yet</h3>
           <p className="text-sm max-w-sm mx-auto mb-5" style={{ color: 'var(--cream-dim)' }}>
-            Select keywords from a research project, generate a brief, then produce a full SEO-optimized draft — all in your brand voice.
+            Select keywords from a research project, generate a brief, then produce a full draft in your brand voice.
           </p>
           <Link
             href="/articles/new"

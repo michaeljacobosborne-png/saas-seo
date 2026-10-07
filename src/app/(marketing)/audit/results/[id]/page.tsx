@@ -259,7 +259,7 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
             Ready to fix these issues?
           </h2>
           <p className="text-[#a8a29e] text-sm mb-6">
-            Byline generates AI content that scores well on both Google and AI engines like ChatGPT, Gemini, and Perplexity.
+            Byline drafts articles in your brand voice and scores each draft against the same rubric before you publish.
           </p>
           <Link
             href="/pricing"

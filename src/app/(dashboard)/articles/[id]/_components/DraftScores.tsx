@@ -5,8 +5,8 @@
  * cut). Same two scores as the free tool (decision 13), named as the framework
  * names them (decision 14), with a draft-specific breakdown (decision 15):
  *
- *   "Judged now"             checks the draft itself carries, with scores
- *   "Judged at publication"  checks that belong to the published page, with the
+ *   "Checked now"            checks the draft itself carries, with scores
+ *   "Checked at publication" checks that belong to the published page, with the
  *                            reason, and never a zero, a failure or a deduction
  *
  * Every finding shows the text it rests on. From the engine: types, plus the
@@ -145,7 +145,7 @@ export function DraftScores({
       {projection && (
         <div className={`${card} p-5`}>
           <h3 className="text-sm font-semibold text-[var(--cream)]">
-            Fix these and {SCORE_LABELS.retrievable} goes from {projection.from} to {projection.to}
+            Fix these and {SCORE_LABELS.retrievable} would go from {projection.from} to {projection.to} on this rubric
           </h3>
           <p className="mt-0.5 mb-3 text-xs text-[var(--cream-faint)]">
             Points each check adds on the 0–100 scale when it reaches full marks.
@@ -170,7 +170,7 @@ export function DraftScores({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Judged now: Retrievable checks the draft carries. */}
         <div className={`${card} p-5`}>
-          <h3 className="text-sm font-semibold text-[var(--cream)]">{SCORE_LABELS.retrievable}: judged now</h3>
+          <h3 className="text-sm font-semibold text-[var(--cream)]">{SCORE_LABELS.retrievable}: checked now</h3>
           <p className="mt-0.5 mb-3 text-xs text-[var(--cream-faint)]">
             {r.scoreWithheld ? 'Not enough of the draft to score yet.' : `${r.rawScore} of ${r.assessedMaxScore} points`}
           </p>
@@ -203,7 +203,7 @@ export function DraftScores({
 
         {/* Judged now: Citable signals. */}
         <div className={`${card} p-5`}>
-          <h3 className="text-sm font-semibold text-[var(--cream)]">{SCORE_LABELS.citable}: judged now</h3>
+          <h3 className="text-sm font-semibold text-[var(--cream)]">{SCORE_LABELS.citable}: checked now</h3>
           <p className="mt-0.5 mb-3 text-xs text-[var(--cream-faint)]">Bands, not points: whether a quoted passage carries attribution back to you.</p>
           <div className="space-y-3">
             {signalsNow.map((s) => (
@@ -236,11 +236,11 @@ export function DraftScores({
         </div>
       </div>
 
-      {/* Judged at publication: reasons only. No score, no zero, no deduction. */}
+      {/* Checked at publication: reasons only. No score, no zero, no deduction. */}
       <div className={`${card} p-5`}>
         <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--cream)]">
           <Clock className="h-4 w-4 text-[var(--cream-faint)]" />
-          Judged at publication
+          Checked at publication
         </h3>
         <p className="mt-0.5 mb-3 text-xs text-[var(--cream-faint)]">
           These depend on the published page, not the draft, so they are not part of the draft score. They are checked once the article is live.
