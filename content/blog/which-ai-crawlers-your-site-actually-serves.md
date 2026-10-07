@@ -114,24 +114,27 @@ origin would have served the crawler proves nothing about whether it will ask.
 Both of these are observations from audit runs, dated, and both are checkable by
 anyone.
 
-### Reddit: the two signals disagree
+### Reddit: a status code is not an answer
 
-Run on 30 September 2026. Reddit's robots.txt disallowed `/` for the `*` group,
-which reads as a refusal to all four retrieval crawlers. The origin said
-something else. OAI-SearchBot, Claude-SearchBot and PerplexityBot were each
-served HTTP 200. GPTBot got HTTP 403 with no CDN fingerprint, meaning the
-application itself refused it. ClaudeBot and CCBot were rate limited at 429,
-which is congestion, not policy.
+Run on 30 September 2026 and re-checked by hand on 5 October. Reddit's
+robots.txt disallowed `/` for the `*` group, which reads as a refusal to every
+crawler. On status codes alone, the origin seemed to say something else.
+OAI-SearchBot, Claude-SearchBot and PerplexityBot each got HTTP 200. GPTBot got
+HTTP 403. ClaudeBot and CCBot got HTTP 429.
 
-Read only the file and you conclude that retrieval is blocked. Read only the
-origin and you conclude it is open. The honest answer is that the two signals
-point in opposite directions, and which one wins depends on whether a given
-crawler reads the file.
+Read that way, it looks like retrieval open and training closed. Read the
+responses and it falls apart. Every 200, the plain browser request included,
+was a JavaScript challenge page with none of Reddit's content in it. The GPTBot
+403 said it was blocked by a network policy. The 429s repeated on every attempt
+over six minutes, carried a header reporting zero allowance used, and the
+browser request was served seconds later. That is a refusal wearing a rate-limit
+code, not congestion.
 
-The other finding on that run is worth noting separately. The page returned
-almost no readable text in raw HTML, because the content renders with
-JavaScript. Major AI crawlers do not execute JavaScript, so being served the
-page and being able to read it are also two different things.
+So the accurate reading is narrower than the first one. The training crawlers
+were explicitly refused. The retrieval crawlers were treated like any anonymous
+visitor: challenged, and served no content. A tool that records the status code
+and stops would have reported the opposite of what happened. Being served a 200
+and being served the page are two different things.
 
 ### The New York Times: the false positive
 
@@ -167,7 +170,8 @@ The method is four steps, and the third is the one people skip.
 Then reconcile. A 403 with no CDN signature is usually your application. A 403
 carrying a CDN fingerprint is a rule at the edge. A 429 is rate limiting and
 should be re-run before you treat it as settled. A 200 with eight kilobytes of
-markup and no prose is a rendering problem wearing a success code.
+markup and no prose is a rendering problem or a challenge page wearing a success
+code. Read the body before you believe the status.
 
 [Byline's free crawler access check](https://bylineseo.com/geo-analyzer) runs
 exactly this, baseline included, if you would rather not script it.
@@ -243,4 +247,4 @@ that was correct in June may not be the one running now.
 - Cloudflare, Content Independence Day announcement, 1 July 2025: [https://blog.cloudflare.com/content-independence-day-no-ai-crawl-without-compensation/](https://blog.cloudflare.com/content-independence-day-no-ai-crawl-without-compensation/)
 - RFC 9309, Robots Exclusion Protocol: [https://www.rfc-editor.org/rfc/rfc9309.html](https://www.rfc-editor.org/rfc/rfc9309.html)
 - PPC Land, "Cloudflare drops planned Googlebot block for sites refusing AI training", 27 September 2026, for the TollBit figure and the settings migration detail: [https://ppc.land/cloudflare-drops-planned-googlebot-block-for-sites-refusing-ai-training/](https://ppc.land/cloudflare-drops-planned-googlebot-block-for-sites-refusing-ai-training/)
-- Crawler probe observations for reddit.com and nytimes.com, 30 September 2026, from Byline's own audit archive.
+- Crawler probe observations for reddit.com and nytimes.com, 30 September 2026, from Byline's own audit archive; reddit.com re-checked by hand on 5 October 2026.

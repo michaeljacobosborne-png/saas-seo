@@ -26,13 +26,15 @@ Their per-platform figures, reproduced here with attribution, cover three
 periods: 3 July to 7 August, then 8 to 31 August, then September. Each number is
 Reddit's share of that engine's citations.
 
-- **Google AI Overviews**: 4.375%, then 4.490%, then 5.081%. Up 16% over the quarter.
-- **Google AI Mode**: 3.625%, then 2.803%, then 4.502%. Up 24%.
-- **Perplexity**: 1.176%, then 2.163%, then 2.186%. Up 86%.
-- **Gemini**: 1.727%, then 1.220%, then 1.167%. Down 32%.
-- **ChatGPT**: 3.765%, then 0.374%, then 0.227%. Down 94%.
-- **Microsoft Copilot**: 0.000% in all three periods. No change.
-- **Claude**: 0.000% in all three periods. No change.
+| Engine | 3 Jul to 7 Aug | 8 to 31 Aug | September | Over the quarter |
+| --- | --- | --- | --- | --- |
+| Google AI Overviews | 4.375% | 4.490% | 5.081% | Up 16% |
+| Google AI Mode | 3.625% | 2.803% | 4.502% | Up 24% |
+| Perplexity | 1.176% | 2.163% | 2.186% | Up 86% |
+| Gemini | 1.727% | 1.220% | 1.167% | Down 32% |
+| ChatGPT | 3.765% | 0.374% | 0.227% | Down 94% |
+| Microsoft Copilot | 0.000% | 0.000% | 0.000% | No change |
+| Claude | 0.000% | 0.000% | 0.000% | No change |
 
 Three engines moved up. Two moved down. Two never cited Reddit at any point in
 the quarter, at three significant figures.

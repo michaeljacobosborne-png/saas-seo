@@ -28,8 +28,9 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
   - Proprietary terms picked "Continue Reading" and "San Diego" (screamingfrog.co.uk): UI strings and place names need excluding.
 
 ## 2b. Blog drafts (content/blog)
-- `which-ai-crawlers-your-site-actually-serves.md`: the Reddit section states the 30 September reading as fact. Correct it before publishing; the 2026-10-05 re-run showed the 200s were a JavaScript challenge and the 429s a zero-quota refusal.
-- `one-ai-visibility-score-cannot-be-true.md`: the per-engine Otterly list can be restored as a table now that tables convert. Tested: it becomes one table block.
+- DONE 2026-10-07: `which-ai-crawlers-your-site-actually-serves.md` Reddit section rewritten to the 5 October hand check (200s were a JS challenge, 429s a zero-allowance refusal). Its publishedAt is 2026-10-06, already past: set the real date before running without --dry-run.
+- DONE 2026-10-07: `one-ai-visibility-score-cannot-be-true.md` Otterly figures restored as a table; converts to one table block, 7 rows x 5 columns, cells checked.
+- Both dry-run clean. Only warning: inline code (`/`, `*`) renders as plain text, which reads fine.
 
 ## 3. Group 4: mobile: DONE, live (cb0cb4c), verified at 375px.
 
