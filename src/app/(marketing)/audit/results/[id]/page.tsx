@@ -49,7 +49,7 @@ interface AuditRecord {
 }
 
 export const metadata: Metadata = {
-  title: 'Your GEO Analysis Report — Byline',
+  title: 'Your GEO Analysis Report | Byline',
   description: 'View your full GEO (Generative Engine Optimization) analysis report from Byline.',
   robots: { index: false, follow: false },
 }
@@ -208,8 +208,8 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
             {result.pagesInspected?.filter((p) => p.ok).length
               ? `Pages inspected: ${result.pagesInspected.filter((p) => p.ok).map((p) => p.url).join(', ')}. `
               : ''}
-            This is a heuristic assessment of how ready the published content is to be read and quoted —
-            not a measurement of how often AI tools currently cite this site.
+            This is a heuristic assessment of how ready the published content is to be read and quoted.
+            It does not measure how often AI tools currently cite this site.
           </p>
         </div>
 

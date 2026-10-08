@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Script from 'next/script'
 
 export const metadata: Metadata = {
-  title: 'Book a Call — Byline',
+  title: 'Book a Call | Byline',
   description: 'Schedule a free 30-minute call to see how Byline can help you scale your content strategy with AI.',
 }
 

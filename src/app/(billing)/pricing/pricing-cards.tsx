@@ -52,7 +52,7 @@ const PLANS = [
       'Everything in Starter',
       '30 articles per month',
       '60 keyword sessions per month',
-      'Agent Assist mode — select text, agent rewrites it in-place',
+      'Agent Assist mode: select text and the agent rewrites it in place',
       'Score-based one-click fixes',
       'Persistent agent memory across sessions',
       'Priority support',
@@ -81,7 +81,7 @@ const PLANS = [
 const FAQS = [
   {
     q: 'Can I cancel anytime?',
-    a: 'Yes — no contracts, cancel from your account settings at any time. Your access continues until the end of the billing period.',
+    a: 'Yes. There are no contracts, and you can cancel from your account settings at any time. Your access continues until the end of the billing period.',
   },
   {
     q: 'What happens if I hit my article limit on Starter?',
@@ -145,7 +145,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       window.location.href = data.url
     } catch (err) {
       console.error('Checkout error:', err)
-      alert(err instanceof Error ? err.message : 'Network error — please try again')
+      alert(err instanceof Error ? err.message : 'Network error. Please try again.')
       setLoading(null)
     }
   }
@@ -165,7 +165,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       window.location.href = data.url
     } catch (err) {
       console.error('Portal error:', err)
-      alert(err instanceof Error ? err.message : 'Network error — please try again')
+      alert(err instanceof Error ? err.message : 'Network error. Please try again.')
       setLoading(null)
     }
   }
@@ -179,7 +179,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           Scored from your page. An agent that fixes it.
         </h1>
         <p className="text-[#A89070] text-lg max-w-xl mx-auto leading-relaxed">
-          Byline combines AI keyword research, SEO-optimized article generation, and a real editorial agent that rewrites your content — not just scores it.
+          Byline combines keyword research, article generation and scoring in code with an editorial agent that rewrites the sections the scorer flags.
         </p>
       </div>
 
@@ -188,7 +188,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-sm text-[#7A6555]">
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
-            No ChatGPT wrapper — a real SEO workflow
+            One SEO workflow, from keyword to scored draft
           </span>
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
@@ -207,13 +207,13 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           <div className="max-w-3xl mx-auto rounded-2xl border border-[rgba(184,115,51,0.4)] bg-[#231F1B] p-8">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 bg-[rgba(184,115,51,0.12)] border border-[rgba(184,115,51,0.3)] rounded-full px-4 py-1.5 text-xs font-semibold text-[#D4954A] tracking-wide uppercase mb-3">
-                Founder Pricing — Limited Spots
+                Founder Pricing: Limited Spots
               </div>
               <h2 className="text-2xl font-bold text-[#F7F3EC] mb-2">
                 Lock in your rate. Forever.
               </h2>
               <p className="text-[#A89070] text-sm max-w-md mx-auto">
-                The first 100 subscribers get permanently reduced pricing — your rate never increases.
+                The first 100 subscribers get permanently reduced pricing. Your rate never increases.
               </p>
               <div className="mt-4 flex items-center justify-center gap-3">
                 <div className="h-2 w-40 rounded-full bg-[#2A2420] overflow-hidden">
@@ -230,7 +230,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Starter founder */}
               <div className="rounded-xl border border-[rgba(184,115,51,0.25)] bg-[#1C1917] p-5 flex flex-col">
-                <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Starter — Founder</div>
+                <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Starter (Founder)</div>
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="text-3xl font-bold text-[#F7F3EC]">$39</span>
                   <span className="text-sm text-[#7A6555]">/mo</span>
@@ -247,7 +247,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
               </div>
               {/* Growth founder */}
               <div className="rounded-xl border-2 border-[#B87333] bg-[#1C1917] p-5 flex flex-col">
-                <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Growth — Founder</div>
+                <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Growth (Founder)</div>
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="text-3xl font-bold text-[#F7F3EC]">$79</span>
                   <span className="text-sm text-[#7A6555]">/mo</span>
@@ -391,7 +391,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           </div>
 
           <p className="text-center text-[#A89070] text-xs mt-6">
-            30-day money-back guarantee on all plans. No questions asked — email us and we'll refund in full.
+            30-day money-back guarantee on all plans. No questions asked: email us and we'll refund in full.
           </p>
 
           {/* Enterprise strip */}
@@ -416,13 +416,13 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           <h2 className="text-2xl font-bold mb-8">Why not just use Surfer or Frase?</h2>
           <div className="space-y-5 text-[#A89070] leading-relaxed text-[15px]">
             <p>
-              Surfer SEO gives you a score and a list of keywords to add. Frase gives you a content brief. Both tell you what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, works from the sections the scorer flagged, and rewrites them — directly inside your editor, with one click.
+              Surfer SEO gives you a score and a list of keywords to add. Frase gives you a content brief. Both tell you what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, works from the sections the scorer flagged, and rewrites them directly inside your editor, with one click.
             </p>
             <p>
               The scores come from deterministic code that reads your page, with the evidence shown under each finding. The editorial agent runs on Claude Sonnet and writes the fix. It never sets a score.
             </p>
             <p>
-              And because Byline&apos;s keyword database is shared across all accounts, your research loads from cache on repeat queries — which means your results get faster the more you use the platform.
+              And because Byline&apos;s keyword database is shared across all accounts, your research loads from cache on repeat queries, so your results get faster the more you use the platform.
             </p>
           </div>
         </div>

@@ -24,6 +24,11 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
   - Some origins (aira.net, zelst.co.uk) serve or refuse a crawler UA depending on the other request headers: 200 with Accept/Accept-Language, 403 without. The probe's verdict is therefore about our request shape, not the crawler. Report such rows as unconfirmed, or probe twice with different header sets and report only what agrees.
   - FIXED 2026-10-07 (DECISIONS 32): authorship miss (varn, screamingfrog), legal-name brand matching (candour, zelst), own-CEO quote as client evidence (varn), "Continue Reading" and "San Diego" as coined terms (screamingfrog). Also fixed: zelst coined term and founder name, salt nav-as-testimonial, optimist CORE Framework, "strong" authorship from an agency award.
 
+## 2a. Engine rubric faults found on our own homepage (2026-10-08, awaiting approval)
+- Heading hierarchy is declared out of 12 but its awards sum to 11 (3+4+2+2), so no site can score 12/12 and every Retrievable score is capped at 99. Needs a rubric fix and an engine version bump.
+- "Content-level type" counts BreadcrumbList but not SoftwareApplication/WebApplication, and the narrated recommendation then tells a page that has SoftwareApplication to add it.
+- Freshness evidence is labelled with the home URL when the date came from the blog page.
+
 ## 2b. Blog drafts (content/blog)
 - DONE 2026-10-07: `which-ai-crawlers-your-site-actually-serves.md` Reddit section rewritten to the 5 October hand check (200s were a JS challenge, 429s a zero-allowance refusal). Its publishedAt is 2026-10-06, already past: set the real date before running without --dry-run.
 - DONE 2026-10-07: `one-ai-visibility-score-cannot-be-true.md` Otterly figures restored as a table; converts to one table block, 7 rows x 5 columns, cells checked.

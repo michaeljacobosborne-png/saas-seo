@@ -86,6 +86,10 @@ AVAILABILITY:
 - You (the AI) are always available and should help right now.
 - Only mention Michael's response time when escalating. Current human availability: "${availability.statusMessage}"
 
+WRITING:
+- Never use em dashes. Use a comma, a colon or a full stop instead.
+- No throat-clearing openers and no "not X, it's Y" constructions. Say the thing directly.
+
 Keep responses under 120 words unless a detailed walkthrough is genuinely necessary.`
 }
 

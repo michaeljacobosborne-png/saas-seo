@@ -249,8 +249,8 @@ export default function GeoAnalyzerClient() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {[
-              { num: '01', heading: 'Read your page properly', body: 'We fetch your page and parse the whole document — headings, links, lists and structured data — then follow your About and blog links. No login needed.' },
-              { num: '02', heading: 'Score 7 GEO factors', body: 'We check schema markup, author signals, direct answers, factual claims, content structure, brand clarity, and freshness — scored in code, with the evidence shown.' },
+              { num: '01', heading: 'Read your page properly', body: 'We fetch your page and parse the whole document (headings, links, lists and structured data), then follow your About and blog links. No login needed.' },
+              { num: '02', heading: 'Score it in code', body: 'Retrievable covers access, parseability, chunkability and extractability. Citable covers six attribution signals. Every finding carries the evidence it was scored from.' },
               { num: '03', heading: 'Get a prioritized fix list', body: 'See which factors are weak and why, with the exact text or markup we found. Anything we could not verify is labelled, not guessed at.' },
             ].map((step) => (
               <div key={step.num}>
@@ -318,7 +318,7 @@ export default function GeoAnalyzerClient() {
                       Citability
                     </h2>
                     <p className="text-xs text-[#998876] mb-4">
-                      Six attribution signals, banded rather than scored — there is no honest
+                      Six attribution signals, banded rather than scored, because there is no honest
                       arithmetic that turns a named author into points.
                     </p>
                     <CitabilitySignals result={result} />
@@ -333,7 +333,7 @@ export default function GeoAnalyzerClient() {
                   </h2>
                   <FactorBreakdown
                     result={result}
-                    note="This is an assessment of how ready your published content is to be quoted — not a measurement of how often AI tools currently cite you."
+                    note="This assesses how ready your published content is to be quoted. It does not measure how often AI tools currently cite you."
                   />
                 </div>
               )}
@@ -419,7 +419,7 @@ export default function GeoAnalyzerClient() {
                         Unlock your full GEO report
                       </p>
                       <p className="text-sm text-[#57534E] text-center mb-5">
-                        {lockedRecs.length} more recommendation{lockedRecs.length !== 1 ? 's' : ''} — free with your email
+                        {lockedRecs.length} more recommendation{lockedRecs.length !== 1 ? 's' : ''}, free with your email
                       </p>
                       <div className="w-full max-w-sm">
                         <div className="flex flex-col sm:flex-row gap-2">
@@ -448,7 +448,7 @@ export default function GeoAnalyzerClient() {
                         </div>
                         {emailStatus === 'error' && (
                           <p className="mt-2 text-xs text-[#9A6228] text-center">
-                            Couldn&apos;t save your email — please try again.
+                            Couldn&apos;t save your email. Please try again.
                           </p>
                         )}
                       </div>
@@ -477,7 +477,7 @@ export default function GeoAnalyzerClient() {
                   href={`/signup?plan=free&ref=geo_analyzer${emailSubmitted ? `&email=${encodeURIComponent(email)}` : ''}`}
                   className="inline-flex items-center gap-2 px-5 py-3 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
                 >
-                  Start free — no credit card required
+                  Start free, no credit card required
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -526,7 +526,7 @@ export default function GeoAnalyzerClient() {
               assess&rdquo; and left out of the total rather than counted against you.
             </p>
             <p className="mt-4">
-              This is a heuristic assessment of how ready your content is to be quoted — not a
+              This is a heuristic assessment of how ready your content is to be quoted. It is not a
               measurement of your actual visibility in AI tools. No one outside OpenAI, Google or
               Perplexity can measure that from your HTML, and any tool claiming otherwise is
               guessing. A higher score means fewer structural obstacles to being read, understood
@@ -543,8 +543,8 @@ export default function GeoAnalyzerClient() {
             Ready to optimize for AI?
           </h2>
           <p className="text-lg text-[#A89070] mb-9 leading-relaxed">
-            Run a free GEO analysis above — or sign up to generate your first AI-ready article in
-            under 60 seconds.
+            Run a free GEO analysis above, or sign up to generate a draft and score it before
+            you publish.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — Byline',
+  title: 'Privacy Policy | Byline',
   description: 'How Byline collects, uses, and protects your data.',
 }
 
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
               </li>
               <li>
                 <strong>Payment information:</strong> Billing is handled by Stripe. We never see or
-                store your card number or full payment details — only a Stripe customer ID and
+                store your card number or full payment details. We keep only a Stripe customer ID and
                 subscription status.
               </li>
               <li>
@@ -78,7 +78,7 @@ export default function PrivacyPage() {
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                <strong>Supabase</strong> — database and authentication.{' '}
+                <strong>Supabase</strong>: database and authentication.{' '}
                 <a
                   href="https://supabase.com/privacy"
                   className="text-indigo-600 hover:underline"
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
                 </a>
               </li>
               <li>
-                <strong>Stripe</strong> — payment processing.{' '}
+                <strong>Stripe</strong>: payment processing.{' '}
                 <a
                   href="https://stripe.com/privacy"
                   className="text-indigo-600 hover:underline"
@@ -100,7 +100,7 @@ export default function PrivacyPage() {
                 </a>
               </li>
               <li>
-                <strong>OpenAI</strong> — AI content generation.{' '}
+                <strong>OpenAI</strong>: AI content generation.{' '}
                 <a
                   href="https://openai.com/policies/privacy-policy"
                   className="text-indigo-600 hover:underline"
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
                 </a>
               </li>
               <li>
-                <strong>Anthropic</strong> — AI content generation.{' '}
+                <strong>Anthropic</strong>: AI content generation.{' '}
                 <a
                   href="https://www.anthropic.com/privacy"
                   className="text-indigo-600 hover:underline"
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
                 </a>
               </li>
               <li>
-                <strong>DataForSEO</strong> — keyword and SEO data.{' '}
+                <strong>DataForSEO</strong>: keyword and SEO data.{' '}
                 <a
                   href="https://dataforseo.com/privacy-policy"
                   className="text-indigo-600 hover:underline"
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
                 </a>
               </li>
               <li>
-                <strong>Vercel</strong> — hosting and edge delivery.{' '}
+                <strong>Vercel</strong>: hosting and edge delivery.{' '}
                 <a
                   href="https://vercel.com/legal/privacy-policy"
                   className="text-indigo-600 hover:underline"

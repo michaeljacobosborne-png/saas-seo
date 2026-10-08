@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { AffiliateForm } from './_components/AffiliateForm'
 
 export const metadata: Metadata = {
-  title: 'Affiliate Program — Byline',
+  title: 'Affiliate Program | Byline',
   description:
     'Earn 30% recurring commission for every customer you refer to Byline. Perfect for SEO bloggers, content creators, agencies, and marketers.',
 }
@@ -77,7 +77,7 @@ export default function AffiliatePage() {
               {
                 step: '02',
                 title: 'Share',
-                desc: 'Promote Byline to your audience — blog posts, reviews, newsletters, or social media.',
+                desc: 'Promote Byline to your audience through blog posts, reviews, newsletters or social media.',
               },
               {
                 step: '03',
@@ -123,7 +123,7 @@ export default function AffiliatePage() {
               {
                 icon: '🤖',
                 title: 'AI & Automation Creators',
-                desc: 'Your audience is obsessed with AI productivity tools — Byline is a natural fit.',
+                desc: 'Your audience already uses AI productivity tools, so Byline is a natural fit.',
               },
             ].map(({ icon, title, desc }) => (
               <div key={title} className="flex gap-4 rounded-2xl border border-[#E7E0D6] bg-white p-5">
@@ -145,7 +145,8 @@ export default function AffiliatePage() {
             What you can earn
           </h2>
           <p className="mb-10 text-center text-[#57534E]">
-            30% of every subscription, every month, for as long as they stay.
+            30% of every subscription, every month, for as long as they stay. The rows below are worked
+            examples at current list prices, not earnings anyone has been paid.
           </p>
           <div className="overflow-hidden rounded-2xl border border-[#E7E0D6] bg-white">
             <table className="w-full text-sm">

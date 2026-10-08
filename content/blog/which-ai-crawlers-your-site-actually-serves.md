@@ -122,13 +122,13 @@ crawler. On status codes alone, the origin seemed to say something else.
 OAI-SearchBot, Claude-SearchBot and PerplexityBot each got HTTP 200. GPTBot got
 HTTP 403. ClaudeBot and CCBot got HTTP 429.
 
-Read that way, it looks like retrieval open and training closed. Read the
-responses and it falls apart. Every 200, the plain browser request included,
+Read that way, it looks like retrieval open and training closed. The response
+bodies say otherwise. Every 200, the plain browser request included,
 was a JavaScript challenge page with none of Reddit's content in it. The GPTBot
 403 said it was blocked by a network policy. The 429s repeated on every attempt
 over six minutes, carried a header reporting zero allowance used, and the
-browser request was served seconds later. That is a refusal wearing a rate-limit
-code, not congestion.
+browser request was served seconds later. A rate limit that allows zero requests
+is a refusal.
 
 So the accurate reading is narrower than the first one. The training crawlers
 were explicitly refused. The retrieval crawlers were treated like any anonymous

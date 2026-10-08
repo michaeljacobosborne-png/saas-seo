@@ -2,14 +2,14 @@ import type { Metadata } from 'next'
 import AoAnalyzerClient from './_components/AoAnalyzerClient'
 
 export const metadata: Metadata = {
-  title: 'Free AO Analyzer — Answer Optimization Score | Byline',
+  title: 'Free AO Analyzer: Answer Optimization Score | Byline',
   description:
     'Check your Answer Optimization score. See how well your content is structured for answer extraction: direct answers, question headings and scannable structure, checked on the page itself.',
   alternates: {
     canonical: 'https://app.bylineseo.com/ao-analyzer',
   },
   openGraph: {
-    title: 'Free AO Analyzer — Answer Optimization Score',
+    title: 'Free AO Analyzer: Answer Optimization Score',
     description:
       'See how well your content is structured for answer extraction: direct answers, question headings and scannable structure, checked on the page itself. Free Answer Optimization score.',
     url: 'https://app.bylineseo.com/ao-analyzer',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free AO Analyzer — Answer Optimization Score',
+    title: 'Free AO Analyzer: Answer Optimization Score',
     description: 'Check whether a clean answer can be extracted from your page. Scored from the page itself, with the evidence shown.',
   },
 }

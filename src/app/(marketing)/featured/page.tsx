@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Listed on — Byline',
+  title: 'Listed on | Byline',
   description: 'Byline is listed on dang.ai and Fazier.',
 }
 
@@ -62,7 +62,7 @@ export default function FeaturedPage() {
                 target="_blank"
                 rel="dofollow noopener"
                 style={{ display: 'inline-block', textDecoration: 'none' }}
-                aria-label="Verified on DANG! — AI tools directory"
+                aria-label="Verified on DANG!, the AI tools directory"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img

@@ -35,10 +35,10 @@ function buildAuditEmailHtml(params: {
   const gradeLabel = scoreWithheld
     ? 'Not enough of the page could be read to score it'
     : score >= 70
-      ? 'Few structural obstacles found — out of 100'
+      ? 'Few structural obstacles found (out of 100)'
       : score >= 40
-        ? 'Room for improvement — out of 100'
-        : 'Significant gaps to address — out of 100'
+        ? 'Room for improvement (out of 100)'
+        : 'Significant gaps to address (out of 100)'
 
   const recsHtml = topRecs.slice(0, 3).map(r => `
     <tr>
@@ -121,13 +121,13 @@ function buildAuditEmailHtml(params: {
             View Your Full Report →
           </a>
           <p style="color:#a8a29e;font-size:12px;margin:16px 0 0;">
-            Want to fix these issues automatically? <a href="https://bylineseo.com/pricing" style="color:#B87333;">Start with Byline</a> — AI content that scores well on both Google and AI engines.
+            Byline can draft articles and score each draft against this rubric before you publish. <a href="https://app.bylineseo.com/pricing" style="color:#B87333;">See plans</a>
           </p>
         </td></tr>
 
         <!-- Footer -->
         <tr><td style="background:#f7f3ec;padding:20px 32px;text-align:center;">
-          <p style="color:#a8a29e;font-size:12px;margin:0;">© ${new Date().getFullYear()} Byline · <a href="https://bylineseo.com" style="color:#a8a29e;">bylineseo.com</a></p>
+          <p style="color:#a8a29e;font-size:12px;margin:0;">© ${new Date().getFullYear()} Byline · <a href="https://app.bylineseo.com" style="color:#a8a29e;">bylineseo.com</a></p>
         </td></tr>
 
       </table>
@@ -258,7 +258,7 @@ export async function POST(request: Request) {
       await ghlUpdateCustomField(contactId, 'geo_grade', geoResult.scoreWithheld ? 'N/A' : geoResult.grade)
     }
     if (resultId && geoResult) {
-      const resultsUrl = `https://bylineseo.com/audit/results/${resultId}`
+      const resultsUrl = `https://app.bylineseo.com/audit/results/${resultId}`
       const html = buildAuditEmailHtml({
         email,
         domain,
@@ -274,7 +274,7 @@ export async function POST(request: Request) {
         toEmail: email,
         subject: geoResult.scoreWithheld
           ? `Your GEO Analysis for ${domain || 'your site'}`
-          : `Your GEO Analysis for ${domain || 'your site'} — Score: ${geoResult.score}/100`,
+          : `Your GEO Analysis for ${domain || 'your site'}: Score ${geoResult.score}/100`,
         html,
         fromEmail: 'michael@lc.bylineseo.com',
       })
@@ -332,15 +332,15 @@ export async function POST(request: Request) {
           <ul style="margin:0;padding-left:0;list-style:none;">${winsHtml}</ul>
         </td></tr>` : ''}
         <tr><td style="padding:32px;text-align:center;border-top:1px solid #f0ece4;margin-top:24px;">
-          <a href="https://bylineseo.com/audit/results/${resultId}" style="display:inline-block;background:#B87333;color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:bold;padding:14px 28px;border-radius:8px;text-decoration:none;margin-bottom:16px;">
+          <a href="https://app.bylineseo.com/audit/results/${resultId}" style="display:inline-block;background:#B87333;color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:bold;padding:14px 28px;border-radius:8px;text-decoration:none;margin-bottom:16px;">
             View your full content map →
           </a>
           <p style="color:#a8a29e;font-size:12px;margin:16px 0 0;">
-            Byline can draft any of these and score the draft before you publish. <a href="https://bylineseo.com/pricing" style="color:#B87333;">See plans</a>
+            Byline can draft any of these and score the draft before you publish. <a href="https://app.bylineseo.com/pricing" style="color:#B87333;">See plans</a>
           </p>
         </td></tr>
         <tr><td style="background:#f7f3ec;padding:20px 32px;text-align:center;">
-          <p style="color:#a8a29e;font-size:12px;margin:0;">© ${new Date().getFullYear()} Byline · <a href="https://bylineseo.com" style="color:#a8a29e;">bylineseo.com</a></p>
+          <p style="color:#a8a29e;font-size:12px;margin:0;">© ${new Date().getFullYear()} Byline · <a href="https://app.bylineseo.com" style="color:#a8a29e;">bylineseo.com</a></p>
         </td></tr>
       </table>
     </td></tr>
@@ -382,12 +382,12 @@ export async function POST(request: Request) {
             <li style="margin-bottom:8px;">Keyword research built into the brief</li>
             <li style="margin-bottom:8px;">One-click publishing to your CMS</li>
           </ul>
-          <a href="https://bylineseo.com/pricing" style="display:inline-block;background:#B87333;color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:bold;padding:14px 28px;border-radius:8px;text-decoration:none;">
+          <a href="https://app.bylineseo.com/pricing" style="display:inline-block;background:#B87333;color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:bold;padding:14px 28px;border-radius:8px;text-decoration:none;">
             ${isAo ? 'Start optimizing for AI →' : 'See plans →'}
           </a>
         </td></tr>
         <tr><td style="background:#f7f3ec;padding:20px 32px;text-align:center;">
-          <p style="color:#a8a29e;font-size:12px;margin:0;">© ${new Date().getFullYear()} Byline · <a href="https://bylineseo.com" style="color:#a8a29e;">bylineseo.com</a></p>
+          <p style="color:#a8a29e;font-size:12px;margin:0;">© ${new Date().getFullYear()} Byline · <a href="https://app.bylineseo.com" style="color:#a8a29e;">bylineseo.com</a></p>
         </td></tr>
       </table>
     </td></tr>
@@ -399,7 +399,7 @@ export async function POST(request: Request) {
           toEmail: email,
           subject: isAo
             ? `Your AO analysis for ${domain || 'your site'}: what came out of the page`
-            : 'Welcome to Byline — your AI content platform',
+            : 'Welcome to Byline',
           html: welcomeHtml,
           fromEmail: 'michael@lc.bylineseo.com',
         })

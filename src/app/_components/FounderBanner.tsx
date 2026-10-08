@@ -31,13 +31,13 @@ export default async function FounderBanner() {
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-[rgba(184,115,51,0.12)] border border-[rgba(184,115,51,0.3)] rounded-full px-4 py-1.5 text-xs font-semibold text-[#D4954A] tracking-wide uppercase mb-4">
-            Founder Pricing — Limited Time
+            Founder Pricing: Limited Time
           </div>
           <h2 className="text-3xl font-bold text-[#F7F3EC] mb-3">
             Lock in founder pricing. Forever.
           </h2>
           <p className="text-[#A89070] max-w-lg mx-auto">
-            The first 100 subscribers get reduced pricing locked for life — your rate never increases, even as we add features and raise prices.
+            The first 100 subscribers get reduced pricing locked for life. Your rate never increases, even as we add features and raise prices.
           </p>
           <div className="mt-4 flex items-center justify-center gap-2">
             <div className="h-2 w-48 rounded-full bg-[#2A2420] overflow-hidden">
@@ -56,7 +56,7 @@ export default async function FounderBanner() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
           {/* Starter Founder */}
           <div className="rounded-2xl border border-[rgba(184,115,51,0.3)] bg-[#231F1B] p-7 flex flex-col">
-            <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Starter — Founder</div>
+            <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Starter (Founder)</div>
             <div className="flex items-baseline gap-2 mb-1">
               <span className="text-4xl font-bold text-[#F7F3EC]">$39</span>
               <span className="text-sm text-[#7A6555]">/mo</span>
@@ -81,7 +81,7 @@ export default async function FounderBanner() {
                 BEST VALUE
               </span>
             </div>
-            <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Growth — Founder</div>
+            <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Growth (Founder)</div>
             <div className="flex items-baseline gap-2 mb-1">
               <span className="text-4xl font-bold text-[#F7F3EC]">$79</span>
               <span className="text-sm text-[#7A6555]">/mo</span>

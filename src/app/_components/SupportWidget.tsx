@@ -10,7 +10,7 @@ type View = 'chat' | 'cancel'
 const GREETING: Message = {
   role: 'assistant',
   content:
-    "Hi — I'm Byline Support. Ask me anything about keywords, articles, scoring, billing, or your account. I can also help you cancel your plan or get a message to Michael.",
+    "Hi, I'm Byline Support. Ask me anything about keywords, articles, scoring, billing, or your account. I can also help you cancel your plan or get a message to Michael.",
 }
 
 const QUICK_ACTIONS = [
@@ -120,13 +120,13 @@ export default function SupportWidget() {
           role: 'assistant',
           content: data.ok
             ? `I've passed this to Michael. ${data.availability ?? ''}`.trim()
-            : "I couldn't reach the escalation channel just now — please email hi@bylineseo.com and we'll jump on it.",
+            : "I couldn't reach the escalation channel just now. Please email hi@bylineseo.com and we'll jump on it.",
         },
       ])
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: "I couldn't reach the escalation channel just now — please email hi@bylineseo.com." },
+        { role: 'assistant', content: "I couldn't reach the escalation channel just now. Please email hi@bylineseo.com." },
       ])
     } finally {
       setStreaming(false)
@@ -337,7 +337,7 @@ export default function SupportWidget() {
                       style={{ accentColor: '#B87333' }}
                     />
                     <span className="text-xs leading-relaxed" style={{ color: '#A89070' }}>
-                      I&apos;d also like to request a refund. (Reviewed personally by Michael — refunds are available within 30 days of your first payment.)
+                      I&apos;d also like to request a refund. (Reviewed personally by Michael. Refunds are available within 30 days of your first payment.)
                     </span>
                   </label>
 

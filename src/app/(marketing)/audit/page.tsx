@@ -254,8 +254,8 @@ export default function PublicAuditPage() {
           </h1>
           <p className="text-lg text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-10">
             Byline reads your sitemap and groups what you have published, then suggests topics adjacent to
-            your coverage. The suggestions come from a model reading your page titles, so they are a starting
-            point for your own keyword research rather than a measurement.
+            your coverage. A model reading your page titles makes the suggestions, so take them into your own
+            keyword research before you commit to any of them.
           </p>
 
           {/* URL input form — the above-the-fold CTA */}
@@ -305,7 +305,7 @@ export default function PublicAuditPage() {
               {
                 num: '01',
                 heading: 'We crawl your sitemap',
-                body: "Enter your domain and we pull every page you've published. No login needed — we use your sitemap to see exactly what content you've built.",
+                body: "Enter your domain and we pull every page you've published. No login needed. We use your sitemap to see what you've published.",
               },
               {
                 num: '02',
@@ -338,8 +338,8 @@ export default function PublicAuditPage() {
           </h2>
           <div className="space-y-5 text-[#57534E] text-[17px] leading-relaxed">
             <p>
-              Your team picks topics based on what feels right — what the CEO mentioned in a meeting,
-              what a customer asked about last week, what a competitor wrote about last month.
+              Your team picks topics on instinct: something the CEO mentioned in a meeting,
+              or a question a customer asked last week.
             </p>
             <p>
               A map of what you have already published is the first step. It shows which topics you cover
@@ -572,7 +572,7 @@ export default function PublicAuditPage() {
                         </div>
                         {unlockStatus === 'error' && (
                           <p className="mt-2 text-xs text-[#9A6228] text-center">
-                            Couldn&apos;t save your email — please try again.
+                            Couldn&apos;t save your email. Please try again.
                           </p>
                         )}
                       </div>
@@ -592,7 +592,7 @@ export default function PublicAuditPage() {
                     href="/signup?plan=free&ref=audit"
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
                   >
-                    Write your first article free — no credit card needed
+                    Write your first article free, no credit card needed
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                   <p className="mt-3 text-xs text-[#57534E]">
@@ -618,15 +618,15 @@ export default function PublicAuditPage() {
                   Want articles that fill these gaps, written in your brand voice?
                 </h2>
                 <p className="text-sm text-[#A89070] mb-5 leading-relaxed">
-                  Byline turns these gaps into publish-ready, SEO-optimized articles —
-                  matched to how your site already sounds.
+                  Byline can draft an article for any of these topics in the voice
+                  your site already uses, and score it before you publish.
                 </p>
 
                 <Link
                   href={`/signup?plan=free&ref=audit&email=${encodeURIComponent(capturedEmail)}&source=lead_magnet`}
                   className="inline-flex items-center gap-2 px-5 py-3 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
                 >
-                  Start free — no credit card required
+                  Start free, no credit card required
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -684,7 +684,7 @@ export default function PublicAuditPage() {
             Start with your sitemap
           </h2>
           <p className="text-lg text-[#A89070] mb-9 leading-relaxed">
-            Run a free audit above — or sign up to generate a draft and score it before you publish.
+            Run a free audit above, or sign up to generate a draft and score it before you publish.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button

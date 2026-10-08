@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — Byline',
+  title: 'Terms of Service | Byline',
   description: 'Terms governing your use of the Byline service.',
 }
 
@@ -67,7 +67,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">4. Your Content</h2>
             <p>
-              You retain ownership of all content you create using Byline — articles, briefs,
+              You retain ownership of all content you create using Byline, including articles, briefs,
               keywords, and brand profiles. We do not claim any ownership rights over your content.
               You grant us a limited license to store and process your content solely to deliver
               and improve the service. We do not use your content to train AI models.

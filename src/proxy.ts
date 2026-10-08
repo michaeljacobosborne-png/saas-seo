@@ -3,7 +3,23 @@ import { createServerClient } from '@supabase/ssr'
 
 const AUTH_PROTECTED = ['/dashboard', '/brand', '/keywords', '/articles']
 
+/**
+ * The apex served a full duplicate of the app with every canonical pointing at
+ * app.bylineseo.com (our own engine scored it 4/6 on fetch and canonical).
+ * Pages move permanently to the canonical host. /api (excluded by the matcher)
+ * and /auth stay put, so a webhook or sign-in callback registered against the
+ * apex keeps working.
+ */
+const CANONICAL_HOST = 'app.bylineseo.com'
+const REDIRECT_HOSTS = new Set(['bylineseo.com'])
+
 export async function proxy(request: NextRequest) {
+  const host = (request.headers.get('host') ?? '').toLowerCase().split(':')[0]
+  if (REDIRECT_HOSTS.has(host) && !request.nextUrl.pathname.startsWith('/auth')) {
+    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${CANONICAL_HOST}`)
+    return NextResponse.redirect(url, 308)
+  }
+
   // Forward the current path to Server Components via a request header so the
   // dashboard layout can decide whether to push the user to brand onboarding.
   const forwardedHeaders = () => {

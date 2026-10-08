@@ -262,7 +262,7 @@ export default function AoAnalyzerClient() {
               {
                 num: '01',
                 heading: 'Crawl your homepage',
-                body: 'Enter your URL and we fetch your page HTML. No login needed — we read what any visitor would see.',
+                body: 'Enter your URL and we fetch your page HTML. No login needed. We read what any visitor would see.',
               },
               {
                 num: '02',
@@ -357,7 +357,7 @@ export default function AoAnalyzerClient() {
                   </h2>
                   <FactorBreakdown
                     result={result}
-                    note="This is an assessment of how ready your published content is to be quoted in an answer — not a measurement of how often AI tools or featured snippets currently surface it."
+                    note="This assesses how ready your published content is to be quoted in an answer. It does not measure how often AI tools or featured snippets currently surface it."
                   />
                 </div>
               )}
@@ -451,7 +451,7 @@ export default function AoAnalyzerClient() {
                       </p>
                       <p className="text-sm text-[#57534E] text-center mb-5">
                         {lockedRecs.length} more recommendation
-                        {lockedRecs.length !== 1 ? 's' : ''} — free with your email
+                        {lockedRecs.length !== 1 ? 's' : ''}, free with your email
                       </p>
                       <div className="w-full max-w-sm">
                         <div className="flex flex-col sm:flex-row gap-2">
@@ -480,7 +480,7 @@ export default function AoAnalyzerClient() {
                         </div>
                         {emailStatus === 'error' && (
                           <p className="mt-2 text-xs text-[#9A6228] text-center">
-                            Couldn&apos;t save your email — please try again.
+                            Couldn&apos;t save your email. Please try again.
                           </p>
                         )}
                       </div>
@@ -512,7 +512,7 @@ export default function AoAnalyzerClient() {
                   href={`/signup?plan=free&ref=ao_analyzer${emailSubmitted ? `&email=${encodeURIComponent(email)}` : ''}`}
                   className="inline-flex items-center gap-2 px-5 py-3 bg-[#B87333] text-white text-sm font-semibold rounded-xl hover:bg-[#9A6228] transition-colors"
                 >
-                  Start free — no credit card required
+                  Start free, no credit card required
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -550,7 +550,7 @@ export default function AoAnalyzerClient() {
             style={playfair}
             className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight"
           >
-            AO vs GEO — what&apos;s the difference?
+            AO vs GEO: what&apos;s the difference?
           </h2>
           <div className="text-[#57534E] text-[17px] leading-relaxed">
             <p>
@@ -583,7 +583,7 @@ export default function AoAnalyzerClient() {
             Ready to see what comes out of your page?
           </h2>
           <p className="text-lg text-[#A89070] mb-9 leading-relaxed">
-            Run a free AO analysis above — or sign up to generate a draft and score it before
+            Run a free AO analysis above, or sign up to generate a draft and score it before
             you publish.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

@@ -6,23 +6,23 @@ import FounderBanner from './_components/FounderBanner'
 import { ORG_ID, SITE_URL, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
 
 export const metadata: Metadata = {
-  title: 'Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content',
+  title: 'Byline: AI search readiness, scored from your page with the evidence',
   description:
-    'Byline is the AI SEO platform that researches real keywords, generates articles, and rewrites weak sections with an editorial agent — directly inside your editor. Try it free.',
+    'Byline scores whether AI search can reach, parse and lift a clean passage from your pages, with the evidence behind every finding. It withholds the score when it cannot read enough to publish one. It does not measure AI visibility.',
   alternates: {
     canonical: 'https://app.bylineseo.com',
   },
   openGraph: {
-    title: 'Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content',
+    title: 'Byline: AI search readiness, scored from your page',
     description:
-      'The AI SEO platform with real keyword data, AI article generation, and an editorial agent that rewrites what\'s holding you back.',
+      'Two scores, rule-derived in code. Retrievable out of 100, Citable as a band. Evidence under every finding, and no score at all when the evidence is thin.',
     url: 'https://app.bylineseo.com',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Byline — AI SEO Writing Tool',
-    description: 'Real keyword data. AI content generation. An editorial agent that fixes what\'s holding you back.',
+    title: 'Byline: AI search readiness, scored from your page',
+    description: 'Rule-derived scores for AI search readiness, with the evidence shown. No visibility claims, no ranking forecasts.',
   },
 }
 
@@ -61,7 +61,7 @@ const jsonLd = graph(organizationNode(), websiteNode(), personNode({ slug: 'mich
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
   description:
-    'AI SEO platform with real keyword research, article generation, and an editorial agent that identifies and rewrites weak content sections.',
+    'Scores how ready a page is for AI search to reach, parse and quote, in deterministic code with the evidence shown, and drafts articles scored against the same rubric before they publish.',
   offers: {
     '@type': 'Offer',
     price: '0',
@@ -74,7 +74,10 @@ const jsonLd = graph(organizationNode(), websiteNode(), personNode({ slug: 'mich
     'Editorial rewrite agent',
     'GEO (Generative Engine Optimization) scoring',
     'Answer Optimization analysis',
-    'Free SEO audit tool',
+    'Free content map',
+    'Evidence shown for every finding',
+    'Deterministic scoring, no model-set scores',
+    'Stored run history with engine version',
   ],
 })
 
@@ -103,7 +106,7 @@ export default function HomePage() {
           </h1>
           <p className="text-xl text-[#A89070] max-w-2xl mx-auto mb-10 leading-relaxed">
             Byline scores your article in code, shows the evidence behind every finding, and its editorial
-            agent rewrites the flagged sections — directly inside your editor.
+            agent rewrites the flagged sections directly inside your editor.
           </p>
           <PrimaryCta />
         </div>
@@ -120,7 +123,7 @@ export default function HomePage() {
               <img src="/dashboard-screenshot-2.png" alt="Byline editorial agent" className="w-full border-l border-[rgba(184,115,51,0.2)]" />
             </div>
           </div>
-          <p className="text-sm text-[#7A6555] mt-3">The editorial agent — live inside your editor</p>
+          <p className="text-sm text-[#7A6555] mt-3">The editorial agent, live inside your editor</p>
         </div>
       </section>
 
@@ -131,8 +134,8 @@ export default function HomePage() {
           <div className="space-y-6 text-[#A89070] leading-relaxed text-[15px]">
             <p>
               Surfer SEO gives you a score and a keyword list. Frase gives you a content brief. Both tell you
-              what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, identifies
-              the specific sentences holding you back, and rewrites them — directly inside your editor, with one click.
+              what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, takes
+              the sections the scorer flagged, and rewrites them directly inside your editor, with one click.
             </p>
             <p>
               The findings come from deterministic code that reads your page, with the evidence shown under each
@@ -155,7 +158,7 @@ export default function HomePage() {
             From keyword to scored draft in one workflow.
           </h2>
           <p className="text-center text-[#A89070] mb-14 max-w-xl mx-auto">
-            One workflow. Research, generate, score, and fix — all without leaving Byline.
+            One workflow. Research, generate, score and fix, all without leaving Byline.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
@@ -166,12 +169,12 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
-                Step 1 — Research
+                Step 1: Research
               </div>
               <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Discover the right keywords</h3>
               <p className="text-[#A89070] text-sm leading-relaxed">
                 Tell the discovery agent your topic and audience. It asks the right questions and generates
-                15–20 targeted keyword seeds before touching the API — so your results are specific, not generic.
+                15–20 targeted keyword seeds before touching the API, so your results fit your topic.
               </p>
             </div>
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
@@ -182,12 +185,12 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
-                Step 2 — Generate
+                Step 2: Generate
               </div>
               <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Generate an article that actually fits</h3>
               <p className="text-[#A89070] text-sm leading-relaxed">
                 Choose your target word count. Byline generates a fully structured, SEO-optimized article
-                matched to the keyword&apos;s search intent — then checks it for how retrievable and citable it is before you publish.
+                matched to the keyword&apos;s search intent, then scores how retrievable and citable it is before you publish.
               </p>
             </div>
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
@@ -198,12 +201,12 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
-                Step 3 — Optimize
+                Step 3: Optimize
               </div>
-              <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Let the agent fix what&apos;s underperforming</h3>
+              <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Let the agent fix what the scorer flagged</h3>
               <p className="text-[#A89070] text-sm leading-relaxed">
-                Select any section. Tell the agent to rewrite it. The fix drops in directly — no copy-paste,
-                no leaving the editor. The agent also surfaces content gaps and suggests your next article.
+                Select any section. Tell the agent to rewrite it. The fix drops in directly, with no copy-paste
+                and no leaving the editor. The agent also surfaces content gaps and suggests your next article.
               </p>
             </div>
           </div>
@@ -233,20 +236,20 @@ export default function HomePage() {
                 <h3 className="font-bold text-[#F7F3EC] mb-2">Assist mode</h3>
                 <p className="text-[#A89070] text-sm leading-relaxed">
                   Select any paragraph. Give an instruction. The agent rewrites it in-place and applies it
-                  to your editor with one click — no copy-paste.
+                  to your editor with one click. No copy-paste.
                 </p>
               </div>
               <div>
                 <h3 className="font-bold text-[#F7F3EC] mb-2">Score-based shortcuts</h3>
                 <p className="text-[#A89070] text-sm leading-relaxed">
-                  Failed your AEO score? One click sends the agent straight to the fix — &ldquo;Add a FAQ section
+                  Failed a check? One click sends the agent straight to the fix: &ldquo;Add a FAQ section
                   targeting common questions about [keyword].&rdquo;
                 </p>
               </div>
               <div>
                 <h3 className="font-bold text-[#F7F3EC] mb-2">Agent Memory</h3>
                 <p className="text-[#A89070] text-sm leading-relaxed">
-                  The agent remembers what it told you before — across sessions and articles — so it never
+                  The agent remembers what it told you before, across sessions and articles, so it never
                   repeats itself.
                 </p>
               </div>
@@ -255,7 +258,7 @@ export default function HomePage() {
             <div className="bg-[#1C1917] rounded-2xl border border-[rgba(184,115,51,0.2)] shadow-lg p-6">
               <div className="flex items-center gap-2 mb-5 pb-4 border-b border-[rgba(184,115,51,0.15)]">
                 <div className="w-2.5 h-2.5 rounded-full bg-[rgba(184,115,51,0.08)]0" />
-                <span className="text-xs font-medium text-[#A89070]">Assist mode — paragraph selected</span>
+                <span className="text-xs font-medium text-[#A89070]">Assist mode: paragraph selected</span>
               </div>
               {/* Selected / highlighted text block */}
               <div className="rounded-lg bg-[rgba(184,115,51,0.08)] border border-blue-200 px-4 py-3 mb-4">
