@@ -22,10 +22,7 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
 - FIXED 2026-10-07: the opposite error. reCAPTCHA/hCaptcha/Turnstile markers labelled full pages with a protected contact form "a bot challenge, not the page" (screamingfrog.co.uk, varn.co.uk, withcandour.co.uk: every row, baseline included). Those markers now count only on a response under 30 KB. Divergence is no longer reported when the baseline was refused too. Any prospect reading from before this fix that says "bot challenge" must be re-run.
 - Open (found 2026-10-07, outreach audits):
   - Some origins (aira.net, zelst.co.uk) serve or refuse a crawler UA depending on the other request headers: 200 with Accept/Accept-Language, 403 without. The probe's verdict is therefore about our request shape, not the crawler. Report such rows as unconfirmed, or probe twice with different header sets and report only what agrees.
-  - Named authorship missed named staff on varn.co.uk/about-us (CEO and Comms Director named in text) and reported "absent".
-  - Brand-claim proximity matches the Organization's legal name ("Candour Agency Ltd", "Zelst Limited") rather than the brand, so it reports "absent" when the brand is in the copy.
-  - Original evidence counted the agency's own CEO quote as "named client feedback" (varn.co.uk).
-  - Proprietary terms picked "Continue Reading" and "San Diego" (screamingfrog.co.uk): UI strings and place names need excluding.
+  - FIXED 2026-10-07 (DECISIONS 32): authorship miss (varn, screamingfrog), legal-name brand matching (candour, zelst), own-CEO quote as client evidence (varn), "Continue Reading" and "San Diego" as coined terms (screamingfrog). Also fixed: zelst coined term and founder name, salt nav-as-testimonial, optimist CORE Framework, "strong" authorship from an agency award.
 
 ## 2b. Blog drafts (content/blog)
 - DONE 2026-10-07: `which-ai-crawlers-your-site-actually-serves.md` Reddit section rewritten to the 5 October hand check (200s were a JS challenge, 429s a zero-allowance refusal). Its publishedAt is 2026-10-06, already past: set the real date before running without --dry-run.

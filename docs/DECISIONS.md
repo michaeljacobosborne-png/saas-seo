@@ -6,6 +6,18 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 32. Citability reads names the way a person would, and claims nothing it cannot attribute
+**Date:** 2026-10-07 (outreach audits of eight SEO agencies)
+**Decision:**
+- The brand is the trading name, not only the declared legal name. "Candour Agency Ltd" is checked as "Candour"; a derived short form must match with its capital, so the noun "candour" is not the brand.
+- Named authorship reads people from structured data, dated bylines ("19 May, 2026 by Dan Sharp"), quotes attributed to someone at the brand ("Tom Vaughton CEO at Varn"), and "Name Role" copy where the role is not at a different organisation. A name that appears only as a client's attribution is never the site's person.
+- "Strong" authorship needs a credential that belongs to the person: in their own Person markup (not a job title alone), or in the same sentence as their full name. An agency award elsewhere on the page does not count.
+- Client feedback needs a named client organisation other than the brand. A staff quote is not client evidence. A name and role with no company ("Vicky Walker Comms Director") is reported as neither staff nor client, because the text cannot tell which.
+- Coined terms exclude UI labels ("Continue Reading"), multi-word place names ("San Diego") and people's names. A heading-case framework ("The Complete Organic Revenue Engine (CORE) Framework") counts, but needs an acronym or three-plus words so "The Content Process" does not.
+- No engine version bump: the rubric is unchanged; these fix how accurately pages are read (the same treatment as the crawler-probe CAPTCHA fix, 027fd88).
+**Drivers (each a false finding on a real site, now a test in `attribution-names.test.ts`):** varn.co.uk authorship "absent" with the CEO named on /about-us, and the CEO's own quote counted as client feedback; withcandour.co.uk and zelst.co.uk brand proximity "absent" (legal name searched); screamingfrog.co.uk authorship "absent" with bylines on the homepage, and "Continue Reading" and "San Diego" credited as coined terms; zelst.co.uk "Seen Everywhere Optimisation" missed and its founder read as "Peter Van"; salt.agency a nav menu credited as client feedback; yesoptimist.com its CORE Framework missed.
+**Revisit if:** a site's staff and clients are routinely indistinguishable in this way and the "neither" rule hides real client evidence; then read the attribution's surrounding widget (team versus testimonial section) rather than the text.
+
 ## 31. A refused page request is our limitation, not a finding; the engine fetches over node:https with an honest user agent
 **Date:** 2026-10-06 (aira.net run that blocked Michael's outbound)
 **Decision:**

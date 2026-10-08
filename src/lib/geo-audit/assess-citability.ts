@@ -25,6 +25,7 @@ import { countWords, truncate, type ContentBlock, type ExtractedPage } from './e
 import { pageForRole, type KeyPageResult } from './crawl'
 import { SignalBuilder, bandCounts, overallBand } from './scoring'
 import { BAND_LABELS, type Citability, type CitabilitySignal, type Evidence } from './types'
+import { brandNames, findPeople, isClientFeedback, mentionsBrand, type BrandNames } from './attribution-names'
 
 export interface CitabilityInput {
   home: ExtractedPage
@@ -59,9 +60,25 @@ function namedAuthorship({ home, keyPages }: CitabilityInput): CitabilitySignal 
   const about = pageForRole(keyPages, 'about')
   const aboutPage = about?.page ?? null
 
-  const person = findPersonName(home) ?? (aboutPage ? findPersonName(aboutPage) : null)
+  const brand = brandNames(home)
+  const people = [...findPeople(home, brand).map((p) => ({ ...p, url: home.url }))]
+  if (aboutPage) people.push(...findPeople(aboutPage, brand).map((p) => ({ ...p, url: aboutPage.url })))
+  // A credential counts only when it belongs to the person: stated in their own
+  // Person markup or in a paragraph that names them. An agency award elsewhere
+  // on the page is not "a named person with stated experience".
+  const pages = aboutPage ? [home, aboutPage] : [home]
+  let named = people[0] ?? null
+  let credential: { url: string; text: string } | null = null
+  for (const p of people) {
+    const c = pages.map((pg) => findCredential(pg, p.name)).find(Boolean) ?? null
+    if (c) {
+      named = p
+      credential = c
+      break
+    }
+  }
+  const person = named?.name ?? null
   const bio = findBio(home) ?? (aboutPage ? findBio(aboutPage) : null)
-  const credential = findCredential(home) ?? (aboutPage ? findCredential(aboutPage) : null)
 
   // Invariant: never claim authorship is absent sitewide on the strength of one
   // page. If an About page is linked we say so, and if we could not read it we
@@ -76,13 +93,17 @@ function namedAuthorship({ home, keyPages }: CitabilityInput): CitabilitySignal 
     s.missing(`An About page is published at ${about.url} and was inspected.`)
   }
 
+  const personEvidence = named
+    ? ev(named.url, named.source === 'jsonld' ? 'jsonld' : 'text', named.context)
+    : null
+
   if (person && credential) {
     s.found('strong', `A named person is identified (${person}) with stated experience or specialism.`, [
-      ev(home.url, 'jsonld', `Person: ${person}`),
+      personEvidence!,
       ev(credential.url, 'text', credential.text),
     ])
   } else if (person) {
-    s.found('adequate', `A named person is identified (${person}), but no experience, qualification or specialism is stated alongside the name.`, ev(home.url, 'jsonld', `Person: ${person}`))
+    s.found('adequate', `A named person is identified (${person}), but no experience, qualification or specialism is stated alongside the name.`, personEvidence!)
   } else if (bio) {
     s.found('weak', 'A first-person bio describes who is behind the work, but no name is attached that an engine could attribute to.', ev(bio.url, 'text', bio.text))
   } else if (!about) {
@@ -98,15 +119,6 @@ function namedAuthorship({ home, keyPages }: CitabilityInput): CitabilitySignal 
   return s.build()
 }
 
-function findPersonName(page: ExtractedPage): string | null {
-  for (const node of page.structuredData) {
-    if (!node.types.some((t) => /^Person$/i.test(t))) continue
-    const name = node.raw.name
-    if (typeof name === 'string' && name.trim() && !name.includes('@')) return name.trim()
-  }
-  return null
-}
-
 function findBio(page: ExtractedPage): { url: string; text: string } | null {
   const markers = /\b(i built|i started|i founded|my name is|note from (the )?founder|about (me|the founder)|i help|i work with)\b/i
   for (const p of page.paragraphs) {
@@ -115,10 +127,26 @@ function findBio(page: ExtractedPage): { url: string; text: string } | null {
   return null
 }
 
-function findCredential(page: ExtractedPage): { url: string; text: string } | null {
-  const markers = /\b(\d+\+?\s*years?(?:\s+of)?\s+(?:experience|in)|certified|accredited|qualified|specialis[ez]|worked (?:with|across)|clients? (?:include|across)|degree|award)\b/i
+const CREDENTIAL = /\b(\d+\+?\s*years?(?:\s+of)?\s+(?:experience|in)|certified|accredited|qualified|specialis[ez]|worked (?:with|across)|clients? (?:include|across)|degree|award)\b/i
+
+function findCredential(page: ExtractedPage, name: string): { url: string; text: string } | null {
+  for (const node of page.structuredData) {
+    if (!node.types.some((t) => /^Person$/i.test(t)) || node.raw.name !== name) continue
+    // A job title says what someone does, not what they know; it is not
+    // "stated experience or specialism" on its own.
+    for (const key of ['description', 'knowsAbout', 'hasCredential', 'alumniOf']) {
+      const v = node.raw[key]
+      const textValue = Array.isArray(v) ? v.filter((x) => typeof x === 'string').join(', ') : typeof v === 'string' ? v : ''
+      if (textValue.trim()) return { url: page.url, text: truncate(`${name} — ${key}: ${textValue}`, 300) }
+    }
+  }
+  // Same sentence as the full name. A surname alone is not enough: on
+  // zelst.co.uk the founder's surname is the brand, so it is in every paragraph.
   for (const p of page.paragraphs) {
-    if (markers.test(p)) return { url: page.url, text: truncate(p, 300) }
+    if (!p.includes(name)) continue
+    for (const sentence of p.split(/(?<=[.!?])\s+/)) {
+      if (sentence.includes(name) && CREDENTIAL.test(sentence)) return { url: page.url, text: truncate(sentence, 300) }
+    }
   }
   return null
 }
@@ -173,11 +201,13 @@ function readSameAs(v: unknown): string[] {
 function brandClaimProximity({ home }: CitabilityInput): CitabilitySignal {
   const s = new SignalBuilder('brand-proximity', 'Brand-claim proximity')
 
-  const brand = findBrandName(home)
-  if (!brand) {
+  const names = brandNames(home)
+  if (!names) {
     s.missing('No consistent brand name could be read from the markup or title, so proximity to claims could not be established.')
     return s.build()
   }
+  // The trading name, not the legal one: copy says "Candour", not "Candour Agency Ltd".
+  const brand = names.display
 
   const substantive = home.blocks.filter((b) => b.wordCount >= 25)
   if (substantive.length === 0) {
@@ -185,9 +215,8 @@ function brandClaimProximity({ home }: CitabilityInput): CitabilitySignal {
     return s.build()
   }
 
-  const needle = brand.toLowerCase()
   const withBrand = substantive.filter(
-    (b) => b.text.toLowerCase().includes(needle) || (b.headingText ?? '').toLowerCase().includes(needle),
+    (b) => mentionsBrand(b.text, names) || mentionsBrand(b.headingText ?? '', names),
   )
   const share = withBrand.length / substantive.length
 
@@ -204,25 +233,16 @@ function brandClaimProximity({ home }: CitabilityInput): CitabilitySignal {
   return s.build()
 }
 
-function findBrandName(page: ExtractedPage): string | null {
-  for (const node of page.structuredData) {
-    if (node.types.some((t) => /^(Organization|LocalBusiness|OnlineBusiness|WebSite|ProfessionalService)$/i.test(t))) {
-      const name = node.raw.name
-      if (typeof name === 'string' && name.trim()) return name.trim()
-    }
-  }
-  const parts = page.title.split(/\s[|\-–—]\s/)
-  if (parts.length > 1) return parts[parts.length - 1].trim() || null
-  return page.title || null
-}
-
 // ── 4. Original evidence ──────────────────────────────────────────────────────
 
 function originalEvidence({ home }: CitabilityInput): CitabilitySignal {
   const s = new SignalBuilder('original-evidence', 'Original evidence')
 
   const stats = home.statistics
-  const testimonial = home.testimonials[0]
+  // A quote from the agency's own CEO is the organisation describing itself,
+  // not client feedback (varn.co.uk: "Tom Vaughton CEO at Varn").
+  const brand = brandNames(home)
+  const testimonial = home.testimonials.find((t) => isClientFeedback(t, brand))
   const methodology = home.paragraphs.find((p) =>
     /\b(we (tested|measured|analysed|analyzed|surveyed|audited|reviewed)|our (research|study|analysis|data|testing)|in our (experience|testing)|across \d+)\b/i.test(p),
   )
@@ -264,15 +284,22 @@ function originalEvidence({ home }: CitabilityInput): CitabilitySignal {
 function proprietaryTerms({ home }: CitabilityInput): CitabilitySignal {
   const s = new SignalBuilder('proprietary-terms', 'Proprietary terms')
 
-  const brand = (findBrandName(home) ?? '').toLowerCase()
-  const candidates = findCoinedTerms(home, brand)
+  const candidates = findCoinedTerms(home, brandNames(home))
 
-  const framework = home.mainText.match(
-    /\b(?:our|the)\s+([A-Z][A-Za-z]+(?:[- ][A-Z][A-Za-z]+){0,3})\s+(?:framework|method|methodology|approach|model|process|system|formula)\b/,
-  )
+  // Headings capitalise the keyword and often carry an acronym:
+  // yesoptimist.com, "The Complete Organic Revenue Engine (CORE) Framework".
+  // In heading case every word is capitalised, so "The Content Process" would
+  // pass for a name; there an acronym or three-plus words is required.
+  const framework = [
+    ...home.mainText.matchAll(
+      /\b([Oo]ur|[Tt]he)\s+([A-Z][A-Za-z]+(?:[- ][A-Z][A-Za-z]+){0,4})(\s+\([A-Z][A-Za-z0-9]{1,9}\))?\s+([Ff]ramework|[Mm]ethod|[Mm]ethodology|[Aa]pproach|[Mm]odel|[Pp]rocess|[Ss]ystem|[Ff]ormula)\b/g,
+    ),
+  ]
+    .filter((m) => /^[a-z]/.test(m[1]) || m[3] || m[2].split(/[- ]/).length >= 3)
+    .map((m) => [m[0], m[2], m[3], m[4]] as const)[0]
 
   if (framework) {
-    s.found('strong', `A named framework is used ("${framework[1]} ${framework[0].split(' ').pop()}"), which is the kind of term an engine cannot source anywhere else.`, ev(home.url, 'text', truncate(framework[0], 160)))
+    s.found('strong', `A named framework is used ("${framework[1]}${framework[2] ?? ''} ${framework[3]}"), which is the kind of term an engine cannot source anywhere else.`, ev(home.url, 'text', truncate(framework[0], 160)))
   } else if (candidates.length >= 2) {
     s.found('adequate', `Distinctive repeated terms appear (${candidates.slice(0, 3).map((c) => `"${c.term}"`).join(', ')}), which give a quote something identifiable to carry.`, ev(home.url, 'text', candidates.slice(0, 3).map((c) => `${c.term} (×${c.count})`).join(', ')))
   } else if (candidates.length === 1) {
@@ -284,19 +311,51 @@ function proprietaryTerms({ home }: CitabilityInput): CitabilitySignal {
   return s.build()
 }
 
-const STOPWORD_HEAD = /^(The|This|That|These|Those|Our|Your|We|You|It|And|But|For|With|From|How|What|Why|When|Where|Who|Which|A|An|In|On|At|To|Of|If|As|By|So|Not|All|More|Most|Every|Each|Some|Start|Get|See|Read|Learn|Contact|Book|Free|New|Best|Top)\b/
+const STOPWORD_HEAD = /^(The|This|That|These|Those|Our|Your|We|You|It|And|But|For|With|From|How|What|Why|When|Where|Who|Which|A|An|In|On|At|To|Of|If|As|By|So|Not|All|More|Most|Every|Each|Some|Start|Get|See|Read|Learn|Contact|Book|Free|New|Best|Top|Continue|View|Find|Load|Show|Sign|Log|Click|Download|Subscribe|Follow|Share|Back|Next|Previous|Explore|Discover|Watch|Listen|Request|Join|Try|Visit|Call|Email|Leave|Post|Reply|Comment|Comments|Posted|Written|Published|Filed|Tagged)\b/
 
-function findCoinedTerms(page: ExtractedPage, brandLower: string): { term: string; count: number }[] {
+/**
+ * Multi-word places, which repeat on any page with an office address or an
+ * event listing and are nobody's coined term (screamingfrog.co.uk listed
+ * "brightonSEO San Diego" three times and was credited with "San Diego").
+ */
+const PLACES = new Set(
+  [
+    'San Diego', 'San Francisco', 'San Jose', 'San Antonio', 'Los Angeles', 'Las Vegas', 'New York', 'New Jersey',
+    'New Mexico', 'New Orleans', 'New Hampshire', 'New Zealand', 'New Delhi', 'North Carolina', 'South Carolina',
+    'North Dakota', 'South Dakota', 'West Virginia', 'Rhode Island', 'Hong Kong', 'Saudi Arabia', 'South Africa',
+    'South Korea', 'North America', 'South America', 'Latin America', 'United Kingdom', 'United States',
+    'United Arab Emirates', 'Costa Rica', 'Puerto Rico', 'Sri Lanka', 'Buenos Aires', 'Sao Paulo', 'Mexico City',
+    'Kuala Lumpur', 'Tel Aviv', 'Cape Town', 'Abu Dhabi', 'Salt Lake City', 'Kansas City', 'Oklahoma City',
+    'Santa Monica', 'Santa Clara', 'Santa Barbara', 'Palo Alto', 'Silicon Valley', 'Northern Ireland',
+    'Great Britain', 'Milton Keynes', 'Tunbridge Wells', 'Hemel Hempstead', 'Welwyn Garden City', 'St Albans',
+    'Middle East', 'Western Europe', 'Eastern Europe', 'Bay Area', 'Greater London', 'Greater Manchester',
+  ].map((p) => p.toLowerCase()),
+)
+
+function findCoinedTerms(page: ExtractedPage, brand: BrandNames | null): { term: string; count: number }[] {
   const counts = new Map<string, number>()
+  // UI labels ("Continue Reading" under every blog teaser) are caught by the
+  // verb list above; link text is not excluded wholesale, because a real named
+  // framework is often linked from the nav. People's names repeat in bylines.
+  const peopleNames = new Set(findPeople(page, brand).map((p) => p.name.toLowerCase()))
   // Two-to-four word Title Case runs.
   const pattern = /\b([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3})\b/g
   let m: RegExpExecArray | null
 
   while ((m = pattern.exec(page.mainText)) !== null) {
-    const term = m[1]
+    let term = m[1]
+    // A run that swallowed the brand from the next sentence ("Seen Everywhere
+    // Optimisation" + "Zelst's proven methodology") keeps its non-brand part.
+    if (brand && mentionsBrand(term, brand)) {
+      let rest = term
+      for (const c of brand.candidates) rest = rest.replace(new RegExp(`(^|\\s)${c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`, 'g'), ' ')
+      rest = rest.replace(/\s+/g, ' ').trim()
+      if (rest.split(' ').length < 2 || mentionsBrand(rest, brand)) continue
+      term = rest
+    }
+    const lower = term.toLowerCase()
     if (STOPWORD_HEAD.test(term)) continue
-    if (term.toLowerCase() === brandLower) continue
-    if (brandLower && term.toLowerCase().includes(brandLower)) continue
+    if (PLACES.has(lower) || peopleNames.has(lower)) continue
     counts.set(term, (counts.get(term) ?? 0) + 1)
   }
 
