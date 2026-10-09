@@ -3,8 +3,8 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Byline Blog — SEO, content, and AEO insights',
-    template: '%s — Byline Blog',
+    default: 'Byline Blog: SEO, content and AEO insights',
+    template: '%s | Byline Blog',
   },
   description:
     'Practical guides on SEO, content operations, and answer-engine optimization from the team building Byline.',
