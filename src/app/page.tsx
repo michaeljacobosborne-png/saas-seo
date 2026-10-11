@@ -52,7 +52,43 @@ function PrimaryCta({ light = false }: { light?: boolean }) {
   )
 }
 
+/**
+ * The opening answer to each question heading, used both on the page and in the
+ * FAQPage markup so the two can never say different things. Every figure here
+ * has a public source linked beside it on the page.
+ */
+const FAQ = [
+  {
+    question: 'What does Byline do?',
+    answer:
+      'Byline reads a page the way a crawler does and scores two things. Retrievable is a score out of 100 for whether an engine can reach the page, parse it and lift a clean passage out of it. Citable is a band for whether a lifted passage carries anything that points back to you, such as a named author or data only you publish.',
+  },
+  {
+    question: 'Why does Byline score the page instead of AI answers?',
+    answer:
+      "Because citations move when nothing on the page changes. Otterly.AI reported that between July and September 2026 Reddit's share of ChatGPT citations fell 94% while its share of Perplexity citations rose 86%. In Semrush's 30-day test, Google AI Mode cited 48 of 81 unchanged pages on day six and 21 on day thirty.",
+  },
+  {
+    question: 'What do other AI readiness scores report?',
+    answer:
+      "Otterly.AI, an AI search monitoring vendor, also publishes a content readiness score. Its public API describes that score as 13 named dimensions, such as specificity and paragraph cohesion, each returned as a number from 0 to 100 with a free-text explanation.",
+  },
+  {
+    question: "How is Byline's approach different?",
+    answer:
+      "Each Byline finding names its threshold and quotes what it found. 'Self-contained sections 0/8: no section pairs a heading with enough prose to stand alone (target: 8+ sections of 40+ words)' is a line you can check in a browser in a minute. Factors that cannot be checked are marked unable to assess and left out of the total, never scored as zero.",
+  },
+]
+
 const jsonLd = graph(organizationNode(), websiteNode(), personNode({ slug: 'michael-osborne' }), {
+  '@type': 'FAQPage',
+  '@id': `${SITE_URL}/#faq`,
+  mainEntity: FAQ.map((f) => ({
+    '@type': 'Question',
+    name: f.question,
+    acceptedAnswer: { '@type': 'Answer', text: f.answer },
+  })),
+}, {
   '@type': 'SoftwareApplication',
   '@id': `${SITE_URL}/#software`,
   name: 'Byline',
@@ -105,8 +141,8 @@ export default function HomePage() {
             Scored from your page.<br className="hidden sm:block" /> An agent that fixes it.
           </h1>
           <p className="text-xl text-[#A89070] max-w-2xl mx-auto mb-10 leading-relaxed">
-            Byline scores your article in code, shows the evidence behind every finding, and its editorial
-            agent rewrites the flagged sections directly inside your editor.
+            Byline is an AI search readiness tool for SEOs. It scores whether a page can be retrieved and
+            cited, in code, with the evidence under every finding.
           </p>
           <PrimaryCta />
         </div>
@@ -127,26 +163,126 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Comparison ── */}
+      {/* ── The four questions a practitioner arrives with, then the evidence ── */}
       <section className="bg-[#231F1B] px-6 py-20">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-10 text-[#F7F3EC]">Not another ChatGPT wrapper.</h2>
-          <div className="space-y-6 text-[#A89070] leading-relaxed text-[15px]">
-            <p>
-              Surfer SEO gives you a score and a keyword list. Frase gives you a content brief. Both tell you
-              what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, takes
-              the sections the scorer flagged, and rewrites them directly inside your editor, with one click.
+        <div className="max-w-3xl mx-auto space-y-16 text-[#A89070] leading-relaxed text-[15px]">
+          <div>
+            <h2 className="text-3xl font-bold mb-6 text-[#F7F3EC]">What does Byline do?</h2>
+            <div className="space-y-5">
+              <p>{FAQ[0].answer}</p>
+              <p>
+                Every finding shows the evidence it was scored from, down to the heading text as found or the line
+                in your robots.txt that decided a crawler&apos;s access. When too little of a page can be read, Byline
+                publishes no score rather than a guess. The same rubric scores drafts in the editor before you
+                publish them.
+              </p>
+            </div>
+            <h3 className="text-xl font-bold mt-10 mb-4 text-[#F7F3EC]">Retrievable vs citable</h3>
+            <p className="mb-5">
+              The two halves fail for different reasons and need different fixes, so Byline reports them
+              separately and never blends them into one number.
             </p>
-            <p>
-              The findings come from deterministic code that reads your page, with the evidence shown under each
-              one. The agent, which runs on Claude Sonnet, writes the fix. It never sets a score. Byline does not
-              measure AI visibility, and nothing that reads a page&apos;s HTML can.
-            </p>
-            <p>
-              And because Byline&apos;s keyword database is shared across accounts, your research loads from cache
-              on repeat queries. Your results get faster over time, and your cost-per-article stays flat as the
-              platform grows.
-            </p>
+            <div className="overflow-x-auto rounded-xl border border-[rgba(184,115,51,0.2)]">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-[#2A2420] text-[#F7F3EC]">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 font-semibold"> </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">Retrievable</th>
+                    <th scope="col" className="px-4 py-3 font-semibold">Citable</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[rgba(184,115,51,0.15)]">
+                  <tr>
+                    <th scope="row" className="px-4 py-3 font-medium text-[#F7F3EC]">The question</th>
+                    <td className="px-4 py-3">Can an engine reach the page, parse it and lift a clean passage?</td>
+                    <td className="px-4 py-3">If a passage is lifted, does anything in it point back to you?</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="px-4 py-3 font-medium text-[#F7F3EC]">Reported as</th>
+                    <td className="px-4 py-3">A score from 0 to 100</td>
+                    <td className="px-4 py-3">A band: Strong, Adequate, Weak or Absent</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="px-4 py-3 font-medium text-[#F7F3EC]">What is checked</th>
+                    <td className="px-4 py-3">Access 30, Parseability 25, Chunkability 25, Extractability 20</td>
+                    <td className="px-4 py-3">Six attribution signals, from named authorship to original evidence</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="px-4 py-3 font-medium text-[#F7F3EC]">When evidence is thin</th>
+                    <td className="px-4 py-3">No score below 60% of the points being assessable</td>
+                    <td className="px-4 py-3">Marked unable to assess, never scored as absent</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-3xl font-bold mb-6 text-[#F7F3EC]">Why does Byline score the page instead of AI answers?</h2>
+            <div className="space-y-5">
+              <p>{FAQ[1].answer}</p>
+              <p>
+                A single visibility number averages those movements into something that happened to nobody. What
+                stays still, and what you can change, is the page. So the score comes from deterministic code
+                reading your HTML. A language model writes the explanation beside a finding and nothing else. It
+                cannot set a score, a status or a band.
+              </p>
+              <p className="text-sm">
+                Sources:{' '}
+                <a href="https://otterly.ai/blog/reddit-ban-geo-experiment/" className="underline hover:text-[#F7F3EC]" rel="noopener" target="_blank">Otterly.AI, 1 October 2026</a>
+                {' '}and{' '}
+                <a href="https://www.semrush.com/blog/how-fast-do-ai-search-platforms-cite-new-content/" className="underline hover:text-[#F7F3EC]" rel="noopener" target="_blank">Semrush, 10 December 2025</a>.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-3xl font-bold mb-6 text-[#F7F3EC]">What do other AI readiness scores report?</h2>
+            <div className="space-y-5">
+              <p>{FAQ[2].answer}</p>
+              <p>
+                The schema has no field for text quoted from the page, and it does not say how the dimensions
+                combine into the overall score. Otterly also runs prompt monitoring across AI engines, which is a
+                different product; this is about its readiness score only. The schema is public, under
+                PublicApiContentCheckContentAnalysis in{' '}
+                <a href="https://data.otterly.ai/v1/openapi.json" className="underline hover:text-[#F7F3EC]" rel="noopener" target="_blank">Otterly&apos;s API specification</a>,
+                checked on 11 October 2026.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-3xl font-bold mb-6 text-[#F7F3EC]">How is Byline&apos;s approach different?</h2>
+            <div className="space-y-5">
+              <p>{FAQ[3].answer}</p>
+              <p>
+                Every report records the engine version that produced it, currently 2026.11, so two runs can be
+                checked for whether the rubric moved between them. A language model never decides a score, and the
+                score is withheld when the page cannot support one.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-3xl font-bold mb-6 text-[#F7F3EC]">What did we find on eight SEO agency homepages?</h2>
+            <div className="space-y-5">
+              <p>
+                In October 2026 we audited the homepages of eight SEO agencies in the UK and US. All eight could be
+                read well enough to score, between 62 and 79 on engine 2026.10. Wherever the crawler check could be
+                attributed, every AI crawler was served the page. On two sites an ordinary browser request was
+                refused too, so every crawler row there was reported as unknown, not blocked.
+              </p>
+              <p>
+                The gaps were on the page. Seven of the eight had fewer than eight sections that stand alone when
+                quoted. Four had no heading phrased as a question. One had its main Organization markup fail to
+                parse because of a line break inside a text string.
+              </p>
+              <p>
+                Those runs also exposed errors in our own engine: a CAPTCHA script on a contact form read as a bot
+                challenge, and a legal company name searched for instead of the trading name. We fixed both and
+                re-ran all eight before using any finding.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -158,7 +294,7 @@ export default function HomePage() {
             From keyword to scored draft in one workflow.
           </h2>
           <p className="text-center text-[#A89070] mb-14 max-w-xl mx-auto">
-            One workflow. Research, generate, score and fix, all without leaving Byline.
+            Research, generate, score and fix, all without leaving Byline.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
@@ -217,9 +353,10 @@ export default function HomePage() {
       <section className="px-6 py-20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4 text-[#F7F3EC]">Not a score. An actual fix.</h2>
+            <h2 className="text-3xl font-bold mb-4 text-[#F7F3EC]">How does the editorial agent fix what the scorer flags?</h2>
             <p className="text-[#A89070] max-w-xl mx-auto text-lg">
-              Every other tool tells you your H2 is wrong. Byline&apos;s agent rewrites it.
+              The scorer finds the problem in code. The agent drafts the fix inside your editor, and you choose
+              whether to apply it.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -228,8 +365,8 @@ export default function HomePage() {
               <div>
                 <h3 className="font-bold text-[#F7F3EC] mb-2">Review mode</h3>
                 <p className="text-[#A89070] text-sm leading-relaxed">
-                  Open an article, ask the agent to review it. It reads the full content, identifies specific
-                  sentences and sections, and tells you exactly what to change and why.
+                  Ask the agent to review an article. It reads the full draft and the scorer&apos;s findings, then
+                  suggests changes that quote the lines they mean.
                 </p>
               </div>
               <div>
@@ -249,8 +386,7 @@ export default function HomePage() {
               <div>
                 <h3 className="font-bold text-[#F7F3EC] mb-2">Agent Memory</h3>
                 <p className="text-[#A89070] text-sm leading-relaxed">
-                  The agent remembers what it told you before, across sessions and articles, so it never
-                  repeats itself.
+                  The agent keeps a memory of what it has already told you, across sessions and articles.
                 </p>
               </div>
             </div>
