@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import NavLinks from '../../../_components/NavLinks'
 import { rdt } from '@/lib/reddit-pixel'
+import { CITABLE_SIGNALS, GEO_FAQS, RUBRIC } from '../geo-content'
 
 import {
   CitabilitySignals,
@@ -490,14 +491,12 @@ export default function GeoAnalyzerClient() {
       <section className="bg-[#F7F3EC] px-6 py-20">
         <div className="max-w-2xl mx-auto">
           <h2 style={playfair} className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight">
-            What is GEO (Generative Engine Optimization)?
+            {GEO_FAQS[0].q}
           </h2>
           <div className="space-y-4 text-[#57534E] text-[17px] leading-relaxed mb-12">
             <p>
-              Generative Engine Optimization (GEO) is the practice of structuring your website so
-              that AI tools like ChatGPT, Gemini, and Perplexity can read it, lift answers from it
-              and attribute those answers to you. As more search behavior shifts to AI-generated
-              answers, being usable in those answers, not just in blue links, matters more.
+              {GEO_FAQS[0].a} As more search behavior shifts to AI-generated answers, being usable in
+              those answers matters as much as ranking in the links below them.
             </p>
             <p>
               Retrieval has prerequisites. A page an engine cannot fetch is not a candidate at all. Past
@@ -512,25 +511,56 @@ export default function GeoAnalyzerClient() {
           </div>
 
           <h2 style={playfair} className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight">
-            How is your GEO score calculated?
+            {GEO_FAQS[1].q}
+          </h2>
+          <div className="text-[#57534E] text-[17px] leading-relaxed mb-12">
+            <p className="mb-6">{GEO_FAQS[1].a}</p>
+            <div className="overflow-x-auto rounded-xl border border-[#E7E0D6] bg-white">
+              <table className="w-full text-sm text-left">
+                <caption className="sr-only">Retrievable rubric: groups, checks and points</caption>
+                <thead className="bg-[#F7F3EC] text-[#1C1917]">
+                  <tr>
+                    <th scope="col" className="px-4 py-2.5 font-semibold">Group</th>
+                    <th scope="col" className="px-4 py-2.5 font-semibold">Check</th>
+                    <th scope="col" className="px-4 py-2.5 font-semibold text-right">Points</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E7E0D6]">
+                  {RUBRIC.flatMap((g) =>
+                    g.checks.map(([check, pts], i) => (
+                      <tr key={`${g.group}-${check}`}>
+                        <td className="px-4 py-2.5 text-[#1C1917] font-medium">{i === 0 ? `${g.group} (${g.points})` : ''}</td>
+                        <td className="px-4 py-2.5">{check}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">{pts}</td>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <h3 style={playfair} className="text-2xl font-bold text-[#1C1917] mb-4 leading-tight">
+            {GEO_FAQS[2].q}
+          </h3>
+          <div className="text-[#57534E] text-[17px] leading-relaxed mb-12">
+            <p className="mb-4">{GEO_FAQS[2].a} The six signals:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              {CITABLE_SIGNALS.map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ul>
+          </div>
+
+          <h2 style={playfair} className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight">
+            {GEO_FAQS[3].q}
           </h2>
           <div className="text-[#57534E] text-[17px] leading-relaxed">
-            <p>
-              Your GEO score is calculated across 7 weighted factors: schema markup (15 pts), author
-              and entity signals (15 pts), direct answer content (20 pts), factual citable claims
-              (15 pts), content structure (15 pts), brand and entity clarity (10 pts), and freshness
-              signals (10 pts). Each factor is scored based on signals found in your page HTML, with
-              a maximum total of 100 points. Each factor is scored in code from what we can actually
-              find in your markup and copy, and every finding shows the evidence behind it. If a
-              factor can&apos;t be checked from the pages we read, it&apos;s marked &ldquo;unable to
-              assess&rdquo; and left out of the total rather than counted against you.
-            </p>
+            <p>{GEO_FAQS[3].a}</p>
             <p className="mt-4">
-              This is a heuristic assessment of how ready your content is to be quoted. It is not a
-              measurement of your actual visibility in AI tools. No one outside OpenAI, Google or
-              Perplexity can measure that from your HTML, and any tool claiming otherwise is
-              guessing. A higher score means fewer structural obstacles to being read, understood
-              and quoted; it is not a prediction of citations.
+              The same engine has been run on the homepages of eight SEO agencies; what it found, and
+              the errors in our own engine those runs exposed, are on the{' '}
+              <Link href="/" className="underline hover:text-[#1C1917]">Byline homepage</Link>.
             </p>
           </div>
         </div>

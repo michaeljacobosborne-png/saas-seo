@@ -33,6 +33,18 @@ describe('Heading hierarchy can reach its maximum', () => {
   })
 })
 
+describe('the rubric published on the GEO Analyzer page matches the engine', () => {
+  // The page said "7 weighted factors: schema markup (15 pts)..." for months
+  // after the engine moved to four groups. This keeps the published table true.
+  it('lists every check with the points the engine awards', async () => {
+    const { RUBRIC } = await import('../../app/(marketing)/geo-analyzer/geo-content')
+    const home = extractPage('<html><body><main><p>x</p></main></body></html>', 'https://example.com/')
+    const r = scoreRetrievability({ home, access: null, now: NOW })
+    const engine = r.groups.map((g) => ({ group: g.name, points: g.maxScore, checks: g.checks.map((c) => [c.name, c.maxScore]) }))
+    expect(RUBRIC.map((g) => ({ group: g.group, points: g.points, checks: g.checks.map(([n, p]) => [n, p]) }))).toEqual(engine)
+  })
+})
+
 describe('SoftwareApplication counts as a content-level type (app.bylineseo.com)', () => {
   // Our own homepage as served on 2026-10-11: Organization, WebSite, Person and
   // SoftwareApplication. It was told it had no content-level type and advised

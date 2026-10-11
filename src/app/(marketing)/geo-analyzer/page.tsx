@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import GeoAnalyzerClient from './_components/GeoAnalyzerClient'
-import { ORG_ID } from '@/lib/structured-data'
+import { ORG_ID, graph, organizationNode } from '@/lib/structured-data'
+import { GEO_FAQS } from './geo-content'
 
 export const metadata: Metadata = {
   title: 'Free GEO Analyzer: Can AI Search Read Your Site? | Byline',
@@ -23,8 +24,7 @@ export const metadata: Metadata = {
   },
 }
 
-const jsonLd = {
-  '@context': 'https://schema.org',
+const app = {
   '@type': 'WebApplication',
   name: 'GEO Analyzer by Byline',
   url: 'https://app.bylineseo.com/geo-analyzer',
@@ -45,6 +45,13 @@ const jsonLd = {
     'GEO optimization recommendations',
   ],
 }
+
+// Organization so the page says who publishes it; FAQPage mirrors the visible
+// questions word for word.
+const jsonLd = graph(organizationNode(), app, {
+  '@type': 'FAQPage',
+  mainEntity: GEO_FAQS.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+})
 
 export default function GeoAnalyzerPage() {
   return (
