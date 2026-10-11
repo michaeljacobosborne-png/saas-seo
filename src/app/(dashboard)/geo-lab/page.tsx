@@ -480,7 +480,7 @@ export default function DashboardGeoAnalyzer() {
               {result.pagesInspected && result.pagesInspected.length > 0 && (
                 <p className="text-xs mt-5 pt-4 border-t leading-relaxed" style={{ color: 'var(--cream-faint)', borderColor: 'var(--border)' }}>
                   Pages inspected: {result.pagesInspected.filter((p) => p.ok).map((p) => p.url).join(', ') || 'none'}.
-                  {' '}Heuristic assessment of content readiness — not a measurement of actual AI visibility.
+                  {' '}Heuristic assessment of content readiness. It does not measure actual AI visibility.
                 </p>
               )}
             </div>

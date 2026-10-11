@@ -87,7 +87,7 @@ export default async function ReportsPage() {
           Audit Reports
         </h1>
         <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>
-          Saved audit reports — content gap audits, GEO scores, and AO analyses.
+          Saved audit reports: content maps, GEO scores and AO analyses.
         </p>
       </div>
 

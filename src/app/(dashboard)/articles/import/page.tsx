@@ -289,7 +289,7 @@ export default function ImportArticlePage() {
         <div>
           <h1 className="text-2xl font-bold text-[var(--cream)]">Import & Analyze Article</h1>
           <p className="text-sm text-[var(--cream-dim)] mt-1">
-            Paste an existing article to score how retrievable and citable it is — and get AI-powered suggestions to improve it.
+            Paste an existing article to score how retrievable and citable it is, and get suggestions to improve it.
           </p>
         </div>
       </div>
@@ -302,7 +302,7 @@ export default function ImportArticlePage() {
           {/* .docx upload drop zone */}
           <div>
             <label className="block text-xs font-medium text-[var(--cream-dim)] mb-2">
-              Upload .docx File <span className="text-[var(--cream-faint)] font-normal">(optional — or paste below)</span>
+              Upload .docx File <span className="text-[var(--cream-faint)] font-normal">(optional, or paste below)</span>
             </label>
             <div
               onDragOver={handleDragOver}

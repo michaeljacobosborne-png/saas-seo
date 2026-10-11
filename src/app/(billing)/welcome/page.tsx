@@ -127,7 +127,7 @@ export default function WelcomePage() {
         {timedOut ? (
           <>
             <p className="text-sm mb-6" style={{ color: '#A89070' }}>
-              This is taking a little longer than usual to finish setting up — but
+              This is taking a little longer than usual to finish setting up, but
               your payment went through. You can head straight in.
             </p>
             <Link

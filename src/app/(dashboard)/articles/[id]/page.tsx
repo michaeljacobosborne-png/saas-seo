@@ -1481,10 +1481,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     <h4 className="text-sm font-semibold text-[var(--cream)]">
                       Internal Links ({linkRecs.internal.length})
                     </h4>
-                    <span className="text-xs text-[var(--cream-faint)]">— links to your other articles</span>
+                    <span className="text-xs text-[var(--cream-faint)]">Links to your other articles</span>
                   </div>
                   {linkRecs.internal.length === 0 ? (
-                    <p className="text-sm text-[var(--cream-faint)] pl-4">No internal link opportunities found — publish more articles to enable this.</p>
+                    <p className="text-sm text-[var(--cream-faint)] pl-4">No internal link opportunities found. Publish more articles to enable this.</p>
                   ) : (
                     <div className="space-y-3">
                       {linkRecs.internal.map((rec, i) => {
@@ -1549,7 +1549,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     <h4 className="text-sm font-semibold text-[var(--cream)]">
                       External Citations ({linkRecs.external.length})
                     </h4>
-                    <span className="text-xs text-[var(--cream-faint)]">— authoritative sources to cite</span>
+                    <span className="text-xs text-[var(--cream-faint)]">Authoritative sources to cite</span>
                   </div>
                   {linkRecs.external.length === 0 ? (
                     <p className="text-sm text-[var(--cream-faint)] pl-4">No external citation opportunities found.</p>
@@ -1680,7 +1680,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               </div>
               <h3 className="font-semibold text-[var(--cream)] text-sm mb-2">Assist &amp; Auto are paid features</h3>
               <p className="text-sm text-[var(--cream-dim)] mb-5 leading-relaxed">
-                Upgrade to let the agent rewrite sections directly — or rewrite your entire article automatically.
+                Upgrade to let the agent rewrite sections directly, or rewrite your entire article automatically.
               </p>
               <Link
                 href="/pricing"
@@ -1738,7 +1738,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                   <div className="shrink-0 border-t border-[rgba(184,115,51,0.15)] px-4 py-3">
                     <p className="text-xs text-[var(--cream-faint)] mb-2.5 leading-relaxed">
-                      Review the rewrite above. Nothing changes until you apply it — then it saves automatically and you can undo (⌘/Ctrl+Z) in the editor.
+                      Review the rewrite above. Nothing changes until you apply it. Then it saves automatically and you can undo (⌘/Ctrl+Z) in the editor.
                     </p>
                     <div className="flex items-center gap-2">
                       <button
@@ -1825,7 +1825,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 /* Ready state — focus instructions + run */
                 <div className="flex-1 flex flex-col p-4 gap-4">
                   <p className="text-xs leading-relaxed text-[var(--cream-faint)]">
-                    Reads your article, audit scores, and brand profile — then applies every failing criterion in one pass. The rewrite saves automatically; undo in the editor to revert.
+                    Reads your article, audit scores and brand profile, then applies every failing criterion in one pass. The rewrite saves automatically; undo in the editor to revert.
                   </p>
                   <div>
                     <label className="block text-xs font-medium mb-1.5 text-[var(--cream-dim)]">

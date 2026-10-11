@@ -385,7 +385,7 @@ export default function BrandPage() {
             <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-[rgba(184,115,51,0.08)] border border-[rgba(184,115,51,0.25)]">
               <Shield className="w-4 h-4 text-[var(--copper-lt)] flex-shrink-0 mt-0.5" />
               <p className="text-sm text-[var(--cream)]">
-                This chat <span className="font-medium">updates</span> your existing profile — it won&apos;t replace it. Anything you don&apos;t mention stays exactly as it is.
+                This chat <span className="font-medium">updates</span> your existing profile. It won&apos;t replace it. Anything you don&apos;t mention stays exactly as it is.
               </p>
             </div>
           </div>
@@ -557,7 +557,7 @@ export default function BrandPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-[var(--cream)]">Brand Profile</h1>
           <p className="mt-1 text-sm text-[var(--cream-dim)]">
-            Your persistent brand memory — the AI uses this to write content that sounds like you.
+            Your persistent brand memory. The AI uses this to write content that sounds like you.
           </p>
           {p.updated_at && (
             <p className="mt-1.5 text-xs text-[var(--cream-faint)]">

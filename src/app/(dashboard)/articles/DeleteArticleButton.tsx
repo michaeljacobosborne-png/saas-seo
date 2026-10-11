@@ -33,7 +33,7 @@ export default function DeleteArticleButton({ articleId }: { articleId: string }
     <button
       onClick={handleDelete}
       disabled={deleting}
-      title={error ? 'Failed — click to retry' : 'Delete article'}
+      title={error ? 'Failed. Click to retry' : 'Delete article'}
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors disabled:opacity-50 ${
         error
           ? 'border-red-200 text-red-600 hover:bg-red-50'

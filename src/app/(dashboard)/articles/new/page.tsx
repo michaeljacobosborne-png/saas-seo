@@ -308,7 +308,7 @@ function NewArticleWizard() {
     setError(null)
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Session expired — please sign in again.'); setLoading(false); return }
+    if (!user) { setError('Session expired. Please sign in again.'); setLoading(false); return }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabaseAny = supabase as any
@@ -374,7 +374,7 @@ function NewArticleWizard() {
     setError(null)
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Session expired — please sign in again.'); setLoading(false); return }
+    if (!user) { setError('Session expired. Please sign in again.'); setLoading(false); return }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabaseAny = supabase as any
@@ -863,7 +863,7 @@ function NewArticleWizard() {
             <div className="bg-[var(--ink)] border border-[rgba(184,115,51,0.2)] rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-xs font-semibold text-[var(--cream-faint)] uppercase tracking-wide">Outline</div>
-                <span className="text-[10px] text-[var(--cream-faint)]">Edit headings &amp; notes — changes feed the draft</span>
+                <span className="text-[10px] text-[var(--cream-faint)]">Edit headings &amp; notes: changes feed the draft</span>
               </div>
               <div className="space-y-3">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -942,7 +942,7 @@ function NewArticleWizard() {
               {outlineChatOpen && (
                 <div className="border-t border-[rgba(184,115,51,0.15)] px-4 py-4">
                   <p className="text-xs text-[var(--cream-faint)] mb-3">
-                    Ask in plain language — e.g. &ldquo;add a section about pricing models&rdquo;,
+                    Ask in plain language, e.g. &ldquo;add a section about pricing models&rdquo;,
                     &ldquo;make section 2 more beginner-friendly&rdquo;, or &ldquo;swap sections 3 and 4&rdquo;.
                   </p>
 
@@ -1098,7 +1098,7 @@ function NewArticleWizard() {
           <Loader2 className="w-10 h-10 animate-spin text-[var(--copper-lt)] mx-auto mb-5" />
           {generatingStatus === 'expanding' ? (
             <>
-              <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-2">Article came in short — deepening the thin sections…</h3>
+              <h3 className="text-base font-semibold text-[var(--cream-dim)] mb-2">Article came in short. Deepening the thin sections…</h3>
               <p className="text-sm text-[var(--cream-faint)] max-w-xs mx-auto">Pulling related questions from DataForSEO and expanding with real substance.</p>
             </>
           ) : (
@@ -1117,7 +1117,7 @@ function NewArticleWizard() {
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
           <h2 className="text-xl font-bold text-[var(--cream)] mb-2">
-            {generatingStatus === 'expanded' ? 'Done — article expanded to target length' : 'Article generated and scored'}
+            {generatingStatus === 'expanded' ? 'Done: article expanded to target length' : 'Article generated and scored'}
           </h2>
           <p className="text-sm text-[var(--cream-dim)] mb-7 max-w-sm mx-auto">
             {generatingStatus === 'expanded'

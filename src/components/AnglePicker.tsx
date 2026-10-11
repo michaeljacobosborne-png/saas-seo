@@ -63,8 +63,8 @@ export default function AnglePicker({ topic, onSelect, onSkip }: AnglePickerProp
           <h3 className="text-base font-semibold text-[#F7F3EC]">Pick a research angle</h3>
         </div>
         <p className="text-sm text-[#A89070]">
-          Choose a direction for <span className="font-medium text-[#A89070]">&ldquo;{topic}&rdquo;</span>{' '}
-          — it shapes the competitor analysis and keyword suggestions.
+          Choose a direction for <span className="font-medium text-[#A89070]">&ldquo;{topic}&rdquo;</span>.{' '}
+          It shapes the competitor analysis and keyword suggestions.
         </p>
       </div>
 
@@ -124,7 +124,7 @@ export default function AnglePicker({ topic, onSelect, onSkip }: AnglePickerProp
               onClick={onSkip}
               className="inline-flex items-center gap-1.5 text-sm text-[#7A6555] hover:text-[#A89070] transition-colors"
             >
-              Skip — run without a specific angle
+              Skip and run without a specific angle
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

@@ -10,9 +10,9 @@ export const revalidate = 0
 const FEATURE_LABELS: Record<string, string> = {
   brief_gen: 'Brief generation',
   draft_gen: 'Draft generation',
-  agent_review: 'Agent — review',
-  agent_assist: 'Agent — assist',
-  agent_auto: 'Agent — auto',
+  agent_review: 'Agent: review',
+  agent_assist: 'Agent: assist',
+  agent_auto: 'Agent: auto',
   keyword_research: 'Keyword research',
   audit: 'Content audit',
 }
@@ -184,7 +184,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
 
       {tableMissing ? (
         <div className="rounded-lg px-4 py-3 text-sm text-[var(--cream-dim)]" style={{ background: 'rgba(184,115,51,0.08)' }}>
-          The <code>usage_events</code> table isn&apos;t present yet — apply migration{' '}
+          The <code>usage_events</code> table isn&apos;t present yet. Apply migration{' '}
           <code>20260618_usage_events.sql</code> to start collecting cost data.
         </div>
       ) : (

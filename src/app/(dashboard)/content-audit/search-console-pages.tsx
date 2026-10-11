@@ -92,7 +92,7 @@ export default function SearchConsolePages({ brandProfileId }: { brandProfileId:
                 </span>
               </div>
               <p className="text-sm text-[var(--cream-dim)]">
-                Connect it to layer real impressions, clicks, and rankings onto this audit. Not required — your audit above is already complete.
+                Connect it to layer real impressions, clicks, and rankings onto this audit. Not required: your audit above is already complete.
               </p>
             </div>
           </div>

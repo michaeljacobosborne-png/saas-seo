@@ -30,9 +30,9 @@ function usd(n: number): string {
 const FEATURE_LABELS: Record<string, string> = {
   brief_gen: 'Brief generation',
   draft_gen: 'Draft generation',
-  agent_review: 'Agent — review',
-  agent_assist: 'Agent — assist',
-  agent_auto: 'Agent — auto',
+  agent_review: 'Agent: review',
+  agent_assist: 'Agent: assist',
+  agent_auto: 'Agent: auto',
   keyword_research: 'Keyword research',
   audit: 'Content audit',
 }
@@ -162,9 +162,9 @@ async function CostTrackingSection() {
       </div>
 
       {cost.tableMissing ? (
-        <Note>The <code>usage_events</code> table isn&apos;t present yet — apply migration <code>20260618_usage_events.sql</code> to start collecting cost data.</Note>
+        <Note>The <code>usage_events</code> table isn&apos;t present yet. Apply migration <code>20260618_usage_events.sql</code> to start collecting cost data.</Note>
       ) : cost.totalCostUsd === 0 ? (
-        <Note>Cost tracking active — data will appear as articles are generated.</Note>
+        <Note>Cost tracking active. Data will appear as articles are generated.</Note>
       ) : null}
 
       {!cost.tableMissing && (

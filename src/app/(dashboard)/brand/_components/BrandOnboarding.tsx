@@ -36,7 +36,7 @@ const SOURCE_LABEL: Record<DerivedField['source'], string> = {
   'meta-author': "Read from your homepage's author tag",
   url: 'The address you entered',
   'page-text': 'Read from your homepage',
-  model: 'Suggested from your homepage — check it',
+  model: 'Suggested from your homepage. Check it',
 }
 
 function list(s: string): string[] {
@@ -295,7 +295,7 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
         <details className="group rounded-lg border border-[rgba(184,115,51,0.15)] px-4 py-3">
           <summary className="cursor-pointer text-sm text-[var(--cream-dim)] select-none">
             Optional details
-            {derived && ` — ${[form.industry, form.tone_notes, form.content_goals, form.primary_keywords].filter((v) => v.trim()).length} filled in from your site`}
+            {derived && ` (${[form.industry, form.tone_notes, form.content_goals, form.primary_keywords].filter((v) => v.trim()).length} filled in from your site)`}
           </summary>
           <div className="mt-4 space-y-4">
             <Field label="Industry" derived={derived?.industry}>
@@ -337,7 +337,7 @@ export default function BrandOnboarding({ onStartChat }: { onStartChat: () => vo
             className="flex items-center gap-2 px-5 py-2.5 bg-[#B87333] text-white text-sm font-medium rounded-lg hover:bg-[#A0622A] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {saving ? 'Saving…' : 'Looks right — start writing'}
+            {saving ? 'Saving…' : 'Looks right, start writing'}
           </button>
           {missing.length > 0 && phase === 'review' && (
             <span className="text-xs text-[var(--cream-faint)]">Needed: {missing.map((k) => FIELD_NAMES[k]).join(', ')}</span>

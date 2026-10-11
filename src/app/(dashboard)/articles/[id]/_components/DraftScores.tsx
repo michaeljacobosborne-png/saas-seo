@@ -249,7 +249,7 @@ export function DraftScores({
           {groupByReason(draft.afterPublication).map(({ reason, names }) => (
             <li key={reason} className="text-xs leading-relaxed">
               <span className="text-[var(--cream-dim)]">{names.join(', ')}</span>
-              <span className="text-[var(--cream-faint)]"> — {reason}</span>
+              <span className="text-[var(--cream-faint)]">: {reason}</span>
             </li>
           ))}
         </ul>

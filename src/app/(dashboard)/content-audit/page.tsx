@@ -571,7 +571,7 @@ export default function DashboardAuditPage() {
                 You&apos;ve saved these keywords but haven&apos;t written about them yet
               </h2>
               <p className="text-xs text-[var(--cream-dim)] mb-3">
-                These are already in your research pipeline — write them first.
+                These are already in your research pipeline. Write them first.
               </p>
               <div className="flex flex-wrap gap-2">
                 {unwrittenSaved.map((kw) => (

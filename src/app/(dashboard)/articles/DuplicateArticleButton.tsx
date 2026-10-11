@@ -32,7 +32,7 @@ export default function DuplicateArticleButton({ articleId }: { articleId: strin
     <button
       onClick={handleDuplicate}
       disabled={duplicating}
-      title={error ? 'Failed — click to retry' : 'Duplicate article'}
+      title={error ? 'Failed. Click to retry' : 'Duplicate article'}
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors disabled:opacity-50 ${
         error
           ? 'border-red-200 text-red-600 hover:bg-red-50'

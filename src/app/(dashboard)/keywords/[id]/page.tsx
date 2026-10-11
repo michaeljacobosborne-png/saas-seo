@@ -450,7 +450,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                   {researching
                     ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     : <RefreshCw className="w-3.5 h-3.5" />}
-                  Data may be stale — Refresh
+                  Data may be stale. Refresh
                 </button>
               ) : (
                 <button
@@ -631,7 +631,7 @@ export default function KeywordProjectPage({ params }: { params: Promise<{ id: s
                         {kw.source === 'exact' && (
                           <span
                             className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[rgba(184,115,51,0.12)] text-[var(--copper-lt)] border border-[rgba(184,115,51,0.3)] shrink-0"
-                            title="The exact phrase you searched — forced into your results"
+                            title="The exact phrase you searched, forced into your results"
                           >
                             Exact match
                           </span>
