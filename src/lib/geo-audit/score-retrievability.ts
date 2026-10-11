@@ -457,7 +457,7 @@ function scoreParseability({ home, access }: RetrievabilityInput): Factor[] {
   const types = home.structuredDataTypes
   const hasEntity = types.some((t) => /^(Organization|LocalBusiness|OnlineBusiness|Person|ProfessionalService|Corporation)$/i.test(t))
   const hasContentType = types.some((t) =>
-    /^(Article|BlogPosting|NewsArticle|FAQPage|HowTo|Product|Service|Review|Course|Event|BreadcrumbList)$/i.test(t),
+    /^(Article|BlogPosting|NewsArticle|FAQPage|HowTo|Product|SoftwareApplication|WebApplication|Service|Review|Course|Event|BreadcrumbList)$/i.test(t),
   )
 
   if (blocks.length === 0) {
@@ -538,8 +538,10 @@ function scoreChunkability({ home }: RetrievabilityInput): Factor[] {
     hierarchy.miss(`Only ${h3s.length} H3 subsections (target: 6+), so longer sections cannot be split further.`)
   }
 
+  // 3 + 4 + 2 + 3 = 12. Until engine 2026.11 this award was 2, so the factor
+  // summed to 11 and no page could reach 12/12 (DECISIONS 33).
   if (!hasSkippedLevels(home.headings)) {
-    hierarchy.award(2, 'Heading levels descend in order without skipping a level.')
+    hierarchy.award(3, 'Heading levels descend in order without skipping a level.')
   } else {
     hierarchy.miss('Heading levels skip a level in places, which obscures the document outline.')
   }

@@ -6,6 +6,19 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 33. Engine 2026.11: heading hierarchy can reach full marks; SoftwareApplication and WebApplication are content-level types
+**Date:** 2026-10-11 (found by auditing our own homepage; approved)
+**Decision:**
+- Heading hierarchy is out of 12 but its awards summed to 11 (H1 3, H2 4, H3 2, no skipped levels 2). "No skipped levels" is now worth 3, so the parts sum to 12.
+- The Parseability "content-level type" check now counts SoftwareApplication and WebApplication alongside Article, Product, Service and the rest.
+- ENGINE_VERSION goes from 2026.10 to 2026.11.
+**PRIOR SCORES ARE AFFECTED. Do not compare across this change without saying so.**
+- Every Retrievable score produced before 2026.11 was capped at 99, and every page with a clean heading outline lost 1 point it had earned. On 2026.11 the same page scores up to 1 point higher with nothing changed on the site.
+- Product and tool pages that declare SoftwareApplication or WebApplication (and no other content-level type) score 2 points higher on 2026.11. Our own homepage is one.
+- compareAudits already flags runs from different engine versions; any copy, report or outreach that quotes a before/after across this boundary must state the version change.
+**Drivers:** our homepage scored 11/12 on heading hierarchy with no stated reason, and was told to "add a SoftwareApplication schema" that was already present. Tests: `score-rubric.test.ts`, using our own homepage markup as served on 2026-10-11.
+**Revisit if:** the planned Original evidence change (Group 1 item 6) ships; it bumps the version again.
+
 ## 32. Citability reads names the way a person would, and claims nothing it cannot attribute
 **Date:** 2026-10-07 (outreach audits of eight SEO agencies)
 **Decision:**
