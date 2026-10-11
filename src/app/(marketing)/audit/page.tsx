@@ -1,5 +1,6 @@
 'use client'
 
+import { AUDIT_FAQS } from './audit-content'
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import {
@@ -297,15 +298,18 @@ export default function PublicAuditPage() {
       {/* ── Section 3: How It Works ── */}
       <section className="bg-[#F7F3EC] px-6 py-20">
         <div className="max-w-5xl mx-auto">
-          <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-center text-[#1C1917] mb-14">
-            How the Audit Works
+          <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-center text-[#1C1917] mb-6">
+            {AUDIT_FAQS[0].q}
           </h2>
+          <p className="text-center text-[17px] text-[#57534E] leading-relaxed max-w-2xl mx-auto mb-14">
+            {AUDIT_FAQS[0].a}
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {[
               {
                 num: '01',
                 heading: 'We crawl your sitemap',
-                body: "Enter your domain and we pull every page you've published. No login needed. We use your sitemap to see what you've published.",
+                body: 'Enter your domain and we read up to 30 pages listed in your sitemap. No login needed.',
               },
               {
                 num: '02',
@@ -334,9 +338,9 @@ export default function PublicAuditPage() {
       <section className="bg-[#FDFAF6] px-6 py-20">
         <div className="max-w-2xl mx-auto">
           <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-[#1C1917] mb-8 leading-tight">
-            Most content strategies are based on guesses
+            Why map what you have already published?
           </h2>
-          <div className="space-y-5 text-[#57534E] text-[17px] leading-relaxed">
+          <div className="space-y-5 text-[#57534E] text-[17px] leading-relaxed mb-14">
             <p>
               Your team picks topics on instinct: something the CEO mentioned in a meeting,
               or a question a customer asked last week.
@@ -351,6 +355,15 @@ export default function PublicAuditPage() {
               before you commit to any of them.
             </p>
           </div>
+
+          {AUDIT_FAQS.slice(1).map((f) => (
+            <div key={f.q} className="mb-12 last:mb-0">
+              <h2 style={playfair} className="text-2xl sm:text-3xl font-bold text-[#1C1917] mb-5 leading-tight">
+                {f.q}
+              </h2>
+              <p className="text-[#57534E] text-[17px] leading-relaxed">{f.a}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -639,7 +652,7 @@ export default function PublicAuditPage() {
       <section className="bg-[#F7F3EC] px-6 py-20">
         <div className="max-w-5xl mx-auto">
           <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-center text-[#1C1917] mb-14">
-            What the Audit Tells You
+            What does the report include?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
