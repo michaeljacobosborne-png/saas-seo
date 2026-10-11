@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import Link from 'next/link'
+import { ANSWER_GROUPS, AO_FAQS } from '../ao-content'
 import {
   Search,
   Loader2,
@@ -261,13 +262,13 @@ export default function AoAnalyzerClient() {
             {[
               {
                 num: '01',
-                heading: 'Crawl your homepage',
-                body: 'Enter your URL and we fetch your page HTML. No login needed. We read what any visitor would see.',
+                heading: 'Read your page',
+                body: 'Enter a URL and we fetch the page HTML. No login needed. We read what any visitor would see.',
               },
               {
                 num: '02',
-                heading: 'Score 6 AO factors',
-                body: 'We check question-based headings, featured snippet format, FAQ sections, scannable structure, conversational language, and related question coverage.',
+                heading: 'Score how an answer comes out',
+                body: 'The same engine as the GEO Analyzer, leading with the checks that decide whether a clean answer can be lifted: how the page breaks into sections, and whether each section opens with a direct answer.',
               },
               {
                 num: '03',
@@ -528,15 +529,10 @@ export default function AoAnalyzerClient() {
             style={playfair}
             className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight"
           >
-            What is Answer Optimization (AO)?
+            {AO_FAQS[0].q}
           </h2>
           <div className="space-y-4 text-[#57534E] text-[17px] leading-relaxed mb-12">
-            <p>
-              Answer Optimization (AO) is the practice of structuring your content so it can be
-              directly extracted and shown as a featured snippet in Google, or quoted in an
-              AI-generated answer from tools like ChatGPT and Perplexity. Where traditional SEO
-              aims at a results page, AO aims at the answer itself.
-            </p>
+            <p>{AO_FAQS[0].a}</p>
             <p>
               AO-optimized content starts with a direct, concise answer to the question the page
               targets, uses question-based headings that mirror how people phrase their searches,
@@ -546,29 +542,53 @@ export default function AoAnalyzerClient() {
             </p>
           </div>
 
-          <h2
-            style={playfair}
-            className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight"
-          >
+          <h2 style={playfair} className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight">
+            {AO_FAQS[1].q}
+          </h2>
+          <div className="text-[#57534E] text-[17px] leading-relaxed mb-12">
+            <p className="mb-6">{AO_FAQS[1].a}</p>
+            <div className="overflow-x-auto rounded-xl border border-[#E7E0D6] bg-white">
+              <table className="w-full text-sm text-left">
+                <caption className="sr-only">The checks that decide whether an answer can be lifted</caption>
+                <thead className="bg-[#F7F3EC] text-[#1C1917]">
+                  <tr>
+                    <th scope="col" className="px-4 py-2.5 font-semibold">Group</th>
+                    <th scope="col" className="px-4 py-2.5 font-semibold">Check</th>
+                    <th scope="col" className="px-4 py-2.5 font-semibold text-right">Points</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E7E0D6]">
+                  {ANSWER_GROUPS.flatMap((g) =>
+                    g.checks.map(([check, pts], i) => (
+                      <tr key={`${g.group}-${check}`}>
+                        <td className="px-4 py-2.5 text-[#1C1917] font-medium">{i === 0 ? `${g.group} (${g.points})` : ''}</td>
+                        <td className="px-4 py-2.5">{check}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">{pts}</td>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <h2 style={playfair} className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight">
             AO vs GEO: what&apos;s the difference?
           </h2>
-          <div className="text-[#57534E] text-[17px] leading-relaxed">
-            <p>
-              AO and GEO are two views of one problem. AO looks at whether a single passage can be
-              extracted cleanly. GEO looks at whether the whole page can be reached and parsed before
-              extraction is even possible.
-            </p>
+          <div className="text-[#57534E] text-[17px] leading-relaxed mb-12">
+            <p>{AO_FAQS[2].a}</p>
             <p className="mt-4">
               Neither one is a placement. Featured snippet selection is Google&apos;s decision and answer
               composition is the model&apos;s. Byline reports the condition of your page, which is the part
               you control.
             </p>
-            <p className="mt-4 text-sm text-[#78716C]">
-              This is an assessment of how ready your content is to be quoted in an answer. It is not a
-              measurement of how often AI tools or featured snippets currently surface it. Nobody outside
-              Google, OpenAI or Perplexity can measure that from your HTML, and a tool that offers to is
-              guessing. A higher score means fewer structural obstacles. It is not a prediction.
-            </p>
+          </div>
+
+          <h2 style={playfair} className="text-3xl font-bold text-[#1C1917] mb-5 leading-tight">
+            {AO_FAQS[3].q}
+          </h2>
+          <div className="text-[#57534E] text-[17px] leading-relaxed">
+            <p>{AO_FAQS[3].a}</p>
           </div>
         </div>
       </section>
