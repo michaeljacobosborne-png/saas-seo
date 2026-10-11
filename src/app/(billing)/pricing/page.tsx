@@ -1,6 +1,22 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import PricingCards from './pricing-cards'
+import { PRICING_FAQS } from './pricing-faqs'
+import { SITE_URL, graph, jsonLdString, organizationNode, websiteNode } from '@/lib/structured-data'
+
+const jsonLd = graph(organizationNode(), websiteNode(), {
+  '@type': 'FAQPage',
+  '@id': `${SITE_URL}/pricing#faq`,
+  mainEntity: PRICING_FAQS.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+})
+
+function JsonLd() {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
+}
 
 export const metadata: Metadata = {
   title: 'Pricing | Byline AI SEO Platform',
@@ -32,19 +48,25 @@ export default async function PricingPage() {
       .maybeSingle() : { data: null }
 
     return (
-      <PricingCards
-        currentPlan={sub?.plan ?? null}
-        currentInterval={sub?.billing_interval ?? null}
-        hasActiveSubscription={!!sub}
-      />
+      <>
+        <JsonLd />
+        <PricingCards
+          currentPlan={sub?.plan ?? null}
+          currentInterval={sub?.billing_interval ?? null}
+          hasActiveSubscription={!!sub}
+        />
+      </>
     )
   } catch {
     return (
-      <PricingCards
-        currentPlan={null}
-        currentInterval={null}
-        hasActiveSubscription={false}
-      />
+      <>
+        <JsonLd />
+        <PricingCards
+          currentPlan={null}
+          currentInterval={null}
+          hasActiveSubscription={false}
+        />
+      </>
     )
   }
 }

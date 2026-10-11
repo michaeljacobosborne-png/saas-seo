@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
 import { analytics } from '@/lib/analytics'
+import { PRICING_FAQS } from './pricing-faqs'
 
 interface FounderSpots {
   available: boolean
@@ -78,30 +79,13 @@ const PLANS = [
   },
 ]
 
-const FAQS = [
-  {
-    q: 'Can I cancel anytime?',
-    a: 'Yes. There are no contracts, and you can cancel from your account settings at any time. Your access continues until the end of the billing period.',
-  },
-  {
-    q: 'What happens if I hit my article limit on Starter?',
-    a: "You'll be prompted to upgrade to Growth. We don't cut off access mid-article.",
-  },
-  {
-    q: 'Is the agent really different from just using ChatGPT?',
-    a: "Yes. ChatGPT has no access to your article, your scores, your keyword data, or your brand profile. Byline's agent has all of that in context, including the findings the scorer flagged and where, and can apply the fix without you leaving the editor.",
-  },
-  {
-    q: 'Do you offer a free trial?',
-    a: "We offer a 30-day money-back guarantee on all plans. If it's not working for you in the first 30 days, email us and we'll refund in full.",
-  },
-]
+// The first two answers lead the page as sections; the rest are the FAQ list.
+const [CHOOSE, HOW_SCORED, ...FAQS] = PRICING_FAQS
 
 export default function PricingCards({ currentPlan, currentInterval, hasActiveSubscription }: PricingCardsProps) {
   const [interval, setInterval] = useState<Interval>(currentInterval ?? 'monthly')
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [founderSpots, setFounderSpots] = useState<FounderSpots | null>(null)
 
   useEffect(() => {
@@ -179,7 +163,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           Scored from your page. An agent that fixes it.
         </h1>
         <p className="text-[#A89070] text-lg max-w-xl mx-auto leading-relaxed">
-          Byline combines keyword research, article generation and scoring in code with an editorial agent that rewrites the sections the scorer flags.
+          Byline is an AI search readiness tool for SEOs. Every plan scores pages and drafts in code, with the
+          evidence under every finding, and includes an editorial agent that rewrites what the scorer flags.
         </p>
       </div>
 
@@ -410,46 +395,39 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         </div>
       </div>
 
-      {/* Comparison section */}
+      {/* Two questions every buyer asks before choosing */}
       <div className="bg-[#231F1B] px-6 py-16">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-8">Why not just use Surfer or Frase?</h2>
-          <div className="space-y-5 text-[#A89070] leading-relaxed text-[15px]">
-            <p>
-              Surfer SEO gives you a score and a list of keywords to add. Frase gives you a content brief. Both tell you what&apos;s wrong. Neither one fixes it. Byline&apos;s editorial agent reads your full article, works from the sections the scorer flagged, and rewrites them directly inside your editor, with one click.
-            </p>
-            <p>
-              The scores come from deterministic code that reads your page, with the evidence shown under each finding. The editorial agent runs on Claude Sonnet and writes the fix. It never sets a score.
-            </p>
-            <p>
-              And because Byline&apos;s keyword database is shared across all accounts, your research loads from cache on repeat queries, so your results get faster the more you use the platform.
+        <div className="max-w-3xl mx-auto space-y-12 text-[#A89070] leading-relaxed text-[15px]">
+          <div>
+            <h2 className="text-2xl font-bold mb-4 text-[#F7F3EC]">{CHOOSE.q}</h2>
+            <p>{CHOOSE.a}</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold mb-4 text-[#F7F3EC]">{HOW_SCORED.q}</h2>
+            <p>{HOW_SCORED.a}</p>
+            <p className="mt-4">
+              The two halves are explained on the{' '}
+              <Link href="/" className="underline hover:text-[#F7F3EC]">homepage under Retrievable vs citable</Link>.
             </p>
           </div>
         </div>
       </div>
 
-      {/* FAQ */}
+      {/* FAQ. Native details elements keep every answer in the server HTML,
+          where crawlers and people without JavaScript can read it. */}
       <div className="px-6 py-16">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl font-bold mb-8">Frequently asked questions</h2>
           <div className="space-y-3">
-            {FAQS.map((faq, i) => (
-              <div key={i} className="border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-[#F7F3EC] hover:bg-[rgba(184,115,51,0.05)] transition-colors"
-                >
-                  <span>{faq.q}</span>
-                  <span className="ml-4 text-[#A89070] flex-shrink-0 text-base leading-none">
-                    {openFaq === i ? '−' : '+'}
-                  </span>
-                </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-5 text-sm text-[#A89070] leading-relaxed">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
+            {FAQS.map((faq) => (
+              <details key={faq.q} className="group border border-[rgba(184,115,51,0.2)] rounded-xl overflow-hidden">
+                <summary className="flex items-center justify-between px-5 py-4 text-left text-sm font-medium text-[#F7F3EC] hover:bg-[rgba(184,115,51,0.05)] transition-colors cursor-pointer list-none">
+                  <h3 className="font-medium">{faq.q}</h3>
+                  <span className="ml-4 text-[#A89070] flex-shrink-0 text-base leading-none group-open:hidden">+</span>
+                  <span className="ml-4 text-[#A89070] flex-shrink-0 text-base leading-none hidden group-open:inline">−</span>
+                </summary>
+                <p className="px-5 pb-5 text-sm text-[#A89070] leading-relaxed">{faq.a}</p>
+              </details>
             ))}
           </div>
         </div>
