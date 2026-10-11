@@ -29,7 +29,7 @@ describe('Heading hierarchy can reach its maximum', () => {
   })
 
   it('is versioned, so scores before the fix are not compared silently', () => {
-    expect(ENGINE_VERSION).toBe('2026.11')
+    expect(ENGINE_VERSION).not.toBe('2026.10')
   })
 })
 

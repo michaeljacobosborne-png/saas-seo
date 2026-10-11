@@ -138,6 +138,9 @@ const SOCIAL_HOSTS = [
 
 const BOILERPLATE_SELECTORS = 'script,style,noscript,template,svg,iframe,object,embed'
 
+const BLOCK_ELEMENTS =
+  'p,h1,h2,h3,h4,h5,h6,li,dt,dd,td,th,tr,div,section,article,aside,header,footer,main,nav,blockquote,figcaption,pre,br,hr,address,summary,details,label,button,option'
+
 export function extractPage(html: string, pageUrl: string): ExtractedPage {
   const $ = cheerio.load(html)
 
@@ -171,6 +174,14 @@ export function extractPage(html: string, pageUrl: string): ExtractedPage {
 
   // Strip non-content nodes before reading text.
   $(BOILERPLATE_SELECTORS).remove()
+
+  // .text() joins text nodes with no separator, so minified HTML read as
+  // "...publish them.Retrievable vs citableThe two halves", merging words across
+  // every block boundary and undercounting them (app.bylineseo.com, DECISIONS 34).
+  // A space after each block element restores the boundaries a browser shows.
+  $(BLOCK_ELEMENTS).each((_, el) => {
+    $(el).append(' ')
+  })
 
   const bodyText = normalise($('body').text())
   const mainText = extractMainText($) || bodyText
@@ -677,7 +688,13 @@ function dedupeTestimonials(items: Testimonial[]): Testimonial[] {
  */
 function extractStatistics(blocks: string[]): string[] {
   const out: string[] = []
-  const pattern = /\b\d{1,3}(?:,\d{3})+|\b\d+(?:\.\d+)?\s?(?:%|percent|x\b)|\b\d+(?:\.\d+)?\s?(?:million|billion|thousand|k\b)/i
+  // "N of M" is a count against a base ("48 of 81 pages", "seven of the eight
+  // sites"): a real figure the old pattern missed on app.bylineseo.com (DECISIONS 34).
+  const NUM = '(?:\\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)'
+  const pattern = new RegExp(
+    `\\b\\d{1,3}(?:,\\d{3})+|\\b\\d+(?:\\.\\d+)?\\s?(?:%|percent|x\\b)|\\b\\d+(?:\\.\\d+)?\\s?(?:million|billion|thousand|k\\b)|\\b${NUM}\\s+of\\s+(?:the\\s+|all\\s+)?${NUM}\\b`,
+    'i',
+  )
 
   for (const block of blocks) {
     for (const sentence of block.split(/(?<=[.!?])\s+/)) {

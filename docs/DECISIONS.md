@@ -6,6 +6,21 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 34. Engine 2026.12: block boundaries, "N of M" figures, defined terms
+**Date:** 2026-10-11 (found on our own rewritten homepage; approved)
+**Decision:**
+- The extractor puts a space at every block-element boundary before reading text. Minified HTML (ours, and any Next.js or similar site) used to read as "publish them.Retrievable vs citableThe two halves". Words merged across every heading, paragraph and list item, word counts were understated, and phrase matching failed.
+- A count against a base ("48 of 81", "seven of the eight") counts as a figure. Before, only percentages, comma-separated thousands, multipliers and "million/k" did.
+- A term the page defines as its own measure ("Retrievable is a score...", "Citable is a band...") and then uses again counts as a coined term. Two such terms set against each other ("Retrievable vs citable") count as a named framework (strong). Title Case runs still need 3 uses. Products described as platforms do not count, because the defining noun must be a measure (score, band, rating, metric, index, framework, method, signal...).
+- ENGINE_VERSION goes from 2026.11 to 2026.12.
+**PRIOR SCORES ARE AFFECTED.** Word counts on sites served as minified HTML go up, so "Server-rendered content" can rise. Figures and coined terms can move Citable signals. Do not compare across 2026.11/2026.12 without saying so.
+**Drivers:**
+- Our homepage showed one figure where it had several.
+- It showed no coined term with "Retrievable vs citable" in a heading.
+- Debugging that exposed the block-boundary bug.
+- Tests: `extract-accuracy.test.ts`, using the page's own sentences.
+- Checked on the eight agency homepages: no new false coined terms.
+
 ## 33. Engine 2026.11: heading hierarchy can reach full marks; SoftwareApplication and WebApplication are content-level types
 **Date:** 2026-10-11 (found by auditing our own homepage; approved)
 **Decision:**

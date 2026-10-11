@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import NavLinks from './_components/NavLinks'
 import FounderBanner from './_components/FounderBanner'
 import { ORG_ID, SITE_URL, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
+import { ENGINE_VERSION } from '@/lib/geo-audit/types'
 
 export const metadata: Metadata = {
   title: 'Byline: AI search readiness, scored from your page with the evidence',
@@ -256,7 +257,7 @@ export default function HomePage() {
             <div className="space-y-5">
               <p>{FAQ[3].answer}</p>
               <p>
-                Every report records the engine version that produced it, currently 2026.11, so two runs can be
+                Every report records the engine version that produced it, currently {ENGINE_VERSION}, so two runs can be
                 checked for whether the rubric moved between them. A language model never decides a score, and the
                 score is withheld when the page cannot support one.
               </p>

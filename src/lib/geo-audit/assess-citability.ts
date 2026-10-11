@@ -298,8 +298,19 @@ function proprietaryTerms({ home }: CitabilityInput): CitabilitySignal {
     .filter((m) => /^[a-z]/.test(m[1]) || m[3] || m[2].split(/[- ]/).length >= 3)
     .map((m) => [m[0], m[2], m[3], m[4]] as const)[0]
 
+  const defined = findDefinedTerms(home)
+
   if (framework) {
     s.found('strong', `A named framework is used ("${framework[1]}${framework[2] ?? ''} ${framework[3]}"), which is the kind of term an engine cannot source anywhere else.`, ev(home.url, 'text', truncate(framework[0], 160)))
+  } else if (defined.pair) {
+    s.found('strong', `A paired framework is defined and used on the page ("${defined.pair.term}"), which is the kind of term an engine cannot source anywhere else.`, ev(home.url, 'text', defined.pair.evidence))
+  } else if (defined.terms.length > 0) {
+    const all = [...defined.terms, ...candidates]
+    if (all.length >= 2) {
+      s.found('adequate', `Distinctive defined or repeated terms appear (${all.slice(0, 3).map((c) => `"${c.term}"`).join(', ')}), which give a quote something identifiable to carry.`, ev(home.url, 'text', all.slice(0, 3).map((c) => `${c.term} (×${c.count})`).join(', ')))
+    } else {
+      s.found('weak', `One term is defined as the page's own measure ("${all[0].term}").`, ev(home.url, 'text', `${all[0].term} (×${all[0].count})`))
+    }
   } else if (candidates.length >= 2) {
     s.found('adequate', `Distinctive repeated terms appear (${candidates.slice(0, 3).map((c) => `"${c.term}"`).join(', ')}), which give a quote something identifiable to carry.`, ev(home.url, 'text', candidates.slice(0, 3).map((c) => `${c.term} (×${c.count})`).join(', ')))
   } else if (candidates.length === 1) {
@@ -331,6 +342,43 @@ const PLACES = new Set(
     'Middle East', 'Western Europe', 'Eastern Europe', 'Bay Area', 'Greater London', 'Greater Manchester',
   ].map((p) => p.toLowerCase()),
 )
+
+/**
+ * Terms the page defines as its own measures: "Retrievable is a score out of
+ * 100", "Citable is a band". A common word promoted to a named measure and used
+ * repeatedly is a coinage, even though it never forms a Title Case run. When two
+ * such terms are also set against each other ("Retrievable vs citable"), the
+ * pair is a framework. app.bylineseo.com carried exactly this and was told it
+ * had no coined term (DECISIONS 34).
+ */
+const MEASURE_NOUN = '(?:score|band|rating|grade|measure|metric|index|framework|method|methodology|signal)'
+
+function findDefinedTerms(page: ExtractedPage): {
+  terms: { term: string; count: number }[]
+  pair: { term: string; evidence: string } | null
+} {
+  const text = page.mainText
+  const terms: { term: string; count: number }[] = []
+  const re = new RegExp(`(?:^|[.!?:]\\s+)([A-Z][a-z]{3,}(?:\\s+[A-Z][a-z]{3,})?)\\s+is\\s+(?:a|an|the)\\s+(?:[a-z0-9-]+\\s+){0,2}${MEASURE_NOUN}\\b`, 'g')
+  for (const m of text.matchAll(re)) {
+    const term = m[1]
+    if (STOPWORD_HEAD.test(term) || terms.some((t) => t.term === term)) continue
+    const count = (text.match(new RegExp(`\\b${term}\\b`, 'gi')) ?? []).length
+    // Defined, then used again: the definition itself is the coinage signal, so
+    // one further use is enough (a Title Case run with no definition needs 3).
+    if (count >= 2) terms.push({ term, count })
+  }
+
+  let pair: { term: string; evidence: string } | null = null
+  for (const a of terms) {
+    for (const b of terms) {
+      if (a === b) continue
+      const m = new RegExp(`\\b(${a.term}\\s+(?:vs\\.?|versus)\\s+${b.term})\\b`, 'i').exec(text)
+      if (m) pair = { term: m[1], evidence: `${m[1]} (${a.term} ×${a.count}, ${b.term} ×${b.count})` }
+    }
+  }
+  return { terms, pair }
+}
 
 function findCoinedTerms(page: ExtractedPage, brand: BrandNames | null): { term: string; count: number }[] {
   const counts = new Map<string, number>()
