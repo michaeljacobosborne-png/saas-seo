@@ -3,7 +3,7 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 import type { Image as SanityImage } from 'sanity'
 
-import { ORG_ID, SITE_URL, WEBSITE_ID, breadcrumbNode, graph, jsonLdString, organizationNode, websiteNode } from '@/lib/structured-data'
+import { FOUNDER, ORG_ID, SITE_URL, WEBSITE_ID, breadcrumbNode, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
 
 import { isSanityConfigured } from '@/sanity/env'
 import { client } from '@/sanity/lib/client'
@@ -60,12 +60,14 @@ export default async function BlogIndexPage() {
       name: 'The Byline Blog',
       url: blogUrl,
       publisher: { '@id': ORG_ID },
+      author: { '@id': FOUNDER.id },
       isPartOf: { '@id': WEBSITE_ID },
       inLanguage: 'en-US',
       blogPost: posts.map((p) => ({ '@id': `${blogUrl}/${p.slug}#article` })),
     },
     organizationNode(),
     websiteNode(),
+    personNode({ slug: 'michael-osborne' }),
     breadcrumbNode(blogUrl, [
       { name: 'Home', url: SITE_URL },
       { name: 'Blog', url: blogUrl },
@@ -80,11 +82,12 @@ export default async function BlogIndexPage() {
           The Byline Blog
         </p>
         <h1 className="font-[family-name:var(--font-playfair)] text-4xl sm:text-5xl font-black tracking-tight text-white">
-          Know what ranks. Say what matters.
+          Notes on AI search readiness
         </h1>
         <p className="mt-4 text-lg text-[#C4AA8A] leading-relaxed">
-          Practical guides on SEO, content operations, and answer-engine
-          optimization from the team building Byline.
+          The Byline Blog is where we write about how AI search reads a page: what makes it retrievable,
+          what makes it citable, and how to check both yourself. Posts are written by Michael Jacobs, who
+          builds Byline.
         </p>
       </header>
 
