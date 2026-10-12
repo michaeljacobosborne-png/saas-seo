@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { TwoScoreSection, type TwoScoreData } from '@/components/audit/TwoScoreSection'
+import { ReportGuide, ReportPreface } from '@/components/audit/ReportGuide'
 import type { Metadata } from 'next'
 
 interface Factor {
@@ -34,6 +35,8 @@ interface AuditResult {
   rawScore?: number
   assessedMaxScore?: number
   pagesInspected?: { url: string; ok: boolean }[]
+  /** Present on reports run since engine versioning (October 2026). */
+  engineVersion?: string
   /** Phase B. Absent on rows stored before the two-score model shipped. */
   retrievability?: TwoScoreData['retrievability']
   citability?: TwoScoreData['citability']
@@ -48,10 +51,15 @@ interface AuditRecord {
   created_at: string
 }
 
-export const metadata: Metadata = {
-  title: 'Your GEO Analysis Report | Byline',
-  description: 'View your full GEO (Generative Engine Optimization) analysis report from Byline.',
-  robots: { index: false, follow: false },
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  return {
+    title: 'Your AI search readiness report | Byline',
+    description: 'How ready your page is to be retrieved and cited by AI search, scored by Byline with the evidence for every finding.',
+    robots: { index: false, follow: false },
+    // The audit layout's canonical points at /audit; a report is its own page.
+    alternates: { canonical: `https://app.bylineseo.com/audit/results/${id}` },
+  }
 }
 
 export default async function AuditResultsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -70,6 +78,7 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
 
   const record = data as AuditRecord
   const result = record.result
+  const auditDate = new Date(record.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   const scoreColor = result.score >= 70 ? '#16a34a' : result.score >= 40 ? '#d97706' : '#dc2626'
   const statusMap: Record<string, string> = {
     good: 'bg-green-100 text-green-700',
@@ -98,17 +107,18 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
           <Link href="/" className="text-[#B87333] font-semibold text-lg" style={{ fontFamily: 'var(--font-playfair, Georgia, serif)' }}>
             Byline
           </Link>
-          <span className="text-sm text-[#998876]">GEO Analysis Report</span>
+          <span className="text-sm text-[#998876]">AI search readiness report</span>
         </div>
 
         {/* Title */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#1c1917] mb-2" style={{ fontFamily: 'var(--font-playfair, Georgia, serif)' }}>
-            GEO Score for <span style={{ color: '#B87333' }}>{record.domain || 'your site'}</span>
+            AI search readiness: <span style={{ color: '#B87333' }}>{record.domain || 'your site'}</span>
           </h1>
-          <p className="text-sm text-[#998876]">
-            Analyzed {new Date(record.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          <p className="text-sm text-[#998876] mb-4">
+            Analyzed {auditDate}
           </p>
+          <ReportPreface domain={record.domain || 'this site'} date={auditDate} engineVersion={result.engineVersion} />
         </div>
 
         {/*
@@ -252,6 +262,8 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
             </ul>
           </div>
         )}
+
+        <ReportGuide />
 
         {/* CTA */}
         <div className="bg-[#1c1917] rounded-2xl p-8 text-center">
