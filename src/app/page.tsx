@@ -543,6 +543,7 @@ export default function HomePage() {
             <div>
               <p className="text-[#A89070] text-xs font-semibold uppercase tracking-wider mb-4">Company</p>
               <ul className="space-y-3 text-sm text-[#7A6555]">
+                <li><Link href="/about" className="hover:text-[#A89070] transition-colors">About</Link></li>
                 <li><Link href="/pricing" className="hover:text-[#A89070] transition-colors">Pricing</Link></li>
                 <li><Link href="/blog" className="hover:text-[#A89070] transition-colors">Blog</Link></li>
                 <li><Link href="/affiliates" className="hover:text-[#A89070] transition-colors">Affiliates</Link></li>

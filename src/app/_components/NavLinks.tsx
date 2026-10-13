@@ -56,8 +56,8 @@ function FreeToolsDropdown() {
             onClick={() => setOpen(false)}
             className="block px-4 py-2.5 text-sm text-[#A89070] hover:text-[#F7F3EC] hover:bg-white/5 transition-colors"
           >
-            Content Gap Audit
-            <span className="block text-xs text-[#57534E] mt-0.5">Find missing content</span>
+            Content Map
+            <span className="block text-xs text-[#57534E] mt-0.5">What you have published, and what you have not</span>
           </Link>
         </div>
       )}
@@ -111,6 +111,9 @@ export default function NavLinks() {
       <FreeToolsDropdown />
       <Link href="/pricing" className={secondaryLink}>
         Pricing
+      </Link>
+      <Link href="/about" className={secondaryLink}>
+        About
       </Link>
       <Link href="/login" className={secondaryLink}>
         Log in
