@@ -149,7 +149,11 @@ const NOT_A_NAME = new Set(
     'content social paid technical local google ai data analytics services service team meet case studies study blog news ' +
     'contact book call read more learn view all latest client clients award awards brand brands growth strategy web website ' +
     'design build email account sales product products business pr link links ppc performance creative global international ' +
-    'london uk us usa new north south east west senior junior associate group company limited ltd inc'
+    'london uk us usa new north south east west senior junior associate group company limited ltd inc ' +
+    // Job titles are never part of a name: digitaloft.co.uk was read as "Manager Amy".
+    'manager director founder cofounder co-founder ceo cto cmo coo cfo head lead officer executive assistant specialist ' +
+    'consultant coordinator strategist analyst editor writer designer developer engineer partner principal owner president ' +
+    'account accounts operations marketing sales client success'
   ).split(' '),
 )
 

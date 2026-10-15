@@ -183,6 +183,21 @@ describe('screamingfrog.co.uk: bylines, UI labels and places', () => {
   })
 })
 
+// ── digitaloft.co.uk ─────────────────────────────────────────────────────────
+
+describe('digitaloft.co.uk: a job title is not a first name', () => {
+  it('does not read "Manager Amy" as a person', () => {
+    const p = page(
+      'https://digitaloft.co.uk/about-us',
+      '<title>About | Digitaloft</title>',
+      '<p>Our team is led by experienced specialists. Account Manager Amy Jones Director of Client Success</p>',
+    )
+    const names = findPeople(p, brandNames(p)).map((x) => x.name)
+    expect(names).not.toContain('Manager Amy')
+    expect(names.some((n) => /^(Manager|Account|Director)\b/.test(n))).toBe(false)
+  })
+})
+
 // ── salt.agency ──────────────────────────────────────────────────────────────
 
 describe('salt.agency: a nav menu is not a testimonial', () => {
