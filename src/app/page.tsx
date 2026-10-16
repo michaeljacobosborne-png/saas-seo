@@ -67,7 +67,7 @@ const FAQ = [
   {
     question: 'Why does Byline score the page instead of AI answers?',
     answer:
-      "Because citations move when nothing on the page changes. Otterly.AI reported that between July and September 2026 Reddit's share of ChatGPT citations fell 94% while its share of Perplexity citations rose 86%. In Semrush's 30-day test, Google AI Mode cited 48 of 81 unchanged pages on day six and 21 on day thirty.",
+      "Because citations move for reasons a page does not control. Otterly.AI reported that between July and September 2026 Reddit's share of ChatGPT citations fell 94% while its share of Perplexity citations rose 86%, and tied the sharpest drop to a ChatGPT model rollout. In Semrush's 30-day test of 81 newly published pages, Google AI Mode cited 48 of them on day six and 21 on day thirty.",
   },
   {
     question: 'What do other AI readiness scores report?',
@@ -224,7 +224,7 @@ export default function HomePage() {
               <p>{FAQ[1].answer}</p>
               <p>
                 A single visibility number averages those movements into something that happened to nobody. What
-                stays still, and what you can change, is the page. So the score comes from deterministic code
+                you can change is the page. So the score comes from deterministic code
                 reading your HTML. A language model writes the explanation beside a finding and nothing else. It
                 cannot set a score, a status or a band.
               </p>

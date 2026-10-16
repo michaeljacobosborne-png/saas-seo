@@ -6,6 +6,29 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 35. RETRACTED CLAIMS: "ten free tools, none query an engine" and "Semrush measured unchanged pages"
+**Date:** 2026-10-15
+**Retracted claim 1, ten free tools.**
+- What we believed and repeated for about two weeks: "Of ten free tools marketed as reporting what AI engines say about your brand, none query an AI engine, and five say so in their own documentation." It came from a survey of Michael's for which no record survives.
+- What the evidence shows: `docs/audits/free-ai-visibility-tools-2026-10.md`, from vendor pages read on 2026-10-11 with quotes checked against the downloaded HTML.
+  - Of ten free tools, five say in their own documentation that they send prompts to named engines: Ahrefs, HubSpot, Mangools, RightBlogger, Backlinko.
+  - Two report from stored real engine answers: Semrush, ContextBolt.
+  - One is a model estimate: SEOcrawl.
+  - Two are page-only: Pixelmojo, LightSite.
+  - Only two say they do not query engines.
+  - Both halves of the claim are false.
+- Where it was used or queued:
+  - byline-social/01-FOUNDER-POSTS.md, posts F-L8 and F-X10, scheduled for Thu 15 in 00-SEQUENCING.md. MUST NOT RUN.
+  - byline-outbound/byline-geo-services-wedge-strategy.md lines ~289, ~910 and ~957 ("zero of ten free tools query an engine", used as the basis of the "moat" argument).
+  - Nearly the homepage. It was kept off because no evidence file existed.
+  - Not used in any live page, report, email or committed blog draft (checked 2026-10-15).
+- What the evidence does support is in the evidence file, under "What the evidence does support". It is a smaller, different point and must be worded exactly as there.
+**Retracted claim 2, Semrush.**
+- "Semrush's test showed citations of unchanged pages peaking and falling." The source (Semrush, Tushar Pol, 10 December 2025) tested 81 newly published pages and does not say whether they were edited during the 30 days.
+- The figures stand: Google AI Mode cited 29 pages on day 1, 48 on day 6, 39 on day 14 and 21 on day 30. "Unchanged" and "nobody edited them" are our inference, not the finding.
+- Removed from the live homepage and from the one-ai-visibility-score blog draft on 2026-10-15. Already listed as limited in the byline-outreach-and-social skill.
+**Rule:** neither claim is restated in any form. Any count of free tools needs the evidence file open beside it, and the file says to re-read the vendor pages before reuse.
+
 ## 34. Engine 2026.12: block boundaries, "N of M" figures, defined terms
 **Date:** 2026-10-11 (found on our own rewritten homepage; approved)
 **Decision:**

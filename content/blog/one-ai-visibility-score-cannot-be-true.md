@@ -55,10 +55,11 @@ tracks, by between 58% and 99%. No single sector carried the result.
 So the decline was not a collection gap and it was not one vertical. Something
 changed inside one engine, and Reddit had no input into it.
 
-## Semrush found the same shape a year earlier, on pages that never changed
+## Semrush saw the same instability on newly published pages
 
-This is the part worth holding onto, because the Reddit case could be dismissed
-as a platform-specific policy move. Semrush's experiment removes that excuse.
+This matters because the Reddit case could be dismissed as a platform-specific
+policy move. Semrush's experiment looks at a different situation and finds the
+same instability.
 
 In December 2025 Semrush published a 30-day test by Tushar Pol. They put 81 new
 FAQ-style pages on their own blog, a domain with an Authority Score of 84, and
@@ -67,20 +68,21 @@ tracked citations daily. Best-case conditions, by their own description.
 In Google AI Mode, 29 of the 81 pages were cited the day after publication. By
 day six, 48 pages. By day 14, 39. By day 30, 21.
 
-Nobody edited those pages. The peak and the trough are the same content, four
-weeks apart, measured by the same tool. Semrush's own conclusion: "What gets
-cited one week might not be cited the next."
+Semrush does not say whether any of the pages were edited during the test, so
+read this as how citations of new content behave over a month, not as proof that
+identical pages rise and fall. Semrush's own conclusion: "What gets cited one
+week might not be cited the next."
 
 ChatGPT behaved in the opposite direction over the same window, climbing from
-eight pages to 34 and holding them. Two engines, one set of pages, opposite
-trajectories.
+eight pages on day one to 34 on day thirty. Two engines, one set of pages,
+opposite trajectories.
 
 ### What two studies together actually establish
 
 Taken alone, each is a single finding from a vendor with a product to sell. Taken
 together they establish something harder to argue with.
 
-Citation share moves without any action by the site. It moves by large
+Citation share moves for reasons the site does not control. It moves by large
 percentages over weeks. And it moves in different directions on different engines
 at the same time, which is the part that breaks the arithmetic.
 

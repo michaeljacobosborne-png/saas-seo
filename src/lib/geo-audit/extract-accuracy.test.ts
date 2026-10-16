@@ -30,7 +30,7 @@ describe('block boundaries in minified HTML', () => {
 describe('"N of M" counts are figures', () => {
   it('reads "48 of 81" and "seven of the eight" as figures', () => {
     const p = page(
-      "<p>In Semrush's 30-day test, Google AI Mode cited 48 of 81 unchanged pages on day six and 21 on day thirty.</p>" +
+      "<p>In Semrush's 30-day test of 81 newly published pages, Google AI Mode cited 48 of 81 on day six and 21 on day thirty.</p>" +
         '<p>Seven of the eight had fewer than eight sections that stand alone when quoted.</p>',
     )
     expect(p.statistics.some((s) => s.includes('48 of 81'))).toBe(true)
