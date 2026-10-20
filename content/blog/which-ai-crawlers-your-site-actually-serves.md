@@ -1,10 +1,10 @@
 ---
 title: "Your Edge Decides Which AI Crawlers See Your Pages, Not Your robots.txt"
 slug: "which-ai-crawlers-your-site-actually-serves"
-excerpt: "Retrieval crawlers and training crawlers are different bots with different consequences, and most sites have never checked which ones their edge refuses. Here is how to check, and how to avoid the false positive that trips up most tools."
+excerpt: "Retrieval crawlers and training crawlers are different bots with different consequences, and most sites have never checked which ones their edge refuses. Here is how to check, and how to rule out the false positive a check without a baseline cannot see."
 seoTitle: "Which AI Crawlers Does Your Site Actually Serve? How to Check"
 seoDescription: "How to test whether AI retrieval crawlers can fetch your pages, why robots.txt does not answer the question, and the baseline request that prevents a false block."
-publishedAt: "2026-10-06T09:00:00.000Z"
+publishedAt: "2026-10-20T09:00:00.000Z"
 author: michael-osborne
 categories: []
 ---
@@ -150,7 +150,7 @@ This is the case that separates a measurement from a guess. A tool that fires
 crawler user-agents without also firing a plain browser request cannot tell
 "this site refuses GPTBot" apart from "this site refuses datacentre IPs". Both
 produce the same 403. One is a finding you should act on and the other is an
-artefact of where the request came from. Most tools will report both as a block.
+artefact of where the request came from. Without the baseline, both read as a block.
 
 ## How to check your own site
 

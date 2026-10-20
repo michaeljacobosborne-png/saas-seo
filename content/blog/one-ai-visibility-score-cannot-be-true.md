@@ -1,10 +1,10 @@
 ---
 title: "One AI Visibility Score Cannot Be True"
 slug: "one-ai-visibility-score-cannot-be-true"
-excerpt: "In one quarter Reddit lost 94% of its ChatGPT citations and gained 86% on Perplexity. Two engines never cited it at all. A number that averages those together describes nothing."
+excerpt: "In one quarter Reddit lost 94% of its ChatGPT citations and gained 86% on Perplexity. Two recorded 0.000% throughout. A number that averages those together describes nothing."
 seoTitle: "Why a Single AI Visibility Score Is Meaningless"
 seoDescription: "Otterly.AI and Semrush data showing AI citation share moving in opposite directions on different engines at once, and what to measure instead."
-publishedAt: "2026-10-09T09:00:00.000Z"
+publishedAt: "2026-10-21T09:00:00.000Z"
 author: michael-osborne
 categories: []
 ---
@@ -36,8 +36,8 @@ Reddit's share of that engine's citations.
 | Microsoft Copilot | 0.000% | 0.000% | 0.000% | No change |
 | Claude | 0.000% | 0.000% | 0.000% | No change |
 
-Three engines moved up. Two moved down. Two never cited Reddit at any point in
-the quarter, at three significant figures.
+Three engines moved up. Two moved down. Two recorded 0.000% in every period,
+which in a monitoring tool means below what it reports rather than a proven zero.
 
 Otterly reports the sharpest move as a single-day event. On 8 August 2026,
 reddit.com fell from 4.01% to 0.44% of all ChatGPT citations in the United
@@ -95,8 +95,8 @@ The engines disagree about direction. A quarter that is catastrophic on ChatGPT
 and excellent on Perplexity has no honest single summary. Any weighting you pick
 is an editorial judgement about which engine matters, presented as a measurement.
 
-Some engines are structurally absent. Copilot and Claude cited Reddit at 0.000%
-through the whole quarter. Including a zero in an average implies the zero is a
+Some engines are effectively absent. Copilot and Claude recorded 0.000% for
+Reddit through the whole quarter. Including a zero in an average implies the zero is a
 result. For a site those engines do not use as a source, it is not a result, it
 is a category error. Averaging it in drags the number down and makes it look like
 a problem you could fix.
