@@ -638,6 +638,102 @@ function buildCaveats(baselineFailed: boolean, probes: CrawlerProbe[]): string[]
   return out
 }
 
+// ── Crawler facts for prose ───────────────────────────────────────────────────
+
+const ROLE_WORDS: Record<CrawlerClass, string> = {
+  'ai-search': 'AI search (retrieval) crawler',
+  training: 'training crawler',
+  'user-triggered': 'user-triggered fetcher',
+}
+
+/**
+ * The crawler table as plain lines, for the narration prompt. Names, owners and
+ * roles must come from here, never from the model's memory: a report that calls
+ * Claude-SearchBot "OpenAI's training crawler" misstates both who runs it and
+ * whether blocking it matters.
+ */
+export function crawlerFactLines(): string[] {
+  return CRAWLERS.map(
+    (c) => `${c.token}: run by ${c.vendor}; ${ROLE_WORDS[c.class]}; ${c.scored ? 'scored' : 'not scored'}.`,
+  )
+}
+
+/** Names that identify a vendor in prose, including its product names. */
+const VENDOR_ALIASES: Record<string, string[]> = {
+  OpenAI: ['OpenAI', 'ChatGPT'],
+  Anthropic: ['Anthropic', 'Claude'],
+  Perplexity: ['Perplexity'],
+  Google: ['Google', 'Gemini'],
+  'Common Crawl': ['Common Crawl'],
+  ByteDance: ['ByteDance', 'TikTok'],
+  Apple: ['Apple'],
+}
+
+/** Phrases that assert a crawler's role, mapped to the class they assert. */
+const ROLE_CLAIMS: { re: RegExp; cls: CrawlerClass }[] = [
+  { re: /\btraining (?:crawler|bot|agent)/i, cls: 'training' },
+  { re: /\b(?:ai[- ])?(?:search|retrieval|indexing) (?:crawler|bot|agent)/i, cls: 'ai-search' },
+  { re: /\buser[- ]triggered (?:fetcher|crawler|bot|agent)/i, cls: 'user-triggered' },
+]
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// Longest first so a token is never matched as part of a longer one.
+const TOKEN_RE = new RegExp(
+  `(?<![\\w-])(${[...CRAWLERS]
+    .map((c) => c.token)
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRe)
+    .join('|')})(?![\\w-])`,
+  'gi',
+)
+
+export interface CrawlerMisattribution {
+  token: string
+  claimed: string
+  actual: string
+}
+
+/**
+ * Finds prose that pairs a crawler with the wrong owner or the wrong role, such
+ * as "Claude-SearchBot (OpenAI's training crawler)". Only the words describing
+ * the token are checked: a following parenthetical or clause, or a short lead-in
+ * in the same clause. Anything past the next crawler name belongs to that one.
+ */
+export function findCrawlerMisattributions(text: string): CrawlerMisattribution[] {
+  const out: CrawlerMisattribution[] = []
+  const matches = [...(text ?? '').matchAll(TOKEN_RE)]
+
+  matches.forEach((m, i) => {
+    const spec = CRAWLERS.find((c) => c.token.toLowerCase() === m[1].toLowerCase())
+    if (!spec) return
+    const start = m.index ?? 0
+    const end = start + m[0].length
+    const prevEnd = i > 0 ? (matches[i - 1].index ?? 0) + matches[i - 1][0].length : 0
+    const nextStart = i + 1 < matches.length ? (matches[i + 1].index ?? text.length) : text.length
+
+    const rest = text.slice(end, nextStart)
+    const paren = rest.match(/^\s*\(([^)]*)\)/)
+    // An appositive ("GPTBot, a training crawler, ...") starts after the comma.
+    const after = paren ? paren[1] : rest.replace(/^\s*,/, '').slice(0, 80).split(/[.;:,]/)[0]
+    const before = text.slice(Math.max(prevEnd, start - 40), start).split(/[.;:,()]/).pop() ?? ''
+    const described = `${before} ${after}`
+
+    for (const [vendor, aliases] of Object.entries(VENDOR_ALIASES)) {
+      if (vendor === spec.vendor) continue
+      const hit = aliases.find((a) => new RegExp(`(?<![\\w-])${escapeRe(a)}(?![\\w-])`, 'i').test(described))
+      if (hit) out.push({ token: spec.token, claimed: hit, actual: spec.vendor })
+    }
+    for (const { re, cls } of ROLE_CLAIMS) {
+      if (cls !== spec.class && re.test(described)) {
+        out.push({ token: spec.token, claimed: ROLE_WORDS[cls], actual: ROLE_WORDS[spec.class] })
+      }
+    }
+  })
+
+  return out
+}
+
 // ── Summary for presentation ──────────────────────────────────────────────────
 
 export interface AccessSummary {

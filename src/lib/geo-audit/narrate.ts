@@ -14,6 +14,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { truncate } from './extract'
 import { capModelInput, type Truncation } from './limits'
+import { crawlerFactLines, findCrawlerMisattributions } from './crawler-access'
 import type { Factor, Recommendation } from './types'
 
 export interface NarrateInput {
@@ -44,6 +45,10 @@ Absolute rules:
 - NEVER recommend adding something the evidence shows is already present. Acknowledge what exists.
 - Only recommend structured data where it genuinely describes content visible on the page.
 - Base every recommendation on the supplied findings. Do not speculate about parts of the site that were not inspected.
+- When you name an AI crawler, take its owner and role ONLY from the crawler facts below. Never attribute a crawler to a different company or describe a search crawler as a training crawler, or the reverse. A refused AI search crawler is a scored access problem; a refused training crawler is a publisher choice.
+
+Crawler facts (authoritative):
+${crawlerFactLines().map((l) => `- ${l}`).join('\n')}
 
 Return ONLY valid JSON, no markdown fence, matching:
 { "recommendations": [{ "priority": "high"|"medium"|"low", "title": string, "description": string, "impact": string }], "quickWins": [string, string, string] }
@@ -185,11 +190,15 @@ function normaliseNarration(raw: unknown): { recommendations: Recommendation[]; 
       }
     })
     .filter((r) => r.title && r.description)
+    // A crawler paired with the wrong vendor or role is a false statement about
+    // the site's access, so the whole recommendation goes rather than a reworded one.
+    .filter((r) => findCrawlerMisattributions(`${r.title}. ${r.description} ${r.impact}`).length === 0)
     .slice(0, 5)
 
   const quickWins = arr(obj.quickWins)
     .map((w) => truncate(String(w ?? ''), 240))
     .filter(Boolean)
+    .filter((w) => findCrawlerMisattributions(w).length === 0)
     .slice(0, 3)
 
   return { recommendations, quickWins }
