@@ -1,10 +1,10 @@
 ---
 title: "One AI Visibility Score Cannot Be True"
 slug: "one-ai-visibility-score-cannot-be-true"
-excerpt: "In one quarter Reddit lost 94% of its ChatGPT citations and gained 86% on Perplexity. Two recorded 0.000% throughout. A number that averages those together describes nothing."
+excerpt: "In one quarter Reddit lost 94% of its ChatGPT citations and gained 86% on Perplexity. A number that averages those together describes nothing."
 seoTitle: "Why a Single AI Visibility Score Is Meaningless"
 seoDescription: "Otterly.AI and Semrush data showing AI citation share moving in opposite directions on different engines at once, and what to measure instead."
-publishedAt: "2026-10-21T09:00:00.000Z"
+publishedAt: "2026-10-27T09:00:00.000Z"
 author: michael-osborne
 categories: []
 ---
@@ -22,35 +22,20 @@ Rick Tousseyn. Otterly sells AI search visibility monitoring, which makes the
 finding more interesting rather than less, because it undercuts the simplest
 version of what the category sells.
 
-Their per-platform figures, reproduced here with attribution, cover three
-periods: 3 July to 7 August, then 8 to 31 August, then September. Each number is
-Reddit's share of that engine's citations.
+Their figures cover three periods: 3 July to 7 August, then 8 to 31 August, then
+September. Each is Reddit's share of that engine's citations. Across the quarter
+that share fell 94% on ChatGPT and rose 86% on Perplexity.
 
-| Engine | 3 Jul to 7 Aug | 8 to 31 Aug | September | Over the quarter |
-| --- | --- | --- | --- | --- |
-| Google AI Overviews | 4.375% | 4.490% | 5.081% | Up 16% |
-| Google AI Mode | 3.625% | 2.803% | 4.502% | Up 24% |
-| Perplexity | 1.176% | 2.163% | 2.186% | Up 86% |
-| Gemini | 1.727% | 1.220% | 1.167% | Down 32% |
-| ChatGPT | 3.765% | 0.374% | 0.227% | Down 94% |
-| Microsoft Copilot | 0.000% | 0.000% | 0.000% | No change |
-| Claude | 0.000% | 0.000% | 0.000% | No change |
-
-Three engines moved up. Two moved down. Two recorded 0.000% in every period,
-which in a monitoring tool means below what it reports rather than a proven zero.
-
-Otterly reports the sharpest move as a single-day event. On 8 August 2026,
-reddit.com fell from 4.01% to 0.44% of all ChatGPT citations in the United
-States, a decline of 89%, which they attribute to a ChatGPT 5.6 rollout.
+Otterly ties the sharpest drop to a ChatGPT model rollout in August.
 
 ### The two checks that make this more than noise
 
-Volume is the obvious alternative explanation, and Otterly closed it off. Over
-the same period ChatGPT increased its total daily citations by 23%. ChatGPT did
-not stop citing. It stopped citing Reddit.
+Volume is the obvious alternative explanation, and Otterly addresses it: by their
+account ChatGPT's total citations rose over the same period. ChatGPT did not stop
+citing. It stopped citing Reddit.
 
-Concentration is the other. Reddit declined across all 17 industries Otterly
-tracks, by between 58% and 99%. No single sector carried the result.
+Concentration is the other. Otterly reports the decline in every industry it
+tracks, so no single sector carried the result.
 
 So the decline was not a collection gap and it was not one vertical. Something
 changed inside one engine, and Reddit had no input into it.
@@ -95,15 +80,14 @@ The engines disagree about direction. A quarter that is catastrophic on ChatGPT
 and excellent on Perplexity has no honest single summary. Any weighting you pick
 is an editorial judgement about which engine matters, presented as a measurement.
 
-Some engines are effectively absent. Copilot and Claude recorded 0.000% for
-Reddit through the whole quarter. Including a zero in an average implies the zero is a
-result. For a site those engines do not use as a source, it is not a result, it
-is a category error. Averaging it in drags the number down and makes it look like
-a problem you could fix.
+Some engines may not use a given site as a source at all. Including a zero in an
+average implies the zero is a result. For a site an engine does not use as a
+source, it is not a result, it is a category error. Averaging it in drags the
+number down and makes it look like a problem you could fix.
 
 The denominators are not stable. These are percentages of each engine's total
-citations, and that total is itself moving. ChatGPT's daily citations rose 23%
-while Reddit's share of them collapsed. Share and volume can move opposite ways,
+citations, and that total is itself moving. By Otterly's account ChatGPT's
+citations rose while Reddit's share of them collapsed. Share and volume can move opposite ways,
 so a share figure alone does not tell you whether you were cited more or less
 often in absolute terms.
 
@@ -118,13 +102,6 @@ Otterly is a vendor publishing research that supports buying monitoring from a
 vendor. That does not make the data wrong. It does mean the framing is not
 neutral, and the same applies to Semrush.
 
-The article gives two different pairs of numbers for what reads as the same
-event. The headline is 4.01% falling to 0.44%. The platform table shows ChatGPT
-at 3.765% falling to 0.374%. The first is described as US daily share, the second
-as period averages, so they are probably different cuts rather than a
-contradiction. The article does not reconcile them, so cite whichever you use
-with its own scope attached.
-
 The sample is not published on that page. There is no prompt count, query set or
 geographic split alongside the table. Otterly documents its methodology
 separately and runs a public industry index, so the material exists, but it is
@@ -137,11 +114,6 @@ quarter-on-quarter read.
 And the causal claim is a date correlation. A drop coinciding with a model
 rollout is consistent with the rollout causing it. It is not a demonstration,
 and only OpenAI could supply one.
-
-Separately, Otterly has published a study putting 19.3% of AI search sources at
-dead citations. That figure is theirs and is referenced here rather than verified
-independently, so treat it as pointing somewhere worth looking rather than as a
-settled number.
 
 Reddit is also an unusual subject. It is one of the most heavily cited domains on
 the web and the object of commercial negotiation between platforms. A move of
@@ -157,14 +129,14 @@ Report per engine, never blended. If a stakeholder wants one number, give them
 the engine that matters to the business and say why that one.
 
 Exclude engines that do not use you as a source, and state the exclusion. A
-0.000% that has held for a quarter is a coverage fact, not a performance
+zero that has held for a quarter is a coverage fact, not a performance
 figure.
 
 Carry volume next to share. Share can fall while absolute citations rise. Without
 both, a line on a chart is ambiguous.
 
-Attach a cause or label it unexplained. The 8 August step coincides with a model
-release. Most movement will not have anything to point at, and writing
+Attach a cause or label it unexplained. Otterly's sharpest drop coincides with a
+model release. Most movement will not have anything to point at, and writing
 "unexplained" is more useful than inventing a reason.
 
 Sample enough to separate movement from noise before reporting either. A single
@@ -187,8 +159,8 @@ does not tell you whether you were cited. It tells you whether you are in a
 condition to be, which is the part that responds to work.
 
 Measure citation share too, by all means. Just do it per engine, with volume
-beside it, and stop pretending a weighted average of seven disagreeing systems is
-a fact about your site.
+beside it, and stop pretending a weighted average of disagreeing systems is a
+fact about your site.
 
 :::faq
 ### Is AI visibility tracking worth paying for?
@@ -210,18 +182,15 @@ assessable on the page and stable over time. Citation share is downstream of
 model behaviour you do not control.
 
 ### Does a 0% citation share on an engine mean I have a problem?
-Not necessarily. Some engines do not use some source types at all. Reddit held
-0.000% on Claude and Copilot for an entire quarter while being one of ChatGPT's
-larger sources. Check whether the engine uses sources like yours before treating
-a zero as a failure.
+Not necessarily. Some engines do not use some source types at all. Check whether
+the engine uses sources like yours before treating a zero as a failure.
 :::
 
 ## Sources
 
 - Otterly.AI, "Reddit GEO in 2026: What Gets You Banned, What Still Works, and What ChatGPT Changed", Rick Tousseyn, 1 October 2026: [https://otterly.ai/blog/reddit-ban-geo-experiment/](https://otterly.ai/blog/reddit-ban-geo-experiment/)
-- Otterly.AI, dead citations study: [https://otterly.ai/blog/dead-citations-study/](https://otterly.ai/blog/dead-citations-study/)
 - Otterly.AI, research methodology: [https://otterly.ai/blog/ai-search-research-methodology/](https://otterly.ai/blog/ai-search-research-methodology/)
 - Semrush, "How Fast Do AI Search Platforms Cite New Content?", Tushar Pol, 10 December 2025: [https://www.semrush.com/blog/how-fast-do-ai-search-platforms-cite-new-content/](https://www.semrush.com/blog/how-fast-do-ai-search-platforms-cite-new-content/)
 
-All figures in the table and in the Reddit section are Otterly.AI's measurements,
-not ours. The Google AI Mode and ChatGPT page-citation figures are Semrush's.
+The 94% and 86% figures are Otterly.AI's measurements, not ours. The Google AI
+Mode and ChatGPT page-citation figures are Semrush's.

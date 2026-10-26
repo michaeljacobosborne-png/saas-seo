@@ -1,10 +1,10 @@
 ---
 title: "Your Edge Decides Which AI Crawlers See Your Pages, Not Your robots.txt"
 slug: "which-ai-crawlers-your-site-actually-serves"
-excerpt: "Retrieval crawlers and training crawlers are different bots with different consequences, and most sites have never checked which ones their edge refuses. Here is how to check, and how to rule out the false positive a check without a baseline cannot see."
+excerpt: "Retrieval crawlers and training crawlers are different bots with different consequences, and it is easy to refuse the wrong one by accident. Here is how to check, and how to rule out the false positive a check without a baseline cannot see."
 seoTitle: "Which AI Crawlers Does Your Site Actually Serve? How to Check"
 seoDescription: "How to test whether AI retrieval crawlers can fetch your pages, why robots.txt does not answer the question, and the baseline request that prevents a false block."
-publishedAt: "2026-10-20T09:00:00.000Z"
+publishedAt: "2026-10-26T09:00:00.000Z"
 author: michael-osborne
 categories: []
 ---
@@ -13,7 +13,7 @@ A site can block the crawlers that would cite it while still serving the ones
 that only train on it. That is the wrong way round, it happens by accident, and
 nothing in your analytics will tell you it happened.
 
-The check takes a few minutes. Almost nobody runs it.
+The check takes a few minutes.
 
 ## Two kinds of AI crawler, two different consequences
 
@@ -39,7 +39,7 @@ crawlers**: one bot doing both jobs. Googlebot, Applebot and Bingbot each
 collect pages for a search index and for model training. Refuse the training
 behaviour by refusing the bot and you lose the search index with it.
 
-This is the part most crawler advice gets wrong. There is no single rule that
+This is the part that is easy to get wrong. There is no single rule that
 covers both groups, because the two groups are built differently.
 
 ## What changed at Cloudflare, and when
