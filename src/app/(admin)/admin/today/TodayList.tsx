@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { xLength, type QueuePart } from '@/lib/outreach-queue/parse'
-import { markDone, undoDone } from './actions'
+import { keepLive, markDone, undoDone } from './actions'
 
 export interface Item {
   id: string
@@ -16,6 +16,8 @@ export interface Item {
   needsRerun: boolean
   closesOn: string | null
   waitingFor: string[]
+  /** Set on stale items: whole days since anything changed. */
+  idleDays?: number
 }
 
 const X_LIMIT = 280
@@ -108,7 +110,7 @@ function shortAccount(a: string): string {
   return a.split(',')[0].trim()
 }
 
-function ItemCard({ item, onDone, busy }: { item: Item; onDone?: () => void; busy?: boolean }) {
+function ItemCard({ item, onDone, onKeep, busy }: { item: Item; onDone?: () => void; onKeep?: () => void; busy?: boolean }) {
   return (
     <article className="rounded-xl p-4 space-y-4" style={card}>
       <header className="space-y-1">
@@ -122,6 +124,11 @@ function ItemCard({ item, onDone, busy }: { item: Item; onDone?: () => void; bus
           {item.closesOn && (
             <span className="rounded px-2 py-0.5 font-semibold" style={{ background: '#7a2e1c', color: '#fff' }}>
               Closes {closesLabel(item.closesOn)}
+            </span>
+          )}
+          {item.idleDays !== undefined && (
+            <span className="rounded px-2 py-0.5 font-semibold" style={{ background: 'rgba(122,101,85,0.35)', color: 'var(--cream)' }}>
+              Stale, untouched {item.idleDays} days
             </span>
           )}
         </div>
@@ -156,6 +163,18 @@ function ItemCard({ item, onDone, busy }: { item: Item; onDone?: () => void; bus
         </button>
       )}
 
+      {onKeep && (
+        <button
+          type="button"
+          onClick={onKeep}
+          disabled={busy}
+          className="w-full rounded-lg text-base font-semibold disabled:opacity-50 text-[var(--cream-dim)]"
+          style={{ minHeight: 48, border: '1px solid rgba(184,115,51,0.3)', background: 'transparent' }}
+        >
+          Still live, keep it 7 more days
+        </button>
+      )}
+
       {item.note && (
         <details className="text-sm text-[var(--cream-dim)]">
           <summary className="cursor-pointer py-2">Context</summary>
@@ -171,6 +190,7 @@ export default function TodayList(props: {
   today: Item[]
   held: Item[]
   blocked: Item[]
+  stale: Item[]
   doneToday: Item[]
   pendingCount: number
   caps: { comments: string; outbound: string }
@@ -213,9 +233,27 @@ export default function TodayList(props: {
     })
   }
 
+  const keep = (id: string) => {
+    setHidden((s) => new Set(s).add(id))
+    setError(null)
+    startTransition(async () => {
+      try {
+        await keepLive(id)
+      } catch {
+        setHidden((s) => {
+          const n = new Set(s)
+          n.delete(id)
+          return n
+        })
+        setError(`Could not keep ${id}. Try again.`)
+      }
+    })
+  }
+
   const today = props.today.filter((i) => !hidden.has(i.id))
   const held = props.held.filter((i) => !hidden.has(i.id))
-  const rest = held.length + props.blocked.length
+  const stale = props.stale.filter((i) => !hidden.has(i.id))
+  const rest = held.length + props.blocked.length + stale.length
 
   return (
     <main className="mx-auto max-w-xl px-4 py-6 space-y-5">
@@ -233,7 +271,7 @@ export default function TodayList(props: {
 
       {today.length === 0 ? (
         <p className="rounded-xl p-4 text-[var(--cream)]" style={card}>
-          Nothing left for today. Everything else is held by the daily and weekly limits or waiting on another item.
+          Nothing left for today. Anything else is held by the daily and weekly limits, waiting on another item, or stale.
         </p>
       ) : (
         today.map((item) => <ItemCard key={item.id} item={item} onDone={() => done(item.id)} busy={pending} />)
@@ -281,6 +319,13 @@ export default function TodayList(props: {
             <section className="space-y-3">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Waiting on another item ({props.blocked.length})</h2>
               {props.blocked.map((item) => <ItemCard key={item.id} item={item} />)}
+            </section>
+          )}
+          {stale.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Stale, nothing changed in 7 days ({stale.length})</h2>
+              <p className="text-sm text-[var(--cream-dim)]">These no longer reach today&apos;s list. Mark one done if it went out, or keep it if it is still worth sending.</p>
+              {stale.map((item) => <ItemCard key={item.id} item={item} onDone={() => done(item.id)} onKeep={() => keep(item.id)} busy={pending} />)}
             </section>
           )}
         </div>

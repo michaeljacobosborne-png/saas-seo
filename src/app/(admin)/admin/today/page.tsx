@@ -18,7 +18,7 @@ type Row = QueueRow & {
   needs_rerun: boolean
 }
 
-const toItem = (r: Row, waitingFor: string[] = []): Item => ({
+const toItem = (r: Row, waitingFor: string[] = [], idleDays?: number): Item => ({
   id: r.id,
   type: r.type,
   account: r.account,
@@ -30,12 +30,13 @@ const toItem = (r: Row, waitingFor: string[] = []): Item => ({
   needsRerun: r.needs_rerun,
   closesOn: r.closes_on,
   waitingFor,
+  idleDays,
 })
 
 export default async function TodayPage() {
   const { data, error } = await createServiceClient()
     .from('outreach_queue')
-    .select('id, type, account, platform, target, parts, warning, note, needs_rerun, status, priority, closes_on, due_date, after_ids, sort_order, created_at, completed_at')
+    .select('id, type, account, platform, target, parts, warning, note, needs_rerun, status, priority, closes_on, due_date, after_ids, sort_order, created_at, updated_at, completed_at')
 
   if (error) {
     return <p className="p-4 text-[var(--cream)]">Could not load the queue: {error.message}</p>
@@ -43,12 +44,12 @@ export default async function TodayPage() {
 
   const rows = (data ?? []) as Row[]
   const now = new Date()
-  const { today, blocked, held } = selectToday(rows, now)
+  const { today, blocked, held, stale } = selectToday(rows, now)
   const todayKey = dayKey(now)
   const doneToday = rows
     .filter((r) => r.status === 'done' && r.completed_at && dayKey(new Date(r.completed_at)) === todayKey)
     .sort((a, b) => (a.completed_at! < b.completed_at! ? 1 : -1))
-  const pendingCount = rows.filter((r) => r.status === 'pending').length
+  const pendingCount = rows.filter((r) => r.status === 'pending').length - stale.length
 
   const used = (type: string) => doneToday.filter((r) => r.type === type).length
   const dateLabel = new Intl.DateTimeFormat('en-GB', { timeZone: TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long' }).format(now)
@@ -59,6 +60,7 @@ export default async function TodayPage() {
       today={(today as Row[]).map((r) => toItem(r))}
       held={(held as Row[]).map((r) => toItem(r))}
       blocked={blocked.map((b) => toItem(b.row as Row, b.waitingFor))}
+      stale={stale.map((s) => toItem(s.row as Row, [], s.idleDays))}
       doneToday={doneToday.map((r) => toItem(r))}
       pendingCount={pendingCount}
       caps={{

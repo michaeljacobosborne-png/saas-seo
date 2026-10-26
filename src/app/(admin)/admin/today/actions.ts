@@ -33,3 +33,16 @@ export async function markDone(id: string) {
 export async function undoDone(id: string) {
   await setStatus(id, 'pending')
 }
+
+/** Counts as activity, so a stale item returns to the live queue for 7 more days. */
+export async function keepLive(id: string) {
+  await assertOwner()
+  if (typeof id !== 'string' || !/^[A-Z]{1,3}-[A-Z]?\d{1,3}$/.test(id)) throw new Error('Bad id')
+  const { error } = await createServiceClient()
+    .from('outreach_queue')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('status', 'pending')
+  if (error) throw new Error(error.message)
+  revalidatePath('/admin/today')
+}

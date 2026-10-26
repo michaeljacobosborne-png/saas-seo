@@ -91,7 +91,7 @@ const row = (over: Partial<QueueRow> & { id: string }): QueueRow => ({
   due_date: null,
   after_ids: [],
   sort_order: null,
-  created_at: new Date(Date.UTC(2026, 9, 1) + seq++ * 1000).toISOString(),
+  created_at: new Date(Date.UTC(2026, 9, 20) + seq++ * 1000).toISOString(),
   completed_at: null,
   ...over,
 })
@@ -154,6 +154,27 @@ describe('selectToday', () => {
   it('ignores items that are not pending', () => {
     const r = selectToday([row({ id: 'gone', status: 'withdrawn' }), row({ id: 'old', status: 'superseded' })], NOW)
     expect(r.today).toHaveLength(0)
+  })
+
+  it('drops an item idle for more than 7 days off today and marks it stale', () => {
+    const r = selectToday([
+      row({ id: 'old', created_at: '2026-10-13T06:00:00Z' }),
+      row({ id: 'fresh', account: 'Brand', created_at: '2026-10-15T06:00:00Z' }),
+    ], NOW)
+    expect(r.today.map((x) => x.id)).toEqual(['fresh'])
+    expect(r.stale).toMatchObject([{ row: { id: 'old' }, idleDays: 8 }])
+  })
+
+  it('counts an update as activity, so a touched item stays live', () => {
+    const r = selectToday([row({ id: 'kept', created_at: '2026-10-01T06:00:00Z', updated_at: '2026-10-20T06:00:00Z' })], NOW)
+    expect(r.today.map((x) => x.id)).toEqual(['kept'])
+    expect(r.stale).toHaveLength(0)
+  })
+
+  it('marks a stale item stale even when it is also waiting on a prerequisite', () => {
+    const r = selectToday([row({ id: 'seq', after_ids: ['X'], created_at: '2026-10-01T06:00:00Z' })], NOW)
+    expect(r.blocked).toHaveLength(0)
+    expect(r.stale.map((s) => s.row.id)).toEqual(['seq'])
   })
 
   it('uses Israel time and Monday weeks', () => {

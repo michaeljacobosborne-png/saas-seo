@@ -12,6 +12,9 @@
  *   6. 3 to 5 items shown; the rest are held.
  * Items already completed today or this week count against the caps, so the
  * list shrinks as he works rather than refilling.
+ * A pending item with no activity (created or updated) for more than 7 days is
+ * stale: it never reaches today's list and is shown apart, so the page shows
+ * what is live rather than everything once written (added 2026-10-26).
  * Days and weeks are in Michael's time zone; weeks start on Monday.
  */
 
@@ -27,11 +30,19 @@ export interface QueueRow {
   after_ids: string[]
   sort_order: number | null
   created_at: string
+  updated_at?: string | null
   completed_at: string | null
 }
 
 export const TIME_ZONE = 'Asia/Jerusalem'
 export const MAX_SHOWN = 5
+export const STALE_AFTER_DAYS = 7
+
+/** Whole days since the item was last created or updated. */
+export function idleDays(r: QueueRow, now: Date): number {
+  const last = Math.max(Date.parse(r.created_at), r.updated_at ? Date.parse(r.updated_at) : 0)
+  return Math.floor((now.getTime() - last) / 86_400_000)
+}
 export const CAPS = { commentsPerDay: 4, socialPerAccountPerDay: 1, socialPerAccountPerWeek: 2, outboundPerDay: 3 }
 
 /** YYYY-MM-DD in the given time zone. */
@@ -55,6 +66,8 @@ export interface TodayResult {
   blocked: { row: QueueRow; waitingFor: string[] }[]
   /** Eligible but held back by a cap or the 5-item limit. */
   held: QueueRow[]
+  /** Pending, but untouched for more than STALE_AFTER_DAYS. Never shown as today. */
+  stale: { row: QueueRow; idleDays: number }[]
 }
 
 export function selectToday(rows: QueueRow[], now: Date): TodayResult {
@@ -76,7 +89,13 @@ export function selectToday(rows: QueueRow[], now: Date): TodayResult {
   const pending = rows.filter((r) => r.status === 'pending')
   const blocked: TodayResult['blocked'] = []
   const eligible: QueueRow[] = []
+  const stale: TodayResult['stale'] = []
   for (const r of pending) {
+    const idle = idleDays(r, now)
+    if (idle > STALE_AFTER_DAYS) {
+      stale.push({ row: r, idleDays: idle })
+      continue
+    }
     const waitingFor = (r.after_ids ?? []).filter((id) => !done.has(id))
     if (waitingFor.length) blocked.push({ row: r, waitingFor })
     else eligible.push(r)
@@ -117,5 +136,5 @@ export function selectToday(rows: QueueRow[], now: Date): TodayResult {
     chosen.push(r)
   }
 
-  return { today: chosen, blocked, held }
+  return { today: chosen, blocked, held, stale }
 }
