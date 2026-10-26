@@ -6,6 +6,26 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 36. Engine 2026.13: only sourced figures are evidence; crawler rows must survive two request shapes
+**Date:** 2026-10-26 (approved by Michael, backlog items 1, 2, 2a and 4)
+**Decision:**
+- Original evidence counts a figure only when the same section of the page links out to a source (another site, not a social profile). A "Sources:" line under the figures counts. Unsourced figures are neither credited nor penalised; the finding states how many there were.
+- Outbound links no longer earn Original evidence on their own. They count through the figure they source. Their provenance value stays under Freshness and provenance.
+- Crawler check: a 200 whose body is a script-submitted form with almost no readable text is a JavaScript challenge, not "served". A 429 with `x-ratelimit-used: 0` and nothing remaining is a refusal, not rate limiting. Every crawler is asked twice, with and without browser-style Accept headers; if the answers disagree the row is unconfirmed and is reported neither as served nor as blocked, never scored.
+- Freshness evidence carries the URL of the page the date came from.
+- Direct answers evidence is labelled ("Opening paragraph", "Definition-style sentence") and quotes the paragraph or sentence its finding describes.
+- ENGINE_VERSION goes from 2026.12 to 2026.13.
+**PRIOR SCORES ARE AFFECTED.** Citable bands can drop where Original evidence rested on unsourced figures or bare outbound links (clickslice.co.uk: adequate to absent). Crawler rows that were "served" behind a JavaScript challenge, or "rate limited" on a zero allowance, now read as refused or unknown. Do not compare across 2026.12/2026.13 without saying so.
+**Drivers:**
+- These produced false findings in reports Michael sends to agencies who check them.
+- clickslice.co.uk: "12 specific figures" credited, none sourced ("AI search projected to hit 1 billion monthly visitors"); review-site badges credited as "outbound links to third-party sources".
+- reddit.com: JavaScript challenge reported as "8,397 bytes served"; zero-allowance 429 labelled "rate limited, not a policy block".
+- aira.net and zelst.co.uk (2026-10-07): the same crawler user agent served with Accept headers and refused without.
+- app.bylineseo.com: the blog's date labelled with the home URL.
+- typeamedia.net: "The opening paragraph is 355 characters" printed over a quote of a different paragraph.
+- Tests built from each site's real markup or headers: `crawler-access.test.ts`, `original-evidence.test.ts`, `freshness-source.test.ts`, `direct-answers.test.ts`.
+**Revisit if:** sites routinely cite figures with footnote links in a separate references section (a section-level match would then miss them), or a real crawler is shown to send a request shape we do not test.
+
 ## 35. RETRACTED CLAIMS: "ten free tools, none query an engine" and "Semrush measured unchanged pages"
 **Date:** 2026-10-15
 **Retracted claim 1, ten free tools.**

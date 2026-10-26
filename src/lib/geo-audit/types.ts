@@ -201,7 +201,7 @@ export interface BylineCheck {
  * Bump when a change to scoring would move scores for the same page, so
  * comparisons over time never mix measurements from two different rubrics.
  */
-export const ENGINE_VERSION = '2026.12'
+export const ENGINE_VERSION = '2026.13'
 
 // ── Score thresholds — the single source of truth for labels ────────────────
 

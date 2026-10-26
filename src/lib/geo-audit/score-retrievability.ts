@@ -604,18 +604,23 @@ function scoreExtractability({ home }: RetrievabilityInput): Factor[] {
   const questions = new FactorBuilder('extract-questions', 'Question coverage', 6)
   const density = new FactorBuilder('extract-density', 'Lists, tables and data', 4)
 
+  // Each finding quotes the paragraph it describes, and says which one. On
+  // typeamedia.net (2026-10-14) "The opening paragraph is 355 characters" sat
+  // over a quote of a different paragraph, the one the definition check matched.
   const opener = home.paragraphs.find((p) => countWords(p) >= 12)
   if (opener && opener.length <= 300) {
-    answers.award(5, `The page opens with a self-contained statement of ${opener.length} characters — the form an engine can lift directly.`, ev(home.url, 'text', opener))
+    answers.award(5, `The page opens with a self-contained statement of ${opener.length} characters, the form an engine can lift directly.`, ev(home.url, 'text', `Opening paragraph: ${opener}`))
   } else if (opener) {
-    answers.award(2, `The opening paragraph is ${opener.length} characters, above the ~300 that lifts cleanly.`)
+    answers.award(2, `The opening paragraph is ${opener.length} characters, above the ~300 that lifts cleanly.`, ev(home.url, 'text', `Opening paragraph (${opener.length} characters): ${opener}`))
   } else {
     answers.miss('No opening paragraph states a self-contained answer.')
   }
 
-  const definition = home.paragraphs.find((p) => /\b(is|are)\s+(a|an|the)\s+\w+/i.test(p) && p.length <= 300)
+  const DEFINITION = /\b(is|are)\s+(a|an|the)\s+\w+/i
+  const definition = home.paragraphs.find((p) => DEFINITION.test(p) && p.length <= 300)
   if (definition) {
-    answers.award(5, 'A definition-style sentence states plainly what the subject is.', ev(home.url, 'text', definition))
+    const sentence = definition.split(/(?<=[.!?])\s+/).find((s) => DEFINITION.test(s)) ?? definition
+    answers.award(5, 'A definition-style sentence states plainly what the subject is.', ev(home.url, 'text', `Definition-style sentence: ${sentence}`))
   } else {
     answers.miss('No definition-style sentence ("X is a …") states plainly what the subject is.')
   }

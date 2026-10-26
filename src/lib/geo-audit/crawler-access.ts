@@ -82,12 +82,21 @@ export interface CrawlerProbe {
   /** robots.txt and the origin disagree. The practitioner-relevant case. */
   divergence: 'robots-allows-origin-blocks' | 'robots-blocks-origin-serves' | null
   /**
-   * False when the baseline browser request also failed. The refusal is then
-   * real but not attributable to the user-agent — it is more likely our IP, or
-   * the site being down for everyone. A non-attributable result must be
-   * presented as unknown, never as "this crawler is blocked".
+   * False when the baseline browser request also failed, or when the row is
+   * unconfirmed (see `confirmed`). The refusal is then real but not attributable
+   * to the user-agent — it is more likely our IP, our request shape, or the site
+   * being down for everyone. A non-attributable result must be presented as
+   * unknown, never as "this crawler is blocked".
    */
   attributable: boolean
+  /**
+   * False when the same user-agent got a different answer with and without
+   * browser-style Accept headers (aira.net and zelst.co.uk, 2026-10-07). The
+   * verdict is then about our request shape, not the crawler, so it is not
+   * reported either way. Absent on reports from before engine 2026.13, which
+   * asked only once.
+   */
+  confirmed?: boolean
   ms: number
 }
 
@@ -225,6 +234,38 @@ const CHALLENGE_MARKERS = [
 const WEAK_CHALLENGE_MARKERS = [/hcaptcha|recaptcha|turnstile/i]
 const CHALLENGE_PAGE_MAX_BYTES = 30_000
 
+/**
+ * A JavaScript challenge served as an ordinary 200: a script that fills in a
+ * form and submits it, on a page with almost no readable text. reddit.com,
+ * 2026-10-05 and again 2026-10-26, served this to the browser baseline and to
+ * every AI search crawler alike; it was being reported as "8,397 bytes served".
+ * A crawler that does not run scripts gets nothing from it.
+ */
+function isScriptChallenge(body: string): boolean {
+  const autoSubmits = /<script[\s\S]*?(?:\.requestSubmit\(|\.submit\(\))[\s\S]*?<\/script>/i.test(body)
+  const challengeField = /<input[^>]+name=["']?(?:js_challenge|jsc_token|solution)["'\s>]/i.test(body)
+  if (!autoSubmits && !challengeField) return false
+  const visible = body
+    .replace(/<(script|style|svg|noscript)\b[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return visible.length < 200
+}
+
+/**
+ * A 429 that says no allowance was ever used: `x-ratelimit-used: 0` with
+ * nothing remaining. That is a quota of zero for this client, a refusal, not a
+ * limit we ran into. reddit.com gives this to ClaudeBot and CCBot on every
+ * attempt while serving the browser baseline from the same IP.
+ */
+function isZeroAllowance(headers: Headers | null): boolean {
+  if (!headers) return false
+  const used = headers.get('x-ratelimit-used')
+  const remaining = headers.get('x-ratelimit-remaining')
+  return used !== null && Number(used) === 0 && (remaining === null || Number(remaining) === 0)
+}
+
 function detectEdge(headers: Headers): string | null {
   for (const sig of EDGE_SIGNATURES) {
     const v = headers.get(sig.header)
@@ -292,6 +333,14 @@ function classify(r: RawResult): {
         edgeVendor,
       }
     }
+    if (smallBody && isScriptChallenge(r.body)) {
+      return {
+        blockKind: 'bot-management',
+        contentServed: false,
+        evidence: `HTTP ${r.status}, ${r.bytes.toLocaleString()} bytes, but the body is a JavaScript challenge (a form the page fills in and submits by script), not the page. A crawler that does not run JavaScript gets no content.`,
+        edgeVendor,
+      }
+    }
     // A 2xx with almost nothing in it is not content.
     if (r.bytes < 500) {
       return {
@@ -305,6 +354,15 @@ function classify(r: RawResult): {
       blockKind: 'none',
       contentServed: true,
       evidence: `HTTP ${r.status}, ${r.truncated ? "at least " : ""}${r.bytes.toLocaleString()} bytes served.`,
+      edgeVendor,
+    }
+  }
+
+  if (r.status === 429 && isZeroAllowance(r.headers)) {
+    return {
+      blockKind: edgeVendor ? 'edge-block' : 'origin-block',
+      contentServed: false,
+      evidence: `HTTP 429 with x-ratelimit-used: 0 and nothing remaining: an allowance of zero before any request was counted. A refusal, not rate limiting.`,
       edgeVendor,
     }
   }
@@ -398,6 +456,8 @@ async function request(
   userAgent: string,
   timeoutMs: number,
   fetchImpl: typeof fetch,
+  /** Send the User-Agent alone, as many real crawlers do, with no Accept headers. */
+  bare = false,
 ): Promise<RawResult> {
   const started = Date.now()
   const controller = new AbortController()
@@ -408,11 +468,13 @@ async function request(
       method: 'GET',
       redirect: 'follow',
       signal: controller.signal,
-      headers: {
-        'User-Agent': userAgent,
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
+      headers: bare
+        ? { 'User-Agent': userAgent }
+        : {
+            'User-Agent': userAgent,
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
     })
 
     // Read a bounded prefix: enough to recognise a challenge page, not enough
@@ -491,11 +553,17 @@ export async function probeCrawlerAccess(
   })()
 
   // Baseline and all crawler probes together. Same moment, same network, so a
-  // difference between them is attributable to the user-agent.
-  const [baselineRaw, ...crawlerRaws] = await Promise.all([
+  // difference between them is attributable to the user-agent. Each crawler is
+  // asked twice, with and without browser-style Accept headers, because some
+  // origins answer the same user-agent differently depending on the rest of the
+  // request; only an answer both shapes agree on is reported.
+  const [baselineRaw, ...rest] = await Promise.all([
     request(url, BASELINE_UA, timeoutMs, fetchImpl),
     ...specs.map((s) => request(url, USER_AGENTS[s.token] ?? s.token, timeoutMs, fetchImpl)),
+    ...specs.map((s) => request(url, USER_AGENTS[s.token] ?? s.token, timeoutMs, fetchImpl, true)),
   ])
+  const crawlerRaws = rest.slice(0, specs.length)
+  const bareRaws = rest.slice(specs.length)
 
   const baselineClass = classify(baselineRaw)
   const baseline: BaselineProbe = {
@@ -508,7 +576,20 @@ export async function probeCrawlerAccess(
 
   const probes: CrawlerProbe[] = specs.map((spec, i) => {
     const raw = crawlerRaws[i]
-    const c = classify(raw)
+    const full = classify(raw)
+    const bare = classify(bareRaws[i])
+    // A transient failure on one shape is not a disagreement about policy.
+    const settled = (k: BlockKind) => k !== 'network-error' && k !== 'rate-limited' && k !== 'server-error'
+    const confirmed =
+      !settled(full.blockKind) || !settled(bare.blockKind) || full.contentServed === bare.contentServed
+    const c = confirmed
+      ? full
+      : {
+          ...full,
+          evidence:
+            `HTTP ${raw.status ?? 'no response'} with browser-style Accept headers, HTTP ${bareRaws[i].status ?? 'no response'} with the user-agent alone. ` +
+            'The answer depends on how we shaped the request, not on the crawler, so this row is unconfirmed.',
+        }
 
     let robotsVerdict: CrawlerProbe['robotsVerdict'] = 'unknown'
     if (opts.robots) {
@@ -520,9 +601,9 @@ export async function probeCrawlerAccess(
     // Divergence is only meaningful when we know both halves. A refusal the
     // baseline also got is not the origin treating this crawler differently.
     let divergence: CrawlerProbe['divergence'] = null
-    if (robotsVerdict === 'allowed' && !c.contentServed && isPolicyBlock(c.blockKind) && !baselineFailed) {
+    if (robotsVerdict === 'allowed' && !c.contentServed && isPolicyBlock(c.blockKind) && !baselineFailed && confirmed) {
       divergence = 'robots-allows-origin-blocks'
-    } else if (robotsVerdict === 'disallowed' && c.contentServed) {
+    } else if (robotsVerdict === 'disallowed' && c.contentServed && confirmed) {
       divergence = 'robots-blocks-origin-serves'
     }
 
@@ -537,7 +618,8 @@ export async function probeCrawlerAccess(
       contentServed: c.contentServed,
       bytes: raw.bytes,
       bytesTruncated: raw.truncated,
-      attributable: !baselineFailed,
+      attributable: !baselineFailed && confirmed,
+      confirmed,
       blockKind: c.blockKind,
       evidence: c.evidence,
       edgeVendor: c.edgeVendor,
@@ -624,6 +706,13 @@ function buildCaveats(baselineFailed: boolean, probes: CrawlerProbe[]): string[]
     out.push(
       'Some crawlers verify themselves by IP range. A site checking those ranges may treat the ' +
         'real crawler differently from this probe, in either direction.',
+    )
+  }
+
+  if (probes.some((p) => p.confirmed === false)) {
+    out.push(
+      'At least one crawler got a different answer with and without browser-style request headers. ' +
+        'Those rows are unconfirmed: the result depends on how the request was shaped, so it is not reported either way.',
     )
   }
 
@@ -752,10 +841,12 @@ export interface AccessSummary {
  * failure; blocking a retrieval crawler is the thing worth surfacing.
  */
 export function summarise(report: CrawlerAccessReport): AccessSummary {
-  const decided = report.baselineFailed ? [] : report.probes
+  const decided = report.baselineFailed ? [] : report.probes.filter((p) => p.confirmed !== false)
   const unknown = report.baselineFailed
     ? report.probes
-    : report.probes.filter((p) => p.blockKind === 'network-error' || p.blockKind === 'rate-limited')
+    : report.probes.filter(
+        (p) => p.confirmed === false || p.blockKind === 'network-error' || p.blockKind === 'rate-limited',
+      )
 
   const pick = (cls: CrawlerClass, blocked: boolean) =>
     decided.filter(

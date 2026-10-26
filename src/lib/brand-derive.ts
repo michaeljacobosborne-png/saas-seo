@@ -240,7 +240,7 @@ export interface OnboardingAccess {
 }
 
 function rowState(p: CrawlerProbe, baselineFailed: boolean): AccessRowState {
-  if (baselineFailed || p.blockKind === 'network-error' || p.blockKind === 'rate-limited') return 'unknown'
+  if (baselineFailed || p.confirmed === false || p.blockKind === 'network-error' || p.blockKind === 'rate-limited') return 'unknown'
   if (p.robotsVerdict === 'disallowed') return 'robots-disallowed'
   if (p.contentServed) return 'served'
   if (isPolicyBlock(p.blockKind)) return 'refused'

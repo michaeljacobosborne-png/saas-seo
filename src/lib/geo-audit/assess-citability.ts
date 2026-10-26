@@ -238,7 +238,15 @@ function brandClaimProximity({ home }: CitabilityInput): CitabilitySignal {
 function originalEvidence({ home }: CitabilityInput): CitabilitySignal {
   const s = new SignalBuilder('original-evidence', 'Original evidence')
 
-  const stats = home.statistics
+  // Only figures with a source linked from the same section count (engine
+  // 2026.13, DECISIONS 36). A number with nothing behind it is neither credited
+  // nor held against the page: it is simply not evidence anyone can check.
+  const sourced = home.sourcedStatistics ?? []
+  const stats = sourced.map((f) => f.figure)
+  const unsourced = home.statistics.filter((f) => !stats.includes(f)).length
+  const unsourcedNote = unsourced > 0
+    ? ` ${unsourced} other figure${unsourced === 1 ? '' : 's'} appear${unsourced === 1 ? 's' : ''} without a linked source and ${unsourced === 1 ? 'is' : 'are'} not counted either way.`
+    : ''
   // A quote from the agency's own CEO is the organisation describing itself,
   // not client feedback (varn.co.uk: "Tom Vaughton CEO at Varn").
   const brand = brandNames(home)
@@ -247,26 +255,31 @@ function originalEvidence({ home }: CitabilityInput): CitabilitySignal {
     /\b(we (tested|measured|analysed|analyzed|surveyed|audited|reviewed)|our (research|study|analysis|data|testing)|in our (experience|testing)|across \d+)\b/i.test(p),
   )
 
+  const figureEv = () => [ev(home.url, 'text', stats[0]), ev(home.url, 'link', sourced[0].source)]
+
   if (stats.length >= 3 && (testimonial || methodology)) {
-    s.found('strong', `${stats.length} specific figures appear in the copy, alongside ${testimonial ? 'attributed client feedback' : 'a first-person methodology statement'} — material an engine can attribute rather than paraphrase.`, [
-      ev(home.url, 'text', stats[0]),
-      testimonial ? ev(home.url, 'text', `${testimonial.quote} — ${testimonial.attribution}`) : ev(home.url, 'text', truncate(methodology!, 200)),
+    s.found('strong', `${stats.length} figures appear with a source linked from the same section, alongside ${testimonial ? 'attributed client feedback' : 'a first-person methodology statement'}: material an engine can attribute rather than paraphrase.${unsourcedNote}`, [
+      ...figureEv(),
+      testimonial ? ev(home.url, 'text', `${testimonial.quote}, ${testimonial.attribution}`) : ev(home.url, 'text', truncate(methodology!, 200)),
     ])
   } else if (testimonial) {
-    s.found('adequate', `Named client feedback is published (attributed to ${testimonial.attribution}), which is first-hand evidence an engine can attribute.`, ev(home.url, 'text', `${testimonial.quote} — ${testimonial.attribution}`))
+    s.found('adequate', `Named client feedback is published (attributed to ${testimonial.attribution}), which is first-hand evidence an engine can attribute.${unsourcedNote}`, ev(home.url, 'text', `${testimonial.quote}, ${testimonial.attribution}`))
   } else if (stats.length >= 2) {
-    s.found('adequate', `${stats.length} specific figures appear in the copy.`, ev(home.url, 'text', stats[0]))
+    s.found('adequate', `${stats.length} figures appear with a source linked from the same section.${unsourcedNote}`, figureEv())
   } else if (methodology) {
-    s.found('weak', 'A first-person methodology statement is present, but without figures or named sources to anchor it.', ev(home.url, 'text', truncate(methodology, 200)))
+    s.found('weak', `A first-person methodology statement is present, but without sourced figures to anchor it.${unsourcedNote}`, ev(home.url, 'text', truncate(methodology, 200)))
   } else if (stats.length === 1) {
-    s.found('weak', 'One specific figure appears in the copy.', ev(home.url, 'text', stats[0]))
+    s.found('weak', `One figure appears with a source linked from the same section.${unsourcedNote}`, figureEv())
+  } else if (unsourced > 0) {
+    s.missing(`${unsourced} figure${unsourced === 1 ? ' appears' : 's appear'} in the copy, but none has a source linked from its section, so none can be checked. They are not counted either way. No named methodology or attributed first-hand evidence was found.`)
   } else {
-    s.missing('No original figures, named methodology or attributed first-hand evidence was found. There is nothing here that an engine could only have got from you.')
+    s.missing('No sourced figures, named methodology or attributed first-hand evidence was found. There is nothing here that an engine could only have got from you.')
   }
 
-  if (home.outboundCitations.length >= 2) {
-    s.found('adequate', `${home.outboundCitations.length} outbound links point to third-party sources.`, ev(home.url, 'link', home.outboundCitations.slice(0, 2).map((l) => l.absolute).join(', ')))
-  }
+  // Outbound links on their own are not evidence: on clickslice.co.uk the only
+  // ones were review-site badges, and they earned "adequate" here. A link counts
+  // above, through the figure it sources; its provenance value is assessed
+  // under freshness and provenance.
 
   return s.build()
 }
@@ -421,6 +434,10 @@ function freshnessProvenance({ home, keyPages, now }: CitabilityInput): Citabili
 
   const blog = pageForRole(keyPages, 'blog')
   const dates = [...home.dates, ...(blog?.page?.dates ?? [])]
+  // Each date keeps the page it was read from, so the evidence names that page.
+  // The newest date often comes from the blog, and it was being labelled with
+  // the home URL (app.bylineseo.com, 2026-10-08).
+  const pageOf = new Map(dates.map((d) => [d, home.dates.includes(d) ? home.url : blog!.page!.url]))
 
   if (dates.length === 0) {
     s.missing('No published or updated date was found in the markup, so nothing dates the claims on this page.')
@@ -437,15 +454,17 @@ function freshnessProvenance({ home, keyPages, now }: CitabilityInput): Citabili
     return s.build()
   }
 
-  const evidence = ev(home.url, 'date', `${f.mostRecent.source}: ${f.mostRecent.iso}`)
+  const dateUrl = pageOf.get(f.mostRecent) ?? home.url
+  const where = dateUrl === home.url ? '' : ` (on the blog page, ${dateUrl})`
+  const evidence = ev(dateUrl, 'date', `${f.mostRecent.source}: ${f.mostRecent.iso}`)
   if (f.bucket === 'current') {
-    s.found('strong', `Publication metadata is present and the most recent update is ${f.mostRecent.iso}, ${f.daysOld} days ago.`, evidence)
+    s.found('strong', `Publication metadata is present and the most recent update is ${f.mostRecent.iso}${where}, ${f.daysOld} days ago.`, evidence)
   } else if (f.bucket === 'recent') {
-    s.found('adequate', `Publication metadata is present; the most recent update is ${f.mostRecent.iso}, about ${Math.round(f.daysOld / 30)} months ago.`, evidence)
+    s.found('adequate', `Publication metadata is present; the most recent update is ${f.mostRecent.iso}${where}, about ${Math.round(f.daysOld / 30)} months ago.`, evidence)
   } else if (f.bucket === 'aging') {
-    s.found('weak', `Publication metadata is present, but the most recent update is ${f.mostRecent.iso}, about ${Math.round(f.daysOld / 30)} months ago.`, evidence)
+    s.found('weak', `Publication metadata is present, but the most recent update is ${f.mostRecent.iso}${where}, about ${Math.round(f.daysOld / 30)} months ago.`, evidence)
   } else {
-    s.found('weak', `Publication metadata is present, but the most recent update is ${f.mostRecent.iso}, over ${Math.floor(f.daysOld / 365)} year(s) ago.`, evidence)
+    s.found('weak', `Publication metadata is present, but the most recent update is ${f.mostRecent.iso}${where}, over ${Math.floor(f.daysOld / 365)} year(s) ago.`, evidence)
   }
 
   if (home.outboundCitations.length) {

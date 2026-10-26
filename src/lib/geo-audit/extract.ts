@@ -84,6 +84,14 @@ export interface ContentBlock {
   headingLevel: number | null
   text: string
   wordCount: number
+  /** Outbound links to third-party sources inside this section (absolute URLs). */
+  sourceLinks?: string[]
+}
+
+/** A figure in the prose and the source linked from the same section. */
+export interface SourcedFigure {
+  figure: string
+  source: string
 }
 
 export interface ExtractedPage {
@@ -119,6 +127,13 @@ export interface ExtractedPage {
   blocks: ContentBlock[]
   /** Numbers appearing in the prose, e.g. "156%", "3 steps", "2,400 users". */
   statistics: string[]
+  /**
+   * Figures in a section that also links out to a third-party source. Only these
+   * count as evidence: a number with nothing behind it cannot be checked by a
+   * reader or an engine (clickslice.co.uk, "AI search projected to hit 1 billion
+   * monthly visitors", no source anywhere in the section).
+   */
+  sourcedStatistics: SourcedFigure[]
   /** Outbound links that look like citations to third-party sources. */
   outboundCitations: PageLink[]
   /**
@@ -185,6 +200,7 @@ export function extractPage(html: string, pageUrl: string): ExtractedPage {
 
   const bodyText = normalise($('body').text())
   const mainText = extractMainText($) || bodyText
+  const blocks = extractBlocks($, pageUrl)
   const wordCount = countWords(mainText)
 
   const paragraphs = $('p')
@@ -264,8 +280,11 @@ export function extractPage(html: string, pageUrl: string): ExtractedPage {
     boldTerms,
     images,
     testimonials: extractTestimonials($, cheerio.load(html)),
-    blocks: extractBlocks($),
+    blocks,
     statistics: extractStatistics(paragraphs.length ? paragraphs : [mainText]),
+    sourcedStatistics: blocks.flatMap((b) =>
+      b.sourceLinks?.length ? extractStatistics([b.text]).map((figure) => ({ figure, source: b.sourceLinks![0] })) : [],
+    ),
     outboundCitations: links.filter(
       (l) => !l.internal && l.absolute.startsWith('http') && !SOCIAL_HOSTS.some((h) => hostOf(l.absolute).endsWith(h)),
     ),
@@ -325,15 +344,18 @@ function hostOf(url: string): string {
  *
  * Must run AFTER boilerplate removal so nav and script text cannot leak in.
  */
-function extractBlocks($: Cheerio): ContentBlock[] {
+function extractBlocks($: Cheerio, pageUrl: string): ContentBlock[] {
   const root = pickContentRoot($)
   if (!root) return []
+  const base = safeUrl(pageUrl)
+  const baseHost = base ? base.hostname.toLowerCase().replace(/^www\./, '') : ''
 
   const blocks: ContentBlock[] = []
-  let current: { headingText: string | null; headingLevel: number | null; parts: string[] } = {
+  let current: { headingText: string | null; headingLevel: number | null; parts: string[]; sources: string[] } = {
     headingText: null,
     headingLevel: null,
     parts: [],
+    sources: [],
   }
 
   const flush = () => {
@@ -345,6 +367,7 @@ function extractBlocks($: Cheerio): ContentBlock[] {
         headingLevel: current.headingLevel,
         text,
         wordCount: countWords(text),
+        sourceLinks: unique(current.sources),
       })
     }
   }
@@ -356,9 +379,23 @@ function extractBlocks($: Cheerio): ContentBlock[] {
 
     if (/^h[1-6]$/.test(tag)) {
       flush()
-      current = { headingText: text, headingLevel: Number(tag.slice(1)), parts: [] }
+      current = { headingText: text, headingLevel: Number(tag.slice(1)), parts: [], sources: [] }
     } else {
       current.parts.push(text)
+      // A source is a link out to another site that is not a social profile.
+      $(el)
+        .find('a[href]')
+        .each((_, a) => {
+          try {
+            const abs = new URL(($(a).attr('href') ?? '').trim(), base ?? undefined).toString()
+            const host = hostOf(abs)
+            if (/^https?:/.test(abs) && host && host !== baseHost && !SOCIAL_HOSTS.some((h) => host.endsWith(h))) {
+              current.sources.push(abs)
+            }
+          } catch {
+            // Not a URL; not a source.
+          }
+        })
     }
   })
   flush()

@@ -13,20 +13,22 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
   - Fixes are targeted, not full rewrites.
   - Generator keeps only citable or user-supplied facts.
   - Ranking and traffic predictions replaced by a projected score (decision 29).
-- Open: Original evidence must stop rewarding uncited numbers. A proposal is awaiting approval: only linked figures count, unsourced ones are neither credited nor penalised, with an optional matching rule for Retrievable's figures point and an engine version bump to 2026.11.
+- DONE 2026-10-26, engine 2026.13 (DECISIONS 36): Original evidence counts only figures with a source linked from the same section; unsourced ones are neither credited nor penalised; bare outbound links no longer earn it.
+- Open, not approved: the optional matching rule for Retrievable's "Lists, tables and data" figures point.
 
 ## 2. Engine: crawler check honesty (found 2026-10-05, reddit.com re-run)
-- A 200 whose body is a JavaScript challenge is reported as "served". Detect challenge pages (same body as the baseline challenge, a self-submitting form, no content).
-- A repeated 429 with `x-ratelimit-used: 0` is labelled "rate limited, not a policy block". Label it as a refusal.
+- DONE 2026-10-26 (DECISIONS 36): a 200 whose body is a script-submitted form with no content is a JavaScript challenge, not "served" (reddit.com fixture).
+- DONE 2026-10-26 (DECISIONS 36): a 429 with `x-ratelimit-used: 0` and nothing remaining is a refusal (reddit.com headers).
 - These affect prospect reports and anything published from the crawler check.
 - FIXED 2026-10-07: the opposite error. reCAPTCHA/hCaptcha/Turnstile markers labelled full pages with a protected contact form "a bot challenge, not the page" (screamingfrog.co.uk, varn.co.uk, withcandour.co.uk: every row, baseline included). Those markers now count only on a response under 30 KB. Divergence is no longer reported when the baseline was refused too. Any prospect reading from before this fix that says "bot challenge" must be re-run.
 - Open (found 2026-10-07, outreach audits):
-  - Some origins (aira.net, zelst.co.uk) serve or refuse a crawler UA depending on the other request headers: 200 with Accept/Accept-Language, 403 without. The probe's verdict is therefore about our request shape, not the crawler. Report such rows as unconfirmed, or probe twice with different header sets and report only what agrees.
+  - DONE 2026-10-26 (DECISIONS 36): every crawler is probed with and without Accept headers; disagreement makes the row unconfirmed (aira.net, zelst.co.uk, 2026-10-07).
+  - Open: several crawler evidence strings still contain em dashes and appear in reports.
   - FIXED 2026-10-07 (DECISIONS 32): authorship miss (varn, screamingfrog), legal-name brand matching (candour, zelst), own-CEO quote as client evidence (varn), "Continue Reading" and "San Diego" as coined terms (screamingfrog). Also fixed: zelst coined term and founder name, salt nav-as-testimonial, optimist CORE Framework, "strong" authorship from an agency award.
 
 ## 2a. Engine rubric faults found on our own homepage (2026-10-08)
 - DONE 2026-10-11, engine 2026.11 (DECISIONS 33): heading hierarchy can reach 12/12; SoftwareApplication and WebApplication count as content-level types.
-- Open: freshness evidence is labelled with the home URL when the date came from the blog page.
+- DONE 2026-10-26 (DECISIONS 36): freshness evidence carries the URL of the page the date came from.
 
 ## 2b. Blog drafts (content/blog)
 - DONE 2026-10-07: `which-ai-crawlers-your-site-actually-serves.md` Reddit section rewritten to the 5 October hand check (200s were a JS challenge, 429s a zero-allowance refusal). Its publishedAt is 2026-10-06, already past: set the real date before running without --dry-run.
@@ -37,7 +39,9 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
 
 ## 4. Group 2: coherence
 - DONE, live (71450e4, cc31b9b): SEO panel reduced to SEO basics (decision 28), Readability removed, agent top issues from the draft report only, Heading hierarchy Fix button.
-- Open: Direct answers evidence must quote the paragraph it describes; the brief meta description came out at 99 characters; a competitor-gap note became a heading verbatim.
+- DONE 2026-10-26 (DECISIONS 36): Direct answers evidence is labelled and quotes the paragraph or sentence it describes (typeamedia.net).
+- Open: the definition check matches any "is a/an/the" sentence (typeamedia.net: "becoming an agentic business is an evolution for us"), so it can call a non-definition a definition. The quote now shows which sentence matched.
+- Open: the brief meta description came out at 99 characters; a competitor-gap note became a heading verbatim.
 
 ## 5. Sanity tables: DONE, live (02c18aa, DECISIONS 30). Final check pending: run a published post that has a table through save-audit.
 

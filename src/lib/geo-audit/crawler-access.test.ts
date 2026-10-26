@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   probeCrawlerAccess,
@@ -211,6 +213,111 @@ describe('probeCrawlerAccess — attribution', () => {
     expect(s.trainingBlocked).toHaveLength(0)
     expect(s.unknown).toHaveLength(r.probes.length)
     expect(s.asymmetry).toBeNull()
+  })
+})
+
+describe('probeCrawlerAccess — reddit.com, as captured 2026-10-26', () => {
+  // The real body reddit.com served to the browser baseline and to OAI-SearchBot,
+  // Claude-SearchBot and PerplexityBot: 8,406 bytes, a hidden form filled in and
+  // submitted by script, no Reddit content. It was reported as "bytes served".
+  const REDDIT_CHALLENGE = readFileSync(join(__dirname, '__fixtures__', 'reddit-js-challenge.html'), 'utf8')
+  // The real headers on reddit.com's 429 to ClaudeBot and CCBot (cookies left out).
+  const ZERO_ALLOWANCE = {
+    'x-ratelimit-remaining': '0.0',
+    'x-ratelimit-reset': '0',
+    'x-ratelimit-used': '0',
+    via: '1.1 varnish',
+    server: 'snooserv',
+  }
+
+  it('does not call the JavaScript challenge page "served"', async () => {
+    const r = await run((ua) => (ua.includes('Chrome') ? { status: 200, body: PAGE } : { status: 200, body: REDDIT_CHALLENGE }))
+    for (const p of r.probes) {
+      expect(p.contentServed).toBe(false)
+      expect(p.blockKind).toBe('bot-management')
+      expect(p.evidence).toMatch(/JavaScript challenge/)
+    }
+  })
+
+  it('treats the baseline getting the same challenge as a failed baseline, so every row is unknown', async () => {
+    const r = await run(() => ({ status: 200, body: REDDIT_CHALLENGE }))
+    expect(r.baselineFailed).toBe(true)
+    for (const p of r.probes) expect(p.attributable).toBe(false)
+  })
+
+  it('labels a 429 with x-ratelimit-used: 0 a refusal, not rate limiting', async () => {
+    const r = await run((ua) =>
+      ua.includes('ClaudeBot') || ua.includes('CCBot') ? { status: 429, headers: ZERO_ALLOWANCE } : { status: 200, body: PAGE },
+    )
+    for (const token of ['ClaudeBot', 'CCBot']) {
+      const p = byToken(r, token)
+      expect(p.blockKind).toBe('origin-block')
+      expect(isPolicyBlock(p.blockKind)).toBe(true)
+      expect(p.evidence).toMatch(/A refusal, not rate limiting/)
+    }
+    expect(r.caveats.join(' ')).not.toMatch(/rate limited/)
+  })
+
+  it('still calls a 429 that has used some allowance a rate limit', async () => {
+    const r = await run((ua) =>
+      ua.includes('ClaudeBot') ? { status: 429, headers: { 'x-ratelimit-used': '600', 'x-ratelimit-remaining': '0' } } : { status: 200, body: PAGE },
+    )
+    expect(byToken(r, 'ClaudeBot').blockKind).toBe('rate-limited')
+  })
+
+  it('does not mistake a real page with a search form for a challenge', async () => {
+    const page = '<html><body><form action="/search"><input name="q"></form><script>document.forms[0].submit()</script><main>' +
+      'Real article text. '.repeat(40) + '</main></body></html>'
+    const r = await run(() => ({ status: 200, body: page }))
+    for (const p of r.probes) expect(p.contentServed).toBe(true)
+  })
+})
+
+describe('probeCrawlerAccess — answers that depend on our request shape', () => {
+  // aira.net and zelst.co.uk, 2026-10-07: the same crawler user-agent got 200
+  // with Accept and Accept-Language headers and 403 without them. Routed here by
+  // whether the probe sent an Accept header.
+  const byShape = (withHeaders: FakeResponse, bare: FakeResponse, only?: string): typeof fetch =>
+    (async (_url: string, init?: RequestInit) => {
+      const h = (init?.headers ?? {}) as Record<string, string>
+      const ua = String(h['User-Agent'] ?? '')
+      const r = ua.includes('Chrome') || (only && !ua.includes(only)) ? { status: 200, body: PAGE } : h.Accept ? withHeaders : bare
+      return fakeFetch(() => r)(_url, init)
+    }) as unknown as typeof fetch
+
+  const AIRA_PAGE = '<html><body>' + 'x'.repeat(128_000) + '</body></html>'
+
+  it('reports a crawler served with headers and refused without as unconfirmed, not served and not blocked', async () => {
+    const r = await probeCrawlerAccess('https://aira.net/', {
+      fetchImpl: byShape({ status: 200, body: AIRA_PAGE }, { status: 403, body: '' }, 'Claude-SearchBot'),
+      robots: parseRobotsTxt('User-agent: *\nDisallow:\n'),
+      now: NOW,
+    })
+    const p = byToken(r, 'Claude-SearchBot')
+    expect(p.confirmed).toBe(false)
+    expect(p.attributable).toBe(false)
+    expect(p.divergence).toBeNull()
+    expect(p.evidence).toMatch(/HTTP 200 with browser-style Accept headers, HTTP 403 with the user-agent alone/)
+    expect(r.caveats.join(' ')).toMatch(/unconfirmed/)
+    // Rows where both shapes agree are reported as before.
+    expect(byToken(r, 'OAI-SearchBot').confirmed).toBe(true)
+    expect(byToken(r, 'OAI-SearchBot').attributable).toBe(true)
+  })
+
+  it('does not count an unconfirmed row in the summary as blocked', async () => {
+    const r = await probeCrawlerAccess('https://www.zelst.co.uk/', {
+      fetchImpl: byShape({ status: 403, body: '' }, { status: 200, body: AIRA_PAGE }),
+      now: NOW,
+    })
+    const s = summarise(r)
+    expect(s.retrievalBlocked).toHaveLength(0)
+    for (const p of r.probes) expect(p.confirmed).toBe(false)
+  })
+
+  it('confirms a row when both shapes agree', async () => {
+    const r = await run((ua) => (ua.includes('GPTBot') ? { status: 403 } : { status: 200, body: PAGE }))
+    expect(byToken(r, 'GPTBot').confirmed).toBe(true)
+    expect(byToken(r, 'GPTBot').blockKind).toBe('origin-block')
   })
 })
 
