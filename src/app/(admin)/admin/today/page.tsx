@@ -16,7 +16,12 @@ type Row = QueueRow & {
   warning: string | null
   note: string | null
   needs_rerun: boolean
+  /** Present once migration 20261026_outreach_queue_blocked.sql has run. */
+  blocked_reason?: string | null
+  blocked_at?: string | null
 }
+
+const DAY = 86_400_000
 
 const toItem = (r: Row, waitingFor: string[] = [], idleDays?: number): Item => ({
   id: r.id,
@@ -31,12 +36,15 @@ const toItem = (r: Row, waitingFor: string[] = [], idleDays?: number): Item => (
   closesOn: r.closes_on,
   waitingFor,
   idleDays,
+  blockedReason: r.blocked_reason ?? null,
 })
 
 export default async function TodayPage() {
   const { data, error } = await createServiceClient()
     .from('outreach_queue')
-    .select('id, type, account, platform, target, parts, warning, note, needs_rerun, status, priority, closes_on, due_date, after_ids, sort_order, created_at, updated_at, completed_at')
+    // All columns, so the page keeps working whether or not the blocked
+    // columns exist yet.
+    .select('*')
 
   if (error) {
     return <p className="p-4 text-[var(--cream)]">Could not load the queue: {error.message}</p>
@@ -50,6 +58,13 @@ export default async function TodayPage() {
     .filter((r) => r.status === 'done' && r.completed_at && dayKey(new Date(r.completed_at)) === todayKey)
     .sort((a, b) => (a.completed_at! < b.completed_at! ? 1 : -1))
   const pendingCount = rows.filter((r) => r.status === 'pending').length - stale.length
+  // Waiting on someone else: never in today's slots, never stale.
+  const waitingOnOthers = rows
+    .filter((r) => r.status === 'blocked')
+    .map((r) => {
+      const since = r.blocked_at ?? r.updated_at ?? r.created_at
+      return toItem(r, [], Math.max(0, Math.floor((now.getTime() - Date.parse(since)) / DAY)))
+    })
 
   const used = (type: string) => doneToday.filter((r) => r.type === type).length
   const dateLabel = new Intl.DateTimeFormat('en-GB', { timeZone: TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long' }).format(now)
@@ -61,6 +76,7 @@ export default async function TodayPage() {
       held={(held as Row[]).map((r) => toItem(r))}
       blocked={blocked.map((b) => toItem(b.row as Row, b.waitingFor))}
       stale={stale.map((s) => toItem(s.row as Row, [], s.idleDays))}
+      waitingOnOthers={waitingOnOthers}
       doneToday={doneToday.map((r) => toItem(r))}
       pendingCount={pendingCount}
       caps={{

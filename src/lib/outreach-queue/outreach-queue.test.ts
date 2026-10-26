@@ -151,6 +151,15 @@ describe('selectToday', () => {
     expect(selectToday(rows, NOW).today).toHaveLength(5)
   })
 
+  it('never gives a slot to an item waiting on someone else, and fills it with one he can do', () => {
+    const r = selectToday([
+      row({ id: 'OB-02', type: 'outbound message', status: 'blocked', priority: 1 }),
+      row({ id: 'CM-08', type: 'comment', priority: 3 }),
+    ], NOW)
+    expect(r.today.map((x) => x.id)).toEqual(['CM-08'])
+    expect(r.stale).toHaveLength(0)
+  })
+
   it('ignores items that are not pending', () => {
     const r = selectToday([row({ id: 'gone', status: 'withdrawn' }), row({ id: 'old', status: 'superseded' })], NOW)
     expect(r.today).toHaveLength(0)

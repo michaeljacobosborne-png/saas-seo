@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { xLength, type QueuePart } from '@/lib/outreach-queue/parse'
-import { keepLive, markDone, undoDone } from './actions'
+import { blockItem, keepLive, markDone, unblockItem, undoDone } from './actions'
 
 export interface Item {
   id: string
@@ -16,8 +16,10 @@ export interface Item {
   needsRerun: boolean
   closesOn: string | null
   waitingFor: string[]
-  /** Set on stale items: whole days since anything changed. */
+  /** Set on stale items: whole days since anything changed. On waiting items: days waiting. */
   idleDays?: number
+  /** Why it is waiting on someone else. Only on blocked items. */
+  blockedReason?: string | null
 }
 
 const X_LIMIT = 280
@@ -110,7 +112,56 @@ function shortAccount(a: string): string {
   return a.split(',')[0].trim()
 }
 
-function ItemCard({ item, onDone, onKeep, busy }: { item: Item; onDone?: () => void; onKeep?: () => void; busy?: boolean }) {
+function WaitButton({ onWait, busy }: { onWait: (reason: string) => void; busy?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full rounded-lg text-sm text-[var(--cream-dim)]"
+        style={{ minHeight: 48, background: 'transparent' }}
+      >
+        Waiting on someone else
+      </button>
+    )
+  }
+  return (
+    <div className="space-y-2">
+      <input
+        type="text"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="What are you waiting for?"
+        className="w-full rounded-lg px-3 text-base text-[var(--cream)]"
+        style={{ minHeight: 48, background: 'var(--ink-deep)', border: '1px solid rgba(184,115,51,0.3)' }}
+        autoFocus
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={busy || !reason.trim()}
+          onClick={() => onWait(reason.trim())}
+          className="flex-1 rounded-lg text-base font-semibold disabled:opacity-50"
+          style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}
+        >
+          Move to waiting
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded-lg px-4 text-base text-[var(--cream-dim)]"
+          style={{ minHeight: 48, background: 'transparent' }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ItemCard({ item, onDone, onKeep, onWait, busy }: { item: Item; onDone?: () => void; onKeep?: () => void; onWait?: (reason: string) => void; busy?: boolean }) {
   return (
     <article className="rounded-xl p-4 space-y-4" style={card}>
       <header className="space-y-1">
@@ -175,6 +226,8 @@ function ItemCard({ item, onDone, onKeep, busy }: { item: Item; onDone?: () => v
         </button>
       )}
 
+      {onWait && <WaitButton onWait={onWait} busy={busy} />}
+
       {item.note && (
         <details className="text-sm text-[var(--cream-dim)]">
           <summary className="cursor-pointer py-2">Context</summary>
@@ -191,6 +244,7 @@ export default function TodayList(props: {
   held: Item[]
   blocked: Item[]
   stale: Item[]
+  waitingOnOthers: Item[]
   doneToday: Item[]
   pendingCount: number
   caps: { comments: string; outbound: string }
@@ -250,7 +304,27 @@ export default function TodayList(props: {
     })
   }
 
+  const run = (id: string, fn: () => Promise<void>, failure: string) => {
+    setHidden((s) => new Set(s).add(id))
+    setError(null)
+    startTransition(async () => {
+      try {
+        await fn()
+      } catch {
+        setHidden((s) => {
+          const n = new Set(s)
+          n.delete(id)
+          return n
+        })
+        setError(failure)
+      }
+    })
+  }
+  const wait = (id: string, reason: string) => run(id, () => blockItem(id, reason), `Could not move ${id} to waiting. Try again.`)
+  const unblock = (id: string) => run(id, () => unblockItem(id), `Could not bring ${id} back. Try again.`)
+
   const today = props.today.filter((i) => !hidden.has(i.id))
+  const waiting = props.waitingOnOthers.filter((i) => !hidden.has(i.id))
   const held = props.held.filter((i) => !hidden.has(i.id))
   const stale = props.stale.filter((i) => !hidden.has(i.id))
   const rest = held.length + props.blocked.length + stale.length
@@ -274,7 +348,48 @@ export default function TodayList(props: {
           Nothing left for today. Anything else is held by the daily and weekly limits, waiting on another item, or stale.
         </p>
       ) : (
-        today.map((item) => <ItemCard key={item.id} item={item} onDone={() => done(item.id)} busy={pending} />)
+        today.map((item) => (
+          <ItemCard key={item.id} item={item} onDone={() => done(item.id)} onWait={(r) => wait(item.id, r)} busy={pending} />
+        ))
+      )}
+
+      {waiting.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Waiting on others ({waiting.length})</h2>
+          <ul className="space-y-2">
+            {waiting.map((i) => (
+              <li key={i.id} className="rounded-lg p-3 space-y-2" style={card}>
+                <p className="text-sm text-[var(--cream-dim)]">
+                  <span className="font-mono">{i.id}</span> · {i.platform} · {i.target ?? shortAccount(i.account)}
+                </p>
+                <p className="text-sm text-[var(--cream)]">
+                  {i.blockedReason ?? 'Waiting on someone else.'}
+                  {i.idleDays !== undefined && <span className="text-[var(--cream-faint)]"> ({i.idleDays === 0 ? 'since today' : `${i.idleDays} day${i.idleDays === 1 ? '' : 's'}`})</span>}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => unblock(i.id)}
+                    disabled={pending}
+                    className="flex-1 rounded-lg text-sm font-semibold disabled:opacity-50"
+                    style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}
+                  >
+                    It came through, back to today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => done(i.id)}
+                    disabled={pending}
+                    className="rounded-lg px-4 text-sm text-[var(--cream-dim)] disabled:opacity-50"
+                    style={{ minHeight: 48, background: 'transparent' }}
+                  >
+                    Done
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {props.doneToday.length > 0 && (
