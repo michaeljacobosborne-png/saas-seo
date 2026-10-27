@@ -312,7 +312,7 @@ function scoreCitableClaims({ home }: ScoreInput): Factor {
 
   if (home.testimonials.length) {
     const t = home.testimonials[0]
-    f.award(5, `Named client feedback is published (attributed to ${t.attribution}), which is first-hand evidence an AI engine can attribute.`, ev(home.url, 'text', `${t.quote} — ${t.attribution}`))
+    f.award(5, `Named client feedback is published (attributed to ${t.attribution}), which is first-hand evidence an AI engine can attribute.`, ev(home.url, 'text', `${t.quote}, ${t.attribution}`))
   } else {
     f.miss('No attributed client feedback, case result or other first-hand evidence was found.')
   }

@@ -237,7 +237,7 @@ export function fallbackNarration(input: NarrateInput): { recommendations: Recom
 
   const quickWins = weakest
     .slice(0, 3)
-    .map((f) => `Review ${f.name.toLowerCase()} — scored ${f.score}/${f.maxScore}. ${truncate(f.detail, 160)}`)
+    .map((f) => `Review ${f.name.toLowerCase()}: scored ${f.score}/${f.maxScore}. ${truncate(f.detail, 160)}`)
 
   return { recommendations: recommendations.slice(0, 5), quickWins }
 }

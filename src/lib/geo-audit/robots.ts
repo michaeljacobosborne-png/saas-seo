@@ -88,7 +88,7 @@ export const CRAWLERS: readonly CrawlerSpec[] = [
     class: 'training',
     docs: 'https://platform.openai.com/docs/bots',
     scored: false,
-    note: 'Training crawler. Blocking it does not remove the page from ChatGPT search — that is OAI-SearchBot.',
+    note: 'Training crawler. Blocking it does not remove the page from ChatGPT search; that is OAI-SearchBot.',
   },
   {
     token: 'ClaudeBot',

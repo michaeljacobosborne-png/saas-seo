@@ -6,7 +6,7 @@
  * previous version so historical reports stay comparable.
  */
 
-import { countWords, truncate, type ExtractedPage } from './extract'
+import { countWords, findDefinition, truncate, type ExtractedPage } from './extract'
 import { FactorBuilder } from './scoring'
 import type { ScoreInput } from './score-geo'
 import type { Evidence, Factor } from './types'
@@ -80,7 +80,7 @@ function scoreSnippetFormat({ home }: ScoreInput): Factor {
   if (opener && opener.length <= 300) {
     f.award(8, `The page opens with a self-contained answer of ${opener.length} characters.`, ev(home.url, 'text', opener))
   } else if (opener) {
-    f.award(3, `The opening paragraph is ${opener.length} characters — above the ~300 that lifts cleanly into an answer box.`, ev(home.url, 'text', truncate(opener, 200)))
+    f.award(3, `The opening paragraph is ${opener.length} characters, above the ~300 that lifts cleanly into an answer box.`, ev(home.url, 'text', truncate(opener, 200)))
   } else {
     f.miss('No opening paragraph states an answer before the page moves on.')
   }
@@ -95,9 +95,9 @@ function scoreSnippetFormat({ home }: ScoreInput): Factor {
   }
 
   // A definition sentence ("X is a…") is the single most liftable form.
-  const definition = home.paragraphs.find((p) => /\b(is|are)\s+(a|an|the)\s+\w+/i.test(p) && p.length <= 300)
+  const definition = findDefinition(home.paragraphs)
   if (definition) {
-    f.award(5, 'A definition-style sentence states plainly what the subject is.', ev(home.url, 'text', definition))
+    f.award(5, 'A definition-style sentence states plainly what the subject is.', ev(home.url, 'text', `Definition-style sentence: ${definition}`))
   } else {
     f.miss('No definition-style sentence ("X is a …") states plainly what the subject is.')
   }

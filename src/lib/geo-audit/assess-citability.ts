@@ -137,7 +137,7 @@ function findCredential(page: ExtractedPage, name: string): { url: string; text:
     for (const key of ['description', 'knowsAbout', 'hasCredential', 'alumniOf']) {
       const v = node.raw[key]
       const textValue = Array.isArray(v) ? v.filter((x) => typeof x === 'string').join(', ') : typeof v === 'string' ? v : ''
-      if (textValue.trim()) return { url: page.url, text: truncate(`${name} — ${key}: ${textValue}`, 300) }
+      if (textValue.trim()) return { url: page.url, text: truncate(`${name}, ${key}: ${textValue}`, 300) }
     }
   }
   // Same sentence as the full name. A surname alone is not enough: on
@@ -165,7 +165,7 @@ function entityResolution({ home }: CitabilityInput): CitabilitySignal {
 
   if (orgName && sameAs.length >= 2) {
     s.found('strong', `An Organization entity is declared as "${orgName}" with ${sameAs.length} sameAs profiles, which is what lets an engine resolve the brand to a known entity rather than a string.`, [
-      ev(home.url, 'jsonld', `${orgName} — sameAs: ${sameAs.slice(0, 3).join(', ')}`),
+      ev(home.url, 'jsonld', `${orgName}, sameAs: ${sameAs.slice(0, 3).join(', ')}`),
     ])
   } else if (orgName && (sameAs.length === 1 || home.socialLinks.length > 0)) {
     s.found('adequate', `An Organization entity is declared as "${orgName}", with ${sameAs.length ? 'one sameAs profile' : 'linked social profiles but no sameAs in the markup'}.`, ev(home.url, 'jsonld', orgName))
@@ -227,7 +227,7 @@ function brandClaimProximity({ home }: CitabilityInput): CitabilitySignal {
   } else if (withBrand.length > 0) {
     s.found('weak', `"${brand}" appears inside only ${withBrand.length} of ${substantive.length} substantive sections. Most sections carry no attribution anchor of their own.`, ev(home.url, 'text', truncate(withBrand[0].text, 200)))
   } else {
-    s.missing(`"${brand}" does not appear inside any of the ${substantive.length} substantive sections — it is present only in the page chrome. Passages lifted from this page carry no attribution anchors.`)
+    s.missing(`"${brand}" does not appear inside any of the ${substantive.length} substantive sections. It is present only in the page chrome. Passages lifted from this page carry no attribution anchors.`)
   }
 
   return s.build()

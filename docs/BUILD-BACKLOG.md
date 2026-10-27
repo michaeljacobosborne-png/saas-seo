@@ -23,7 +23,7 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
 - FIXED 2026-10-07: the opposite error. reCAPTCHA/hCaptcha/Turnstile markers labelled full pages with a protected contact form "a bot challenge, not the page" (screamingfrog.co.uk, varn.co.uk, withcandour.co.uk: every row, baseline included). Those markers now count only on a response under 30 KB. Divergence is no longer reported when the baseline was refused too. Any prospect reading from before this fix that says "bot challenge" must be re-run.
 - Open (found 2026-10-07, outreach audits):
   - DONE 2026-10-26 (DECISIONS 36): every crawler is probed with and without Accept headers; disagreement makes the row unconfirmed (aira.net, zelst.co.uk, 2026-10-07).
-  - Open: several crawler evidence strings still contain em dashes and appear in reports.
+  - DONE 2026-10-27 (DECISIONS 37): no em dashes left in user-facing engine strings.
   - FIXED 2026-10-07 (DECISIONS 32): authorship miss (varn, screamingfrog), legal-name brand matching (candour, zelst), own-CEO quote as client evidence (varn), "Continue Reading" and "San Diego" as coined terms (screamingfrog). Also fixed: zelst coined term and founder name, salt nav-as-testimonial, optimist CORE Framework, "strong" authorship from an agency award.
 
 ## 2a. Engine rubric faults found on our own homepage (2026-10-08)
@@ -40,7 +40,7 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
 ## 4. Group 2: coherence
 - DONE, live (71450e4, cc31b9b): SEO panel reduced to SEO basics (decision 28), Readability removed, agent top issues from the draft report only, Heading hierarchy Fix button.
 - DONE 2026-10-26 (DECISIONS 36): Direct answers evidence is labelled and quotes the paragraph or sentence it describes (typeamedia.net).
-- Open: the definition check matches any "is a/an/the" sentence (typeamedia.net: "becoming an agentic business is an evolution for us"), so it can call a non-definition a definition. The quote now shows which sentence matched.
+- DONE 2026-10-27, engine 2026.14 (DECISIONS 37): a definition must open with its subject; typeamedia.net's "becoming an agentic business is an evolution for us" no longer counts.
 - Open: the brief meta description came out at 99 characters; a competitor-gap note became a heading verbatim.
 
 ## 5. Sanity tables: DONE, live (02c18aa, DECISIONS 30). Final check pending: run a published post that has a table through save-audit.

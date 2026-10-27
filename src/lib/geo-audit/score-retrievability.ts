@@ -18,7 +18,7 @@
  */
 
 
-import { countWords, truncate, type ExtractedPage } from './extract'
+import { countWords, findDefinition, truncate, type ExtractedPage } from './extract'
 import { summariseAccess, type AccessReport } from './access'
 import {
   isPolicyBlock,
@@ -201,7 +201,7 @@ function foldProbeIntoCrawlers(
   const allowed = probed.filter((p) => !blocked.includes(p))
 
   const evidence: Evidence[] = probed.map((p) =>
-    ev(probe.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`),
+    ev(probe.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'}. ${p.evidence}`),
   )
 
   // Crawlers robots.txt assessed that we could not probe — Google-Extended and
@@ -222,7 +222,7 @@ function foldProbeIntoCrawlers(
       ev(
         probe.url,
         'text',
-        `${declarationOnly.join(', ')} assessed from robots.txt only — ${declarationOnly.length === 1 ? 'it is a' : 'these are'} robots.txt control token${declarationOnly.length === 1 ? '' : 's'} with no fetching user-agent to test.`,
+        `${declarationOnly.join(', ')} assessed from robots.txt only; ${declarationOnly.length === 1 ? 'it is a' : 'these are'} robots.txt control token${declarationOnly.length === 1 ? '' : 's'} with no fetching user-agent to test.`,
       ),
     )
   }
@@ -272,11 +272,11 @@ function reportTrainingProbe(probe: CrawlerAccessReport): Factor | null {
 
   b.unverified(
     blocked.length === 0
-      ? `All ${rows.length} training crawlers were served the page. Reported for completeness — this is not scored, because allowing or blocking training crawlers is an editorial choice with no bearing on AI search visibility.`
+      ? `All ${rows.length} training crawlers were served the page. Reported for completeness. This is not scored, because allowing or blocking training crawlers is an editorial choice with no bearing on AI search visibility.`
       : `${blocked.map((p) => p.token).join(', ')} ${blocked.length === 1 ? 'was' : 'were'} refused; ${served.length} of ${rows.length} were served. Not scored: blocking training crawlers is a legitimate choice and does not remove a page from AI search.`,
   )
   for (const p of rows) {
-    b.note(ev(probe.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`))
+    b.note(ev(probe.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'}. ${p.evidence}`))
   }
   return b.build()
 }
@@ -361,7 +361,7 @@ function scoreAccess({ home, access, crawlerAccess, fetchRefusedReason }: Retrie
         ),
       )
       for (const p of rows) {
-        crawlers.note(ev(crawlerAccess.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'} — ${p.evidence}`))
+        crawlers.note(ev(crawlerAccess.url, 'header', `${p.token}: HTTP ${p.status ?? 'no response'}. ${p.evidence}`))
       }
     }
   }
@@ -436,7 +436,7 @@ function scoreParseability({ home, access }: RetrievabilityInput): Factor[] {
   } else if (home.wordCount >= 600) {
     serverText.award(6, `${home.wordCount} words are present in the raw HTML. That reads as a complete page, but pages that get quoted usually carry 1,200+ words of substance.`)
   } else if (home.wordCount >= 200) {
-    serverText.award(3, `${home.wordCount} words are present in the raw HTML — readable, but thin for a page meant to be quoted (target: 1,200+).`)
+    serverText.award(3, `${home.wordCount} words are present in the raw HTML: readable, but thin for a page meant to be quoted (target: 1,200+).`)
   } else {
     serverText.award(1, `Only ${home.wordCount} words are present in the raw HTML (target: 1,200+).`)
   }
@@ -494,7 +494,7 @@ function scoreParseability({ home, access }: RetrievabilityInput): Factor[] {
   } else if (h > 0 || home.paragraphs.length > 0) {
     cleanliness.award(1, 'The document uses some semantic elements, but either headings or paragraphs are missing.')
   } else {
-    cleanliness.miss('No semantic heading or paragraph elements were found — the text is not structurally marked up.')
+    cleanliness.miss('No semantic heading or paragraph elements were found, so the text is not structurally marked up.')
   }
 
   return [serverText.build(), structured.build(), cleanliness.build()]
@@ -616,11 +616,9 @@ function scoreExtractability({ home }: RetrievabilityInput): Factor[] {
     answers.miss('No opening paragraph states a self-contained answer.')
   }
 
-  const DEFINITION = /\b(is|are)\s+(a|an|the)\s+\w+/i
-  const definition = home.paragraphs.find((p) => DEFINITION.test(p) && p.length <= 300)
+  const definition = findDefinition(home.paragraphs)
   if (definition) {
-    const sentence = definition.split(/(?<=[.!?])\s+/).find((s) => DEFINITION.test(s)) ?? definition
-    answers.award(5, 'A definition-style sentence states plainly what the subject is.', ev(home.url, 'text', `Definition-style sentence: ${sentence}`))
+    answers.award(5, 'A definition-style sentence states plainly what the subject is.', ev(home.url, 'text', `Definition-style sentence: ${definition}`))
   } else {
     answers.miss('No definition-style sentence ("X is a …") states plainly what the subject is.')
   }

@@ -6,6 +6,18 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 37. Engine 2026.14: a definition opens with its subject; no em dashes in report text
+**Date:** 2026-10-27 (backlog item 4; Michael's no-em-dash rule for user-facing copy)
+**Decision:**
+- "A definition-style sentence states plainly what the subject is" (5 points in Direct answers, and in the AO scorer) now needs a sentence that opens with its subject (one to six words) and goes straight to "is/are a/an/the". Sentences opening with a pronoun, a demonstrative or a gerund do not count. One shared function, `findDefinition()` in extract.ts.
+- Every user-facing engine string that carried an em dash now uses a colon, comma, semicolon or full stop instead: crawler evidence lines, the Gap text, truncation notices, authorship and testimonial evidence, the draft-report next step. Comments, test names and the narration prompt are unchanged.
+- ENGINE_VERSION goes from 2026.13 to 2026.14.
+**PRIOR SCORES ARE AFFECTED.** Pages whose only "definition" was an incidental "is a/an/the" lose up to 5 Retrievable points (typeamedia.net). Do not compare across 2026.13/2026.14 without saying so.
+**Drivers:**
+- typeamedia.net (2026-10-14 and 2026-10-26): "That is exactly why becoming an agentic business is an evolution for us" was credited as a definition. Since 2026.13 labelled the quote, the false credit was visible to any reader checking the report.
+- Test: `direct-answers.test.ts`, from typeamedia.net's homepage (fetched 2026-10-26) and our own (which keeps "Byline is an AI search readiness tool for SEOs.").
+**Revisit if:** a real definition with an inverted opener ("At its core, X is a ...") turns up in a report as a missed definition.
+
 ## 36. Engine 2026.13: only sourced figures are evidence; crawler rows must survive two request shapes
 **Date:** 2026-10-26 (approved by Michael, backlog items 1, 2, 2a and 4)
 **Decision:**

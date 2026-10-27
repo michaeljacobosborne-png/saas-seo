@@ -55,7 +55,7 @@ export function truncationDisclosure(subject: string, originalBytes: number, kep
     keptBytes,
     disclosure:
       `This page is ${formatBytes(originalBytes)}. We analysed the first ${formatBytes(keptBytes)} ` +
-      `(about ${pct}% of it) and stopped there. Findings below describe only the part we read — ` +
+      `(about ${pct}% of it) and stopped there. Findings below describe only the part we read; ` +
       `anything past that point was not assessed.`,
   }
 }
@@ -79,7 +79,7 @@ export function capModelInput(
       keptBytes: max,
       disclosure:
         `The findings summary was too long to send in full, so recommendations were written from ` +
-        `the first ${formatBytes(max)} of it. Scores are unaffected — they are computed in code from ` +
+        `the first ${formatBytes(max)} of it. Scores are unaffected: they are computed in code from ` +
         `the complete page, not from this summary.`,
     },
   }

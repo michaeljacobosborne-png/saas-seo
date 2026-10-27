@@ -328,7 +328,7 @@ function classify(r: RawResult): {
         blockKind: 'bot-management',
         contentServed: false,
         evidence: mitigated
-          ? `HTTP ${r.status} with cf-mitigated: ${mitigated} — an interactive challenge, not the page.`
+          ? `HTTP ${r.status} with cf-mitigated: ${mitigated}: an interactive challenge, not the page.`
           : `HTTP ${r.status} but the body is a bot challenge, not the page.`,
         edgeVendor,
       }
@@ -346,7 +346,7 @@ function classify(r: RawResult): {
       return {
         blockKind: 'none',
         contentServed: false,
-        evidence: `HTTP ${r.status} but only ${r.bytes} bytes returned — too little to be the page.`,
+        evidence: `HTTP ${r.status} but only ${r.bytes} bytes returned, too little to be the page.`,
         edgeVendor,
       }
     }
@@ -371,7 +371,7 @@ function classify(r: RawResult): {
     return {
       blockKind: 'rate-limited',
       contentServed: false,
-      evidence: `HTTP 429${retryAfter ? `, Retry-After: ${retryAfter}` : ''} — rate limited, not a policy block.`,
+      evidence: `HTTP 429${retryAfter ? `, Retry-After: ${retryAfter}` : ''}: rate limited, not a policy block.`,
       edgeVendor,
     }
   }
@@ -380,7 +380,7 @@ function classify(r: RawResult): {
     return {
       blockKind: 'rate-limited',
       contentServed: false,
-      evidence: `HTTP 503 with Retry-After: ${retryAfter} — temporary, not a policy block.`,
+      evidence: `HTTP 503 with Retry-After: ${retryAfter}: temporary, not a policy block.`,
       edgeVendor,
     }
   }
@@ -391,8 +391,8 @@ function classify(r: RawResult): {
         blockKind: 'bot-management',
         contentServed: false,
         evidence: mitigated
-          ? `HTTP ${r.status} with cf-mitigated: ${mitigated} — refused by bot management.`
-          : `HTTP ${r.status} returning a challenge page — refused by bot management.`,
+          ? `HTTP ${r.status} with cf-mitigated: ${mitigated}: refused by bot management.`
+          : `HTTP ${r.status} returning a challenge page: refused by bot management.`,
         edgeVendor,
       }
     }
@@ -400,14 +400,14 @@ function classify(r: RawResult): {
       return {
         blockKind: 'edge-block',
         contentServed: false,
-        evidence: `HTTP ${r.status} from ${edgeVendor} — refused at the edge before reaching the origin.`,
+        evidence: `HTTP ${r.status} from ${edgeVendor}: refused at the edge before reaching the origin.`,
         edgeVendor,
       }
     }
     return {
       blockKind: 'origin-block',
       contentServed: false,
-      evidence: `HTTP ${r.status} with no CDN fingerprint — refused by the application itself.`,
+      evidence: `HTTP ${r.status} with no CDN fingerprint: refused by the application itself.`,
       edgeVendor,
     }
   }
@@ -416,7 +416,7 @@ function classify(r: RawResult): {
     return {
       blockKind: 'not-found',
       contentServed: false,
-      evidence: `HTTP ${r.status} — the URL does not exist for this request.`,
+      evidence: `HTTP ${r.status}: the URL does not exist for this request.`,
       edgeVendor,
     }
   }
@@ -425,7 +425,7 @@ function classify(r: RawResult): {
     return {
       blockKind: 'server-error',
       contentServed: false,
-      evidence: `HTTP ${r.status} — server error, not a crawler policy.`,
+      evidence: `HTTP ${r.status}: server error, not a crawler policy.`,
       edgeVendor,
     }
   }

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { extractPage } from './extract'
+import { extractPage, findDefinition } from './extract'
 import { scoreRetrievability } from './score-retrievability'
 
 /**
@@ -25,9 +25,21 @@ describe('direct answers evidence quotes the paragraph each finding describes', 
     expect(opening?.snippet).toContain('Type A are becoming an agentic digital marketing agency')
   })
 
-  it('labels the definition quote as the definition, and quotes the sentence that matched', () => {
-    const def = answers.evidence.find((e) => e.snippet.startsWith('Definition-style sentence:'))!
-    expect(def.snippet).toBe('Definition-style sentence: That is exactly why becoming an agentic business is an evolution for us, not a reinvention.')
+  it('does not credit "becoming an agentic business is an evolution for us" as a definition', () => {
+    // Engine 2026.12/2026.13 awarded 5 points for this sentence. It is about
+    // something already said, not a statement of what the subject is.
+    expect(answers.evidence.some((e) => e.snippet.startsWith('Definition-style sentence:'))).toBe(false)
+    expect(answers.detail).toMatch(/No definition-style sentence/)
+  })
+
+  it('still credits a sentence that opens with its subject, and quotes exactly that sentence', () => {
+    const ours = extractPage(readFileSync(join(__dirname, '__fixtures__', 'bylineseo-home-2026-10-26.html'), 'utf8'), 'https://app.bylineseo.com/')
+    expect(findDefinition(ours.paragraphs)).toBe('Byline is an AI search readiness tool for SEOs.')
+  })
+
+  it('skips sentences that open with a pronoun, a demonstrative or a gerund', () => {
+    expect(findDefinition(['That is the reason we exist.', 'It is a long road.', 'Becoming an agency is a big step.'])).toBeNull()
+    expect(findDefinition(['Retrievable is a score out of 100.'])).toBe('Retrievable is a score out of 100.')
   })
 
   it('has no unlabelled quote', () => {

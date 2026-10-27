@@ -257,7 +257,7 @@ function withLines(g: RetrievabilityGroup, md: string): RetrievabilityGroup {
  */
 export function draftWording(s: string): string {
   return s
-    .replace(/ — it is present only in the page chrome\./g, ' of the draft.')
+    .replace(/\. It is present only in the page chrome\./g, ' of the draft.')
     .replace(/\bThe page\b/g, 'The draft')
     .replace(/\bthe page\b/g, 'the draft')
     .replace(/\bthis page\b/g, 'this draft')
@@ -293,7 +293,7 @@ function authorSignal(author: DraftAuthor | null | undefined): CitabilitySignal 
       evidence: [],
     }
   }
-  const evidence = [{ url: 'brand-profile', kind: 'text' as const, snippet: credentials ? `Author: ${name} — ${credentials}` : `Author: ${name}` }]
+  const evidence = [{ url: 'brand-profile', kind: 'text' as const, snippet: credentials ? `Author: ${name}, ${credentials}` : `Author: ${name}` }]
   return credentials
     ? { ...base, band: 'strong', state: 'present', detail: `The byline names ${name}, with stated experience alongside the name.`, evidence }
     : { ...base, band: 'adequate', state: 'present', detail: `The byline names ${name}, but no experience or specialism is stated alongside the name.`, evidence }
@@ -370,7 +370,7 @@ export function diagnoseDraftGap(r: DraftRetrievability, c: Citability): Gap {
       quadrant: 'low-both',
       headline: 'Start with structure',
       diagnosis: `The draft scores ${r.score}/100 on structure and its attribution signals are ${label}.`,
-      nextStep: 'Fix structure first — clear headings, self-contained sections, a direct answer — then add attribution to the sections that make claims.',
+      nextStep: 'Fix structure first (clear headings, self-contained sections, a direct answer), then add attribution to the sections that make claims.',
     }
   }
   return {

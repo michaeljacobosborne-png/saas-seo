@@ -746,6 +746,30 @@ function extractStatistics(blocks: string[]): string[] {
   return out
 }
 
+/**
+ * The first sentence that states what something is: it opens with the subject
+ * (one to six words) and goes straight to "is/are a/an/the". The old check took
+ * "is a/an/the" anywhere in a paragraph, so on typeamedia.net (2026-10-14)
+ * "That is exactly why becoming an agentic business is an evolution for us" was
+ * credited as a definition. Sentences that open with a pronoun, a demonstrative
+ * or a gerund are about something already said, not a definition of a subject.
+ */
+const NOT_A_SUBJECT =
+  /^(?:that|this|these|those|it|its|there|here|what|which|who|we|you|i|they|he|she|our|your|their|my|his|her|one|so|but|and|or|because|if|when|while|now|today|\w+ing)$/i
+export function findDefinition(paragraphs: string[]): string | null {
+  for (const p of paragraphs) {
+    if (p.length > 300) continue
+    for (const sentence of p.split(/(?<=[.!?])\s+/)) {
+      const m = /^(?:the\s+)?((?:[\w&'’.-]+\s+){0,5}?[\w&'’.-]+)\s+(?:is|are)\s+(?:a|an|the)\s+\w+/i.exec(sentence.trim())
+      if (!m) continue
+      const firstWord = m[1].split(/\s+/)[0]
+      if (NOT_A_SUBJECT.test(firstWord)) continue
+      return sentence.trim()
+    }
+  }
+  return null
+}
+
 export function truncate(s: string, max: number): string {
   const t = normalise(s)
   return t.length <= max ? t : `${t.slice(0, max - 1).trimEnd()}…`

@@ -47,7 +47,7 @@ export function diagnoseGap(retrievability: Retrievability, citability: Citabili
       quadrant: 'high-retrievable-low-citable',
       headline: 'Easy to use, hard to credit',
       diagnosis:
-        `This page scores ${retrievability.score}/100 for retrievability — an engine can reach it, parse it and lift a clean answer out of it. ` +
+        `This page scores ${retrievability.score}/100 for retrievability: an engine can reach it, parse it and lift a clean answer out of it. ` +
         `Its attribution signals are ${citability.label.toLowerCase()}: the passages carry no attribution anchors, ` +
         `meaning nothing inside them names you, cites your data, or uses a term that could only have come from you. ` +
         `Content in this state is well prepared to be used and poorly prepared to be credited.`,
@@ -92,7 +92,7 @@ export function diagnoseGap(retrievability: Retrievability, citability: Citabili
       `Retrievability is ${retrievability.score}/100 and attribution signals are ${citability.label.toLowerCase()}. ` +
       `On the evidence of this page there is no obvious structural or attribution obstacle left to fix.`,
     nextStep:
-      'On-page work has taken this about as far as it goes. What an on-page tool cannot tell you is whether engines actually surface this content — that needs repeated live sampling, not another page audit.',
+      'On-page work has taken this about as far as it goes. What an on-page tool cannot tell you is whether engines actually surface this content. That needs repeated live sampling, not another page audit.',
   }
 }
 
