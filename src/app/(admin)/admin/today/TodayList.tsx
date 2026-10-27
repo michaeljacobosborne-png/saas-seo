@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { xLength, type QueuePart } from '@/lib/outreach-queue/parse'
-import { blockItem, keepLive, markDone, unblockItem, undoDone } from './actions'
+import { blockItem, keepLive, markDone, unblockItem, undoDone, type ActionResult } from './actions'
 
 export interface Item {
   id: string
@@ -304,24 +304,29 @@ export default function TodayList(props: {
     })
   }
 
-  const run = (id: string, fn: () => Promise<void>, failure: string) => {
+  // These return the reason rather than throwing, so the message can be shown.
+  const checked = (fn: () => Promise<ActionResult>) => async () => {
+    const r = await fn()
+    if (!r.ok) throw new Error(r.message)
+  }
+  const runChecked = (id: string, fn: () => Promise<ActionResult>) => {
     setHidden((s) => new Set(s).add(id))
     setError(null)
     startTransition(async () => {
       try {
-        await fn()
-      } catch {
+        await checked(fn)()
+      } catch (e) {
         setHidden((s) => {
           const n = new Set(s)
           n.delete(id)
           return n
         })
-        setError(failure)
+        setError(e instanceof Error && e.message ? e.message : `Could not save ${id}. Try again.`)
       }
     })
   }
-  const wait = (id: string, reason: string) => run(id, () => blockItem(id, reason), `Could not move ${id} to waiting. Try again.`)
-  const unblock = (id: string) => run(id, () => unblockItem(id), `Could not bring ${id} back. Try again.`)
+  const wait = (id: string, reason: string) => runChecked(id, () => blockItem(id, reason))
+  const unblock = (id: string) => runChecked(id, () => unblockItem(id))
 
   const today = props.today.filter((i) => !hidden.has(i.id))
   const waiting = props.waitingOnOthers.filter((i) => !hidden.has(i.id))
