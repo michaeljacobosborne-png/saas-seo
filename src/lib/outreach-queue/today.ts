@@ -15,6 +15,8 @@
  * A pending item with no activity (created or updated) for more than 7 days is
  * stale: it never reaches today's list and is shown apart, so the page shows
  * what is live rather than everything once written (added 2026-10-26).
+ * A due date in the future holds an item until that day, and an after_ids entry
+ * "blog:<slug>" holds it until that blog post is published (added 2026-10-27).
  * Days and weeks are in Michael's time zone; weeks start on Monday.
  */
 
@@ -38,10 +40,18 @@ export const TIME_ZONE = 'Asia/Jerusalem'
 export const MAX_SHOWN = 5
 export const STALE_AFTER_DAYS = 7
 
-/** Whole days since the item was last created or updated. */
-export function idleDays(r: QueueRow, now: Date): number {
-  const last = Math.max(Date.parse(r.created_at), r.updated_at ? Date.parse(r.updated_at) : 0)
-  return Math.floor((now.getTime() - last) / 86_400_000)
+/**
+ * Whole days since the item last had activity: created, updated, its scheduled
+ * day arriving, or the blog post it promotes going live (`releasedAt`).
+ */
+export function idleDays(r: QueueRow, now: Date, releasedAt = 0): number {
+  const last = Math.max(
+    Date.parse(r.created_at),
+    r.updated_at ? Date.parse(r.updated_at) : 0,
+    r.due_date ? Date.parse(`${r.due_date}T00:00:00Z`) : 0,
+    releasedAt,
+  )
+  return Math.max(0, Math.floor((now.getTime() - last) / 86_400_000))
 }
 export const CAPS = { commentsPerDay: 4, socialPerAccountPerDay: 1, socialPerAccountPerWeek: 2, outboundPerDay: 3 }
 
@@ -70,8 +80,28 @@ export interface TodayResult {
   stale: { row: QueueRow; idleDays: number }[]
 }
 
-export function selectToday(rows: QueueRow[], now: Date): TodayResult {
+export interface SelectOptions {
+  /**
+   * Blog posts that are live, slug to publishedAt (ISO). An after_ids entry
+   * "blog:<slug>" holds an item (a post promoting that article) until the
+   * article is published.
+   */
+  published?: ReadonlyMap<string, string>
+}
+
+/** after_ids entries that are conditions outside the queue rather than queue ids. */
+export const BLOG_GATE = 'blog:'
+
+export function selectToday(rows: QueueRow[], now: Date, opts: SelectOptions = {}): TodayResult {
   const done = new Set(rows.filter((r) => r.status === 'done').map((r) => r.id))
+  for (const slug of opts.published?.keys() ?? []) done.add(`${BLOG_GATE}${slug}`)
+  // When the article an item waits on went live: that counts as activity.
+  const releasedAt = (r: QueueRow) =>
+    Math.max(0, ...(r.after_ids ?? []).filter((a) => a.startsWith(BLOG_GATE)).map((a) => Date.parse(opts.published?.get(a.slice(BLOG_GATE.length)) ?? '') || 0))
+  // Waiting on something outside the queue is not idleness.
+  const externallyHeld = (r: QueueRow) =>
+    (r.due_date !== null && r.due_date > dayKey(now)) ||
+    (r.after_ids ?? []).some((a) => a.startsWith(BLOG_GATE) && !done.has(a))
   const today = dayKey(now)
   const week = weekKey(now)
 
@@ -91,12 +121,15 @@ export function selectToday(rows: QueueRow[], now: Date): TodayResult {
   const eligible: QueueRow[] = []
   const stale: TodayResult['stale'] = []
   for (const r of pending) {
-    const idle = idleDays(r, now)
-    if (idle > STALE_AFTER_DAYS) {
+    const idle = idleDays(r, now, releasedAt(r))
+    if (idle > STALE_AFTER_DAYS && !externallyHeld(r)) {
       stale.push({ row: r, idleDays: idle })
       continue
     }
     const waitingFor = (r.after_ids ?? []).filter((id) => !done.has(id))
+    // A due date in the future means "not before": spacing two messages that
+    // must not land in the same week, for instance.
+    if (r.due_date && r.due_date > today) waitingFor.push(`date:${r.due_date}`)
     if (waitingFor.length) blocked.push({ row: r, waitingFor })
     else eligible.push(r)
   }

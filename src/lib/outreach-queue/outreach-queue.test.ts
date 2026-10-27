@@ -160,6 +160,26 @@ describe('selectToday', () => {
     expect(r.stale).toHaveLength(0)
   })
 
+  it('holds a post about a blog article until the article is published', () => {
+    const rows = [row({ id: 'F-L11', after_ids: ['blog:which-ai-crawlers-your-site-actually-serves'] })]
+    expect(selectToday(rows, NOW).blocked[0].waitingFor).toEqual(['blog:which-ai-crawlers-your-site-actually-serves'])
+    const live = selectToday(rows, NOW, { published: new Map([['which-ai-crawlers-your-site-actually-serves', '2026-10-21T09:00:00Z']]) })
+    expect(live.today.map((x) => x.id)).toEqual(['F-L11'])
+  })
+
+  it('does not let a post go stale while its article waits to be published, and counts publishing as activity', () => {
+    const rows = [row({ id: 'F-L11', created_at: '2026-10-01T06:00:00Z', after_ids: ['blog:slug'] })]
+    expect(selectToday(rows, NOW).stale).toHaveLength(0)
+    const live = selectToday(rows, NOW, { published: new Map([['slug', '2026-10-20T09:00:00Z']]) })
+    expect(live.today.map((x) => x.id)).toEqual(['F-L11'])
+  })
+
+  it('holds an item with a future due date until that day', () => {
+    const rows = [row({ id: 'OB-03', type: 'outbound message', due_date: '2026-11-02' })]
+    expect(selectToday(rows, NOW).blocked[0].waitingFor).toEqual(['date:2026-11-02'])
+    expect(selectToday(rows, new Date('2026-11-02T07:00:00Z')).today.map((x) => x.id)).toEqual(['OB-03'])
+  })
+
   it('ignores items that are not pending', () => {
     const r = selectToday([row({ id: 'gone', status: 'withdrawn' }), row({ id: 'old', status: 'superseded' })], NOW)
     expect(r.today).toHaveLength(0)

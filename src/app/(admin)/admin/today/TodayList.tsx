@@ -108,6 +108,16 @@ function Part({ part, platform }: { part: QueuePart; platform: string }) {
   )
 }
 
+/** after_ids entries are queue ids, "blog:<slug>" or "date:<YYYY-MM-DD>". */
+function waitingLabel(waitingFor: string[]): string {
+  const ids = waitingFor.filter((w) => !w.startsWith('blog:') && !w.startsWith('date:'))
+  const parts: string[] = []
+  if (ids.length) parts.push(`${ids.join(', ')} to be done first`)
+  for (const w of waitingFor.filter((x) => x.startsWith('blog:'))) parts.push(`the blog post "${w.slice(5)}" to be published`)
+  for (const w of waitingFor.filter((x) => x.startsWith('date:'))) parts.push(`${closesLabel(w.slice(5))} (scheduled)`)
+  return `Waiting for ${parts.join(', and ')}.`
+}
+
 function shortAccount(a: string): string {
   return a.split(',')[0].trim()
 }
@@ -187,7 +197,7 @@ function ItemCard({ item, onDone, onKeep, onWait, busy }: { item: Item; onDone?:
       </header>
 
       {item.waitingFor.length > 0 && (
-        <p className="text-sm text-[var(--cream-dim)]">Waiting for {item.waitingFor.join(', ')} to be done first.</p>
+        <p className="text-sm text-[var(--cream-dim)]">{waitingLabel(item.waitingFor)}</p>
       )}
 
       {/* Warnings sit above every copy button, never below. */}

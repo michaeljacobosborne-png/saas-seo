@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { QueuePart } from '@/lib/outreach-queue/parse'
 import { CAPS, TIME_ZONE, dayKey, selectToday, type QueueRow } from '@/lib/outreach-queue/today'
+import { client as sanity } from '@/sanity/lib/client'
+import { isSanityConfigured } from '@/sanity/env'
 import TodayList, { type Item } from './TodayList'
 
 // Always live: the list changes every time an item is marked done.
@@ -22,6 +24,25 @@ type Row = QueueRow & {
 }
 
 const DAY = 86_400_000
+
+/**
+ * Live blog posts, slug to publishedAt. Read without a token, so only published
+ * posts come back; that is exactly the gate for posts promoting an article. A
+ * failure here holds those posts back rather than breaking the page.
+ */
+async function publishedPosts(): Promise<Map<string, string>> {
+  if (!isSanityConfigured) return new Map()
+  try {
+    const rows = await sanity.fetch<{ slug: string; publishedAt: string | null }[]>(
+      `*[_type == "post" && defined(slug.current)]{"slug": slug.current, publishedAt}`,
+      {},
+      { cache: 'no-store' },
+    )
+    return new Map(rows.map((r) => [r.slug, r.publishedAt ?? new Date(0).toISOString()]))
+  } catch {
+    return new Map()
+  }
+}
 
 const toItem = (r: Row, waitingFor: string[] = [], idleDays?: number): Item => ({
   id: r.id,
@@ -52,7 +73,7 @@ export default async function TodayPage() {
 
   const rows = (data ?? []) as Row[]
   const now = new Date()
-  const { today, blocked, held, stale } = selectToday(rows, now)
+  const { today, blocked, held, stale } = selectToday(rows, now, { published: await publishedPosts() })
   const todayKey = dayKey(now)
   const doneToday = rows
     .filter((r) => r.status === 'done' && r.completed_at && dayKey(new Date(r.completed_at)) === todayKey)
