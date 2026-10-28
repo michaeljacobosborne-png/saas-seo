@@ -6,6 +6,15 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 38. Retrievable keeps counting unsourced figures; only Citable asks for a source
+**Date:** 2026-10-27 (closes the option left open in DECISIONS 36)
+**Decision:** the "Lists, tables and data" check in Retrievable keeps crediting figures whether or not they are sourced. No engine change.
+**Why:**
+- Retrievable asks whether an engine can lift a clean passage. A sentence with a number in it is liftable whether or not the number is sourced. Requiring a source there would make Retrievable measure attribution, which is Citable's job, and the two scores are never blended.
+- The false finding was in Citable (Original evidence credited unchecked numbers as evidence). DECISIONS 36 fixed that where it belonged.
+- The point at stake is 1 of 100. Changing it would move every prior score for no gain in accuracy.
+**Revisit if:** a report reads as if Retrievable vouches for a figure ("12 specific figures" quoted back as praise for the figures themselves).
+
 ## 37. Engine 2026.14: a definition opens with its subject; no em dashes in report text
 **Date:** 2026-10-27 (backlog item 4; Michael's no-em-dash rule for user-facing copy)
 **Decision:**

@@ -4,6 +4,7 @@ import { checkArticleLimit, logUsageEvent } from '@/lib/usage'
 import { interpretSeedQuery, BrandContext } from '@/lib/keyword-intent'
 import { getKeywordIdeas } from '@/lib/dataforseo'
 import { buildBriefPrompt } from '@/lib/generator/prompts'
+import { fitMetaDescription } from '@/lib/generator/meta-description'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -173,6 +174,21 @@ export async function POST(request: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({ error: `AI generation failed: ${msg}` }, { status: 500 })
+  }
+
+  // The model under-writes the meta description (28 of 30 stored briefs were
+  // short of 150). Measure it and ask for a targeted rewrite when it misses.
+  if (typeof brief.meta_description === 'string') {
+    const fitted = await fitMetaDescription(brief.meta_description, (brief.target_keyword as string) ?? null, async (p) => {
+      const r = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: p }],
+        temperature: 0.4,
+        max_tokens: 120,
+      })
+      return r.choices[0].message.content ?? ''
+    })
+    brief.meta_description = fitted.meta
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

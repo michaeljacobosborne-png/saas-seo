@@ -157,7 +157,7 @@ Generate a content brief. Return JSON only, no markdown:
   ],
   "word_count_target": 1500,
   "tone_notes": "specific writing guidance combining brand voice and keyword intent",
-  "competitor_gaps": ["an angle competitors likely miss", "another"],
+  "competitor_gaps": ["a topic competitors likely skip, written as a topic (\\"how natural language processing changes keyword choice\\"), never as an instruction (\\"Highlight NLP\\")", "another"],
   "serp_intent": "informational | commercial | comparison | transactional"
 }
 
@@ -227,7 +227,7 @@ TARGET KEYWORD: ${input.keyword}
 SECONDARY KEYWORDS: ${input.secondaryKeywords.join(', ')}
 SERP INTENT: ${input.serpIntent}
 TONE NOTES: ${input.toneNotes}
-ANGLES COMPETITORS MISS: ${input.competitorGaps.join('; ')}
+TOPICS COMPETITORS SKIP (cover them in your own words; never use one as a heading): ${input.competitorGaps.join('; ')}
 ${input.directAnswer ? `OPENING ANSWER (start with this, refined if needed, under 300 characters): ${input.directAnswer}\n` : ''}
 LENGTH: aim for ${low} to ${high} words. A shorter article that is complete is better than a padded one. Never add a section, example or case study just to reach the length.
 
@@ -288,6 +288,16 @@ Keep the meaning and every fact, and add nothing new: no figures, sources or exa
 Return only JSON: {"rewrites": [{"original": "...", "rewritten": "..."}]}
 
 ${sentences.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+}
+
+/** Headings that copied a brief note in verbatim (findGapHeadings). */
+export function buildHeadingRewritePrompt(headings: string[], keyword: string): string {
+  return `Each heading below is a planning note from a content brief that was published as a heading. It reads as an instruction to the writer.
+Rewrite each one as either the question a reader would type, or a short statement of what the section concludes. Keep the topic. Under 12 words. No figures, no brand names, no colon.
+The article's target keyword is "${keyword}"; use it only where it fits naturally.
+Return only JSON: {"rewrites": [{"original": "...", "rewritten": "..."}]}
+
+${headings.map((h, i) => `${i + 1}. ${h}`).join('\n')}`
 }
 
 /** One targeted revision on the failing judged-now checks, as block edits (change 12). */

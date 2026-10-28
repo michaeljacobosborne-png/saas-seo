@@ -23,13 +23,14 @@ import {
   buildDraftSystemPrompt,
   buildDraftUserPrompt,
   buildExpansionSystemPrompt,
+  buildHeadingRewritePrompt,
   buildIntroPolishPrompt,
   buildRevisionPrompt,
   buildTriadRewritePrompt,
   type AuthorContext,
   type BrandContext,
 } from './prompts'
-import { ensureOpening, findBannedWords, findTriads, openingParagraph, promoteBareHeadings, stripBodyH1, tightenOpening } from './structure'
+import { ensureOpening, findBannedWords, findGapHeadings, findTriads, openingParagraph, promoteBareHeadings, stripBodyH1, tightenOpening } from './structure'
 
 export type ChatModel = 'main' | 'light'
 export interface ChatRequest {
@@ -77,6 +78,9 @@ export interface GenerationReport {
   openingAdded: boolean
   openingSplit: boolean
   headingsPromoted: number
+  /** Headings that were a brief's competitor-gap note, copied in (found / left after the rewrite). */
+  gapHeadingsFound: number
+  gapHeadingsRemaining: number
   triadsFound: number
   triadsRemaining: number
   bannedWordsFound: number
@@ -114,6 +118,8 @@ export async function runDraftPipeline(chat: Chat, input: DraftInput): Promise<D
     openingAdded: false,
     openingSplit: false,
     headingsPromoted: 0,
+    gapHeadingsFound: 0,
+    gapHeadingsRemaining: 0,
     triadsFound: 0,
     triadsRemaining: 0,
     bannedWordsFound: 0,
@@ -143,7 +149,7 @@ export async function runDraftPipeline(chat: Chat, input: DraftInput): Promise<D
     const expanded = await chat({
       model: 'main',
       system: buildExpansionSystemPrompt(input.brand.name, input.sources),
-      user: `ARTICLE:\n${content}\n\nTARGET LENGTH: about ${input.targetWordCount} words (currently ${countWords(content)}).\nTOPICS READERS ALSO ASK ABOUT (to explain, not to cite):\n${input.competitorGaps.map((g) => `- ${g}`).join('\n')}`,
+      user: `ARTICLE:\n${content}\n\nTARGET LENGTH: about ${input.targetWordCount} words (currently ${countWords(content)}).\nTOPICS READERS ALSO ASK ABOUT (to explain, not to cite; never use one as a heading):\n${input.competitorGaps.map((g) => `- ${g}`).join('\n')}`,
       temperature: 0.6,
       maxTokens: 5000,
     }).catch(() => '')
@@ -174,6 +180,12 @@ export async function runDraftPipeline(chat: Chat, input: DraftInput): Promise<D
   const promoted = promoteBareHeadings(content)
   content = promoted.markdown
   report.headingsPromoted = promoted.promoted
+  const gapHeadings = findGapHeadings(content, input.competitorGaps)
+  report.gapHeadingsFound = gapHeadings.length
+  if (gapHeadings.length) {
+    content = await rewriteHeadings(chat, content, gapHeadings.map((g) => g.heading), input).catch(() => content)
+  }
+  report.gapHeadingsRemaining = findGapHeadings(content, input.competitorGaps).length
   const triads = findTriads(content)
   const banned = findBannedWords(content)
   report.triadsFound = triads.length
@@ -234,6 +246,23 @@ async function rewriteStyle(chat: Chat, content: string, sentences: string[], mo
     // A rewrite may not smuggle in a figure or source the original did not have.
     if (guardEvidence(r.rewritten, []).replaced.length > guardEvidence(r.original, []).replaced.length) continue
     out = out.replace(r.original, r.rewritten.trim())
+  }
+  return out
+}
+
+/** Rewrites only the given heading lines; the body is never touched. */
+async function rewriteHeadings(chat: Chat, content: string, headings: string[], input: DraftInput): Promise<string> {
+  const raw = await chat({ model: 'light', user: buildHeadingRewritePrompt(headings, input.keyword), json: true, temperature: 0.4, maxTokens: 800 })
+  const rewrites = parseJson<{ rewrites?: { original?: string; rewritten?: string }[] }>(raw)?.rewrites ?? []
+  let out = content
+  for (const r of rewrites) {
+    const next = r.rewritten?.trim().replace(/^#+\s*/, '')
+    if (!r.original || !next || !headings.includes(r.original) || next.length > 100) continue
+    // A replacement that is itself a gap note, or adds a figure, is no repair.
+    if (findGapHeadings(`## ${next}`, input.competitorGaps).length) continue
+    if (guardEvidence(next, []).replaced.length) continue
+    const line = new RegExp(`^(#{2,6}\\s+)${r.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'm')
+    out = out.replace(line, `$1${next}`)
   }
   return out
 }

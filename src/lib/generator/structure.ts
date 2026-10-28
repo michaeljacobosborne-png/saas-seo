@@ -117,6 +117,30 @@ export function promoteBareHeadings(markdown: string, opts: { allowFirst?: boole
   return { markdown: out.join('\n\n'), promoted }
 }
 
+// ── Brief notes used as headings ─────────────────────────────────────────────
+
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+
+/**
+ * Headings that are a competitor-gap note from the brief, copied in. The notes
+ * are planning text ("Highlight the importance of natural language processing",
+ * article 7f231a4c, 2026-10-05) and read as an instruction when published as a
+ * heading. Matches the whole note, or a heading that contains a note of four
+ * words or more.
+ */
+export function findGapHeadings(markdown: string, gaps: string[]): { heading: string; gap: string }[] {
+  const notes = gaps.map((g) => ({ gap: g, n: norm(g) })).filter((g) => g.n)
+  const out: { heading: string; gap: string }[] = []
+  for (const line of (markdown ?? '').split(/\r?\n/)) {
+    const m = /^#{2,6}\s+(.+?)\s*#*\s*$/.exec(line)
+    if (!m) continue
+    const h = norm(m[1])
+    const hit = notes.find((g) => h === g.n || (g.n.split(' ').length >= 4 && h.includes(g.n)))
+    if (hit) out.push({ heading: m[1].trim(), gap: hit.gap })
+  }
+  return out
+}
+
 // ── Banned words ─────────────────────────────────────────────────────────────
 
 /** One list for the prompts and the checker. */

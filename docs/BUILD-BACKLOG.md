@@ -14,7 +14,7 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
   - Generator keeps only citable or user-supplied facts.
   - Ranking and traffic predictions replaced by a projected score (decision 29).
 - DONE 2026-10-26, engine 2026.13 (DECISIONS 36): Original evidence counts only figures with a source linked from the same section; unsourced ones are neither credited nor penalised; bare outbound links no longer earn it.
-- Open, not approved: the optional matching rule for Retrievable's "Lists, tables and data" figures point.
+- CLOSED 2026-10-27, not doing (DECISIONS 38): Retrievable's figures point stays as is; sourcing is Citable's question.
 
 ## 2. Engine: crawler check honesty (found 2026-10-05, reddit.com re-run)
 - DONE 2026-10-26 (DECISIONS 36): a 200 whose body is a script-submitted form with no content is a JavaScript challenge, not "served" (reddit.com fixture).
@@ -41,17 +41,17 @@ Parked, deliberately not merged: `park/geo-analyzer-accuracy-uncommitted` (Gemin
 - DONE, live (71450e4, cc31b9b): SEO panel reduced to SEO basics (decision 28), Readability removed, agent top issues from the draft report only, Heading hierarchy Fix button.
 - DONE 2026-10-26 (DECISIONS 36): Direct answers evidence is labelled and quotes the paragraph or sentence it describes (typeamedia.net).
 - DONE 2026-10-27, engine 2026.14 (DECISIONS 37): a definition must open with its subject; typeamedia.net's "becoming an agentic business is an evolution for us" no longer counts.
-- Open: the brief meta description came out at 99 characters; a competitor-gap note became a heading verbatim.
+- DONE 2026-10-27: the brief's meta description is measured and rewritten when outside 150 to 160 (28 of 30 stored briefs missed); a competitor-gap note used as a heading is caught after writing and only that heading is rewritten.
 
 ## 5. Sanity tables: DONE, live (02c18aa, DECISIONS 30). Final check pending: run a published post that has a table through save-audit.
 
 ## 6. Group 3: presentation and data
-- The card shows 78/100 next to "45 of 100".
+- DONE 2026-10-27 (5867365): the draft card states the 45 structure points scaled to 100; the section ties raw points to the score.
 - (Fixed in 71450e4: empty meta description no longer passes.)
 - (Resolved: Readability removed.)
-- Wrong keyword shown on the dashboard.
-- Word count differs between the list and the panel.
-- /articles/new briefly shows "Brand profile missing".
+- DONE 2026-10-27 (5867365): dashboard shows "Keyword: <target>" and "Project: <name>" instead of the bare project name.
+- DONE 2026-10-27 (5867365): one word counter matching the editor (checked on all 26 stored articles); link apply recounts. Six stored counts were stale; they correct on next edit (a backfill would reorder the list by updated_at).
+- DONE 2026-10-27 (69fd80c): /articles/new no longer flashes "Brand profile missing" while loading; reads the first brand profile like the dashboard.
 
 ## 7. Later
 - MCP build (decisions 21–27; docs/mcp-server-spec.md): compare and history as the centrepiece, an unmetered usage tool, outputSchema, a claude.ai directory listing.
