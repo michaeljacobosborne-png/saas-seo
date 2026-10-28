@@ -172,7 +172,9 @@ export function DraftScores({
         <div className={`${card} p-5`}>
           <h3 className="text-sm font-semibold text-[var(--cream)]">{SCORE_LABELS.retrievable}: checked now</h3>
           <p className="mt-0.5 mb-3 text-xs text-[var(--cream-faint)]">
-            {r.scoreWithheld ? 'Not enough of the draft to score yet.' : `${r.rawScore} of ${r.assessedMaxScore} points`}
+            {r.scoreWithheld
+              ? 'Not enough of the draft to score yet.'
+              : `${r.rawScore} of ${r.assessedMaxScore} structure points, which is the ${r.score}/100 above`}
           </p>
           <div className="space-y-3">
             {judgedNow.flatMap((g) =>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { articleWordCount } from '@/lib/word-count'
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -59,7 +60,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)
     .from('articles')
-    .update({ content: updatedContent })
+    // Recount with the content: the list shows this number next to the editor's.
+    .update({ content: updatedContent, word_count: articleWordCount(updatedContent) })
     .eq('id', id)
     .eq('user_id', user.id)
 

@@ -15,6 +15,7 @@
  */
 import { buildDraftReport, type DraftReport } from '@/lib/geo-audit/draft-report'
 import { draftFixes } from '@/lib/draft-fixes'
+import { articleWordCount } from '@/lib/word-count'
 import { applyFixEdits, numberBlocks, splitBlocks, type FixEdit } from '@/lib/targeted-fix'
 import { figuresInText, guardEvidence, type EvidenceSource, type Replacement } from './evidence-guard'
 import {
@@ -189,7 +190,8 @@ export async function runDraftPipeline(chat: Chat, input: DraftInput): Promise<D
   // 7. Engine gate.
   content = await engineRevision(chat, content, input, report).catch(() => content)
 
-  return { content, wordCount: countWords(content.replace(/<[^>]+>/g, ' ')), passCount, report }
+  // Counted the way the editor counts, so the list and the editor agree.
+  return { content, wordCount: articleWordCount(content), passCount, report }
 }
 
 async function polish(chat: Chat, content: string, input: DraftInput): Promise<string> {

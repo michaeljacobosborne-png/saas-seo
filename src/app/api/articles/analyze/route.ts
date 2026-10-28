@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { checkArticleLimit } from '@/lib/usage'
 import { authorFromProfile, buildArticleScores } from '@/lib/article-scores'
 import type { ArticleScores } from '@/lib/supabase/types'
+import { articleWordCount } from '@/lib/word-count'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -198,7 +199,7 @@ Provide 3-8 suggestions ordered by severity, and 2-5 content gaps. Be specific a
 
           const titleMatch = content.match(/^#\s+(.+)$/m)
           const title = titleMatch?.[1]?.trim() ?? targetKeyword ?? 'Imported article'
-          const wordCount = content.split(/\s+/).filter(Boolean).length
+          const wordCount = articleWordCount(content)
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data: newArticle, error: insertError } = await (supabase as any)

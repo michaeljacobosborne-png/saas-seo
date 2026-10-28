@@ -111,7 +111,9 @@ describe('TwoScoreSection — draft variant (paid editor)', () => {
 
   it('words the cards for a draft and states the scope inline', () => {
     expect(draftHtml).not.toContain('this page')
-    expect(draftHtml).toContain('45 of 100 points')
+    // "45 of 100 points" under "78/100" read as a contradiction (2026-10-04, finding 8).
+    expect(draftHtml).not.toContain('45 of 100 points')
+    expect(draftHtml).toContain('scored on the 45 structure points it can carry, scaled to 100')
     expect(draftHtml).toContain('A draft is assessed on 45 of the 100 points.')
   })
 })

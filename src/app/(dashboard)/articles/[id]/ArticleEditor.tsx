@@ -15,21 +15,7 @@ import {
   List, ListOrdered, Quote, Table2,
 } from 'lucide-react'
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
-
-function prepareContent(content: string): string {
-  if (content.trim().startsWith('<')) return content
-  const md = content
-    // Convert markdown tables to HTML before passing to marked
-    .replace(/^\|(.+)\|\s*\n\|[-| :]+\|\s*\n((?:\|.+\|\s*\n?)*)/gm, (match, header, rows) => {
-      const ths = header.split('|').filter(Boolean).map((h: string) => `<th>${h.trim()}</th>`).join('')
-      const trs = rows.trim().split('\n').map((row: string) => {
-        const tds = row.split('|').filter(Boolean).map((c: string) => `<td>${c.trim()}</td>`).join('')
-        return `<tr>${tds}</tr>`
-      }).join('')
-      return `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`
-    })
-  return marked.parse(md) as string
-}
+import { prepareContent } from '@/lib/word-count'
 
 // Pressing Enter at the end of a heading exits to a new paragraph instead of
 // creating another heading (the ProseMirror default split behaviour).

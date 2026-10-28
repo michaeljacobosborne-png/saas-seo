@@ -7,6 +7,7 @@ import {
 import SearchPerformance from './search-performance'
 import DomainAuthority from './domain-authority'
 import QuickWrite from '../QuickWrite'
+import { articleMeta } from './article-meta'
 
 // The DB lifecycle is broader than the (stale) Article TS union, so we key off
 // raw status strings: draft -> brief_ready -> generating -> expanding ->
@@ -343,12 +344,12 @@ export default async function DashboardPage() {
                           {article.title || article.target_keyword || 'Untitled draft'}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-[var(--cream-faint)]">
-                          {projectName && (
-                            <>
-                              <span className="truncate max-w-[14rem]">{projectName}</span>
+                          {articleMeta(article.target_keyword, projectName).map((m) => (
+                            <span key={m} className="contents">
+                              <span className="truncate max-w-[14rem]">{m}</span>
                               <span>·</span>
-                            </>
-                          )}
+                            </span>
+                          ))}
                           <span>{timeAgo(article.updated_at)}</span>
                         </div>
                       </div>

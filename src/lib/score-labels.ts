@@ -20,7 +20,9 @@ export const SCORE_DESCRIPTIONS = {
   },
   /** Editor: describes a draft, and must not imply page-level checks ran. */
   draft: {
-    retrievable: 'How cleanly an answer can be lifted from this draft. Structure only: 45 of 100 points.',
+    // Not "45 of 100 points": printed under "78/100" that read as a
+    // contradiction (signed-in pass, 2026-10-04, finding 8).
+    retrievable: 'How cleanly an answer can be lifted from this draft. A draft is scored on the 45 structure points it can carry, scaled to 100.',
     citable: 'If this draft is quoted, does anything in it carry attribution back to you.',
   },
 } as const

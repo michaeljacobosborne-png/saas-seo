@@ -30,6 +30,13 @@ describe('DraftScores — two scores, named as the framework names them (decisio
   it('states the 45-of-100 scope inline (decision 15)', () => {
     expect(html).toContain('45 of the 100 points')
   })
+
+  it('ties the raw points to the score shown on the card, so the two never read as a contradiction', () => {
+    // Signed-in pass 2026-10-04, finding 8: "78/100" over "45 of 100 points" and "35 of 45 points".
+    const r = draft.retrievability
+    expect(html).toContain(`${r.rawScore} of ${r.assessedMaxScore} structure points, which is the ${r.score}/100 above`)
+    expect(html).not.toContain('45 of 100 points')
+  })
 })
 
 describe('DraftScores — publication-layer checks are never missing marks (decision 15)', () => {
