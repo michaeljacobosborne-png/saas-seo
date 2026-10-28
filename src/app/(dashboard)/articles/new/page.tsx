@@ -143,6 +143,10 @@ function NewArticleWizard() {
   const [sortField, setSortField] = useState<SortField>('avg_monthly_searches')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [brandProfile, setBrandProfile] = useState<BrandProfile | null>(null)
+  // projectsLoading clears only after the brand profile has loaded too. Until
+  // then "missing" is unknown, and showing the notice made it flash on every
+  // visit (signed-in pass 2026-10-04).
+  const brandMissing = !projectsLoading && !brandProfile
 
   const [articleId, setArticleId] = useState<string | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,7 +180,9 @@ function NewArticleWizard() {
       const [{ data: projs }, { data: brand }] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from('keyword_projects').select('*').eq('user_id', user.id).eq('status', 'complete').order('created_at', { ascending: false }),
-        supabase.from('brand_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+        // Same read as the dashboard: the first profile. maybeSingle() alone
+        // errors when there are two, which showed as "Brand profile missing".
+        supabase.from('brand_profiles').select('*').eq('user_id', user.id).order('created_at', { ascending: true }).limit(1).maybeSingle(),
       ])
       if (!active) return
       setProjects((projs as KeywordProject[]) ?? [])
@@ -681,7 +687,7 @@ function NewArticleWizard() {
                   {loading ? 'Generating brief…' : 'Generate brief'}
                 </button>
               </form>
-              {!brandProfile && (
+              {brandMissing && (
                 <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
                   <span className="font-medium">Brand profile missing.</span>{' '}
                   <Link href="/brand" className="underline hover:text-amber-900">Set it up first →</Link>
@@ -726,7 +732,7 @@ function NewArticleWizard() {
                 </div>
               )}
 
-              {!brandProfile && (
+              {brandMissing && (
                 <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
                   <span className="font-medium">Brand profile missing.</span>{' '}
                   <Link href="/brand" className="underline hover:text-amber-900">Set it up first →</Link>
