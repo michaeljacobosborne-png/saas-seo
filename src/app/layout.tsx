@@ -29,34 +29,26 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://app.bylineseo.com"),
+  // Defaults for pages that set no title of their own. Images come from the
+  // generated cards (opengraph-image.tsx / twitter-image.tsx in each segment).
   title: {
-    default: "Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content",
+    default: "Byline: AI search readiness, scored from your page",
     template: "%s | Byline",
   },
   description:
-    "Byline is the AI SEO platform with real keyword data, AI article generation, and an editorial agent that rewrites what's holding you back.",
+    "Byline scores whether AI search can reach, parse and lift a clean passage from your pages, with the evidence behind every finding.",
   openGraph: {
     type: "website",
     siteName: "Byline",
-    title: "Byline — AI SEO Writing Tool That Researches, Generates & Fixes Content",
+    title: "Byline: AI search readiness, scored from your page",
     description:
-      "Real keyword data. AI-generated content. An editorial agent that rewrites what's holding you back. Built for serious content operators.",
+      "Two scores, rule-derived in code, with the evidence behind every finding. It does not measure AI visibility.",
     url: "https://app.bylineseo.com",
-    images: [
-      {
-        url: "/dashboard-screenshot-1.png",
-        width: 1200,
-        height: 630,
-        alt: "Byline — AI SEO content platform",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Byline — AI SEO Writing Tool",
-    description:
-      "Real keyword data. AI-generated content. An editorial agent that rewrites what's holding you back.",
-    images: ["/dashboard-screenshot-1.png"],
+    title: "Byline: AI search readiness, scored from your page",
+    description: "Rule-derived scores for AI search readiness, with the evidence shown.",
   },
   robots: {
     index: true,
