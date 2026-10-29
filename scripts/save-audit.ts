@@ -50,7 +50,15 @@ async function main() {
     process.exit(1)
   }
   // Imported after dotenv so the engine sees the keys.
-  const { runAudit } = await import('../src/lib/geo-audit')
+  const { recordAudit } = await import('../src/lib/geo-audit/history')
+  const { snapshotRow } = await import('../src/lib/tracking')
+  const { createServiceClient } = await import('../src/lib/supabase/service')
+  // Untracked and unowned: a prospect page's history, not anyone's account.
+  const storeSnapshot = async (run: Awaited<ReturnType<typeof recordAudit>>) => {
+    const row = { ...snapshotRow({ id: '', user_id: '', tool: rawTool as 'geo' | 'ao' }, run), tracked_page_id: null, user_id: null }
+    const { error } = await createServiceClient().from('audit_snapshots').insert(row)
+    if (error) console.error(`  snapshot not stored: ${error.message}`)
+  }
   const { normaliseUrl, BYLINE_USER_AGENT } = await import('../src/lib/geo-audit/fetch')
   const { probeCrawlerAccess } = await import('../src/lib/geo-audit/crawler-access')
   const { fetchRobotsTxt } = await import('../src/lib/geo-audit/robots')
@@ -61,8 +69,12 @@ async function main() {
   // what the origin did (the divergence is the practitioner-relevant finding).
   const robots = await fetchRobotsTxt(url, { userAgent: BYLINE_USER_AGENT }).then((r) => r.parsed ?? null, () => null)
   const [outcome, probe] = await Promise.all([
-    runAudit(url, rawTool, { now, onProgress: (m) => console.error(`  ${m}`) }).then(
-      (report) => ({ report, error: null as string | null }),
+    // Recorded, so every prospect audit is also a point in that page's history (DECISIONS 39).
+    recordAudit(url, rawTool, { now, onProgress: (m) => console.error(`  ${m}`) }).then(
+      async (run) => {
+        await storeSnapshot(run)
+        return { report: run.report, error: null as string | null }
+      },
       (err: unknown) => ({ report: null, error: err instanceof Error ? err.message : String(err) }),
     ),
     probeCrawlerAccess(url, { now, robots }).catch(() => null),

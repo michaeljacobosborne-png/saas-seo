@@ -1,9 +1,12 @@
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-import { AUDIT_STEPS, AuditError, runAudit } from '@/lib/geo-audit'
+import { AUDIT_STEPS, AuditError } from '@/lib/geo-audit'
+import { recordAudit, type RecordedAudit } from '@/lib/geo-audit/history'
 import { consumeRun, identityFor, isQuotaExempt } from '@/lib/geo-audit/rate-limit'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { snapshotRow } from '@/lib/tracking'
 
 /**
  * Shared NDJSON streaming endpoint for the free GEO and AO analyzers.
@@ -49,14 +52,19 @@ export async function POST(request: Request) {
       const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
 
       try {
-        const report = await runAudit(url, type, {
+        // Every run, free or signed in, is recorded with what it fetched
+        // (DECISIONS 39): history that is not kept now cannot be rebuilt later.
+        const run = await recordAudit(url, type, {
           // The audit clock. Passed explicitly so no date logic anywhere in the
           // engine has to assume what "now" is.
           now: new Date(),
           onProgress: (message, step) => send({ type: 'progress', message, step, total: AUDIT_STEPS }),
           expectedAuthor,
         })
-        send({ type: 'result', ...report, rateLimit: budget })
+        const snapshotId = await storeSnapshot(run, user?.id ?? null)
+        // snapshotId lets this exact run become the first point of a tracked
+        // page if the visitor signs up and tracks it.
+        send({ type: 'result', ...run.report, rateLimit: budget, snapshotId })
       } catch (err) {
         send({
           type: 'error',
@@ -78,6 +86,23 @@ export async function POST(request: Request) {
       'X-Accel-Buffering': 'no',
     },
   })
+}
+
+/**
+ * Keeps the run in audit_snapshots, untracked: tracked_page_id null, and user_id
+ * null for an anonymous visitor. Never fails the audit: a storage problem costs
+ * one point of history, not the visitor's result.
+ */
+async function storeSnapshot(run: RecordedAudit, userId: string | null): Promise<string | null> {
+  try {
+    const row = { ...snapshotRow({ id: '', user_id: userId ?? '', tool: run.snapshot.tool }, run), tracked_page_id: null, user_id: userId }
+    const { data, error } = await createServiceClient().from('audit_snapshots').insert(row).select('id').single()
+    if (error) throw new Error(error.message)
+    return data.id as string
+  } catch (err) {
+    console.error('[free-tools/analyze] snapshot not stored', err instanceof Error ? err.message : err)
+    return null
+  }
 }
 
 /**
