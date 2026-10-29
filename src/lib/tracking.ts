@@ -4,8 +4,10 @@
  * so it is testable; `supabaseTracking` wires it to the real tables.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { recordAudit, type RecordedAudit } from '@/lib/geo-audit/history'
-import { encodeSnapshot } from '@/lib/geo-audit/snapshot'
+import { compareOverTime, recordAudit, type RecordedAudit } from '@/lib/geo-audit/history'
+import { decodeSnapshot, encodeSnapshot } from '@/lib/geo-audit/snapshot'
+import { sendEmail } from '@/lib/email'
+import { buildChangeEmail } from '@/lib/tracking-email'
 
 const DAY = 86_400_000
 /** A failed run is retried the next day rather than waiting a whole interval. */
@@ -19,8 +21,16 @@ export interface TrackedPage {
   interval_days: number
 }
 
+/** The run before this one, for the monthly comparison email. */
+export interface PreviousRun {
+  snapshot: string
+  retrievable_score: number | null
+  score_withheld: boolean
+}
+
 export interface TrackingStore {
   due(now: Date, limit: number): Promise<TrackedPage[]>
+  previousRun(page: TrackedPage): Promise<PreviousRun | null>
   saveRun(page: TrackedPage, run: RecordedAudit): Promise<void>
   markRan(page: TrackedPage, next: Date, ranAt: Date): Promise<void>
   markFailed(page: TrackedPage, error: string, next: Date): Promise<void>
@@ -41,7 +51,15 @@ export interface RunSummary {
 export async function runDuePages(
   store: TrackingStore,
   record: (page: TrackedPage, now: Date) => Promise<RecordedAudit>,
-  opts: { now?: Date; budgetMs?: number; perRunMs?: number; limit?: number; clock?: () => number } = {},
+  opts: {
+    now?: Date
+    budgetMs?: number
+    perRunMs?: number
+    limit?: number
+    clock?: () => number
+    /** Told about each run that has an earlier one to compare with. Its failures never fail the run. */
+    notify?: (page: TrackedPage, previous: PreviousRun, run: RecordedAudit) => Promise<void>
+  } = {},
 ): Promise<RunSummary> {
   const clock = opts.clock ?? Date.now
   const start = clock()
@@ -59,9 +77,12 @@ export async function runDuePages(
     const ranAt = new Date(now.getTime() + (clock() - start))
     try {
       const run = await record(page, ranAt)
+      // Read the earlier run before this one is saved, or it would find itself.
+      const previous = opts.notify ? await store.previousRun(page).catch(() => null) : null
       await store.saveRun(page, run)
       await store.markRan(page, new Date(ranAt.getTime() + page.interval_days * DAY), ranAt)
       summary.ran.push(page.id)
+      if (previous && opts.notify) await opts.notify(page, previous, run).catch(() => undefined)
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err)
       await store.markFailed(page, error, new Date(ranAt.getTime() + RETRY_AFTER_MS))
@@ -104,6 +125,16 @@ export function supabaseTracking(db: SupabaseClient): TrackingStore {
       if (error) throw new Error(error.message)
       return (data ?? []) as TrackedPage[]
     },
+    async previousRun(page) {
+      const { data } = await db
+        .from('audit_snapshots')
+        .select('snapshot, retrievable_score, score_withheld')
+        .eq('tracked_page_id', page.id)
+        .order('recorded_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      return (data as PreviousRun | null) ?? null
+    },
     async saveRun(page, run) {
       const { error } = await db.from('audit_snapshots').insert(snapshotRow(page, run))
       if (error) throw new Error(error.message)
@@ -118,6 +149,27 @@ export function supabaseTracking(db: SupabaseClient): TrackingStore {
     async markFailed(page, message, next) {
       await db.from('tracked_pages').update({ last_error: message.slice(0, 500), next_run_at: next.toISOString() }).eq('id', page.id)
     },
+  }
+}
+
+/** Emails the page's owner what changed since the previous run (decision 8, the retention hook). */
+export function emailChange(db: SupabaseClient) {
+  return async (page: TrackedPage, previous: PreviousRun, run: RecordedAudit): Promise<void> => {
+    const { data } = await db.auth.admin.getUserById(page.user_id)
+    const to = data.user?.email
+    if (!to) return
+    const overTime = await compareOverTime(decodeSnapshot(previous.snapshot), run.snapshot)
+    const r = run.report
+    const { subject, text } = buildChangeEmail({
+      pageId: page.id,
+      url: page.url,
+      overTime,
+      recorded: {
+        from: previous.score_withheld ? null : previous.retrievable_score,
+        to: r.scoreWithheld ? null : (r.retrievability?.score ?? null),
+      },
+    })
+    await sendEmail({ to, subject, text })
   }
 }
 

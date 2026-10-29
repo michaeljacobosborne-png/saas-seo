@@ -6,11 +6,15 @@ import { decodeSnapshot } from '@/lib/geo-audit/snapshot'
 const page = (id: string, interval = 30): TrackedPage => ({ id, user_id: 'u', url: `https://${id}.test/`, tool: 'geo', interval_days: interval })
 const NOW = new Date('2026-11-01T03:00:00Z')
 
-function memoryStore(due: TrackedPage[]) {
+function memoryStore(due: TrackedPage[], saved = new Map<string, string>()) {
   const log: string[] = []
   const store: TrackingStore = {
     due: async () => due,
-    saveRun: async (p) => void log.push(`save ${p.id}`),
+    previousRun: async (p) => (saved.has(p.id) ? { snapshot: saved.get(p.id)!, retrievable_score: 80, score_withheld: false } : null),
+    saveRun: async (p) => {
+      log.push(`save ${p.id}`)
+      saved.set(p.id, `run-of-${p.id}-${log.length}`)
+    },
     markRan: async (p, next) => void log.push(`ran ${p.id} next ${next.toISOString().slice(0, 10)}`),
     markFailed: async (p, e, next) => void log.push(`failed ${p.id} (${e}) retry ${next.toISOString().slice(0, 10)}`),
   }
@@ -40,6 +44,32 @@ describe('runDuePages', () => {
     expect(s.failed).toEqual([{ id: 'down', error: 'That domain could not be resolved.' }])
     expect(s.ran).toEqual(['ok'])
     expect(log[0]).toBe('failed down (That domain could not be resolved.) retry 2026-11-02')
+  })
+
+  it('tells the notifier about the PREVIOUS run, never the one just saved, and skips first runs', async () => {
+    const saved = new Map([['old', 'last-month']])
+    const { store } = memoryStore([page('old'), page('new')], saved)
+    const told: string[] = []
+    await runDuePages(store, async () => fakeRun, {
+      now: NOW,
+      clock: () => 0,
+      notify: async (p, prev) => void told.push(`${p.id}:${prev.snapshot}`),
+    })
+    expect(told).toEqual(['old:last-month'])
+  })
+
+  it('never lets a failed email fail the run', async () => {
+    const { store, log } = memoryStore([page('a')], new Map([['a', 'prev']]))
+    const s = await runDuePages(store, async () => fakeRun, {
+      now: NOW,
+      clock: () => 0,
+      notify: async () => {
+        throw new Error('Resend down')
+      },
+    })
+    expect(s.ran).toEqual(['a'])
+    expect(s.failed).toEqual([])
+    expect(log).toContain('ran a next 2026-12-01')
   })
 
   it('never starts a run it has no time to finish, and leaves the rest for next time', async () => {
