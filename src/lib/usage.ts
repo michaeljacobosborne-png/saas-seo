@@ -51,9 +51,22 @@ export async function logUsageEvent(params: {
 }
 
 export const PLAN_LIMITS = {
-  starter: { articles: 8, keywordSessions: 10, brandProfiles: 1 },
-  pro: { articles: 30, keywordSessions: 60, brandProfiles: 1 },
-  agency: { articles: 100, keywordSessions: 200, brandProfiles: 3 },
+  // trackedPages: pages re-checked monthly for score over time (DECISIONS 39, proposed).
+  starter: { articles: 8, keywordSessions: 10, brandProfiles: 1, trackedPages: 3 },
+  pro: { articles: 30, keywordSessions: 60, brandProfiles: 1, trackedPages: 10 },
+  agency: { articles: 100, keywordSessions: 200, brandProfiles: 3, trackedPages: 25 },
+}
+
+/** How many pages a user may track. Free accounts track one, enough to see a change proven. */
+export async function trackedPageLimit(
+  userId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  accountType?: string,
+): Promise<number> {
+  if (accountType === 'free') return 1
+  const plan = await resolvePlan(userId, supabase, accountType)
+  return PLAN_LIMITS[plan].trackedPages
 }
 
 // DB subscription plan values map onto PLAN_LIMITS keys. 'team' is the renamed

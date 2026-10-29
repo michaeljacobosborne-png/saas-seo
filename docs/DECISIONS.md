@@ -6,6 +6,21 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 39. Score over time stores what was fetched, and compares by re-scoring both runs on today's engine
+**Date:** 2026-10-29 (approved: score-over-time before the MCP server)
+**Decision:**
+- Every tracked run records the responses it read (page, robots.txt, llms.txt, crawler probe, linked pages) as a snapshot: `src/lib/geo-audit/snapshot.ts`, Brotli-compressed, stored in `audit_snapshots.snapshot`.
+- A comparison never diffs two stored scores. It replays both snapshots through the current engine and diffs those (`compareOverTime`). A change then means the page changed, never the rubric. A fingerprint of the readable text says whether the words changed at all.
+- Tracked pages re-run on an interval (default 30 days) from a daily cron (`/api/cron/rerun-tracked`), one page at a time inside the function's time limit; a failed run retries the next day. Scheduled runs use deterministic wording (no model call).
+- Stopping tracking keeps the history.
+- Proposed limits, for Michael to confirm: free account 1 tracked page, starter 3, pro 10, agency 25.
+**Why:**
+- compare.ts refuses a number across engine versions, correctly, and the engine moved four times in three weeks (2026.11 to 2026.14). Stored scores alone would make "proves it changed" read "not comparable" most months.
+- History needs calendar time; it cannot be backfilled. Recording starts the asset.
+- Raw fetches only: rendered fetches go through a third-party service outside the recorded transport.
+**Evidence:** live runs of app.bylineseo.com (30 KB snapshot) and clickslice.co.uk (19 requests, 214 KB) replayed to exactly their live scores, check by check. Tests: `history.test.ts`, `tracking.test.ts`.
+**Revisit if:** snapshot storage grows past what the database plan allows (move bodies to object storage), or a site changes faster than monthly re-runs can show.
+
 ## 38. Retrievable keeps counting unsourced figures; only Citable asks for a source
 **Date:** 2026-10-27 (closes the option left open in DECISIONS 36)
 **Decision:** the "Lists, tables and data" check in Retrievable keeps crediting figures whether or not they are sourced. No engine change.
