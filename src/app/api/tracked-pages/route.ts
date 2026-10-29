@@ -43,6 +43,12 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Owner-only until the migration has run and the plan limits are confirmed
+  // (DECISIONS 39). Remove this check to open it to every plan.
+  if (user.email?.toLowerCase() !== 'michaeljacobosborne@gmail.com') {
+    return NextResponse.json({ error: 'Tracked pages are not open yet.', code: 'NOT_OPEN' }, { status: 403 })
+  }
+
   let body: { url?: string; tool?: string }
   try {
     body = await request.json()

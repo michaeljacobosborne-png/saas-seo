@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { compareOverTime } from '@/lib/geo-audit/history'
+import { describeChange } from '@/lib/geo-audit/change-summary'
 import { decodeSnapshot } from '@/lib/geo-audit/snapshot'
 
 export const maxDuration = 60
@@ -31,7 +32,7 @@ export async function GET(request: Request, { params }: Params) {
     const b = rows?.find((r) => r.id === to)
     if (!a || !b) return NextResponse.json({ error: 'Run not found' }, { status: 404 })
     const result = await compareOverTime(decodeSnapshot(a.snapshot as string), decodeSnapshot(b.snapshot as string))
-    return NextResponse.json({ page, ...result })
+    return NextResponse.json({ page, ...result, summary: describeChange(result) })
   }
 
   const { data: runs } = await supabase
