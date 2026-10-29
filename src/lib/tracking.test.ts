@@ -46,6 +46,14 @@ describe('runDuePages', () => {
     expect(log[0]).toBe('failed down (That domain could not be resolved.) retry 2026-11-02')
   })
 
+  it('waits a week after a repeat failure, so a dead site does not block the queue daily', async () => {
+    const { store, log } = memoryStore([{ ...page('dead'), last_error: 'That domain could not be resolved.' }])
+    await runDuePages(store, async () => {
+      throw new Error('That domain could not be resolved.')
+    }, { now: NOW, clock: () => 0 })
+    expect(log[0]).toBe('failed dead (That domain could not be resolved.) retry 2026-11-08')
+  })
+
   it('tells the notifier about the PREVIOUS run, never the one just saved, and skips first runs', async () => {
     const saved = new Map([['old', 'last-month']])
     const { store } = memoryStore([page('old'), page('new')], saved)

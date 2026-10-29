@@ -10,8 +10,9 @@ import { sendEmail } from '@/lib/email'
 import { buildChangeEmail } from '@/lib/tracking-email'
 
 const DAY = 86_400_000
-/** A failed run is retried the next day rather than waiting a whole interval. */
+/** A first failure is retried the next day; a repeat failure waits a week, so one dead site cannot sit at the front of the queue every day. */
 const RETRY_AFTER_MS = DAY
+const REPEAT_RETRY_AFTER_MS = 7 * DAY
 
 export interface TrackedPage {
   id: string
@@ -19,6 +20,8 @@ export interface TrackedPage {
   url: string
   tool: 'geo' | 'ao'
   interval_days: number
+  /** Set when the previous attempt failed. */
+  last_error?: string | null
 }
 
 /** The run before this one, for the monthly comparison email. */
@@ -85,7 +88,7 @@ export async function runDuePages(
       if (previous && opts.notify) await opts.notify(page, previous, run).catch(() => undefined)
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err)
-      await store.markFailed(page, error, new Date(ranAt.getTime() + RETRY_AFTER_MS))
+      await store.markFailed(page, error, new Date(ranAt.getTime() + (page.last_error ? REPEAT_RETRY_AFTER_MS : RETRY_AFTER_MS)))
       summary.failed.push({ id: page.id, error })
     }
   }
@@ -117,7 +120,7 @@ export function supabaseTracking(db: SupabaseClient): TrackingStore {
     async due(now, limit) {
       const { data, error } = await db
         .from('tracked_pages')
-        .select('id, user_id, url, tool, interval_days')
+        .select('id, user_id, url, tool, interval_days, last_error')
         .eq('active', true)
         .lte('next_run_at', now.toISOString())
         .order('next_run_at', { ascending: true })
