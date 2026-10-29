@@ -70,7 +70,10 @@ export default function RunHistory({ pageId, runs, active }: { pageId: string; r
                   <td className="px-4 py-3 tabular-nums" style={{ color: 'var(--cream)' }}>{r.score_withheld ? 'withheld' : r.retrievable_score}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--cream-dim)' }}>{r.citable_band ?? '—'}</td>
                   <td className="px-4 py-3" style={{ color: text === 'changed' ? 'var(--copper-lt)' : 'var(--cream-faint)' }}>{text}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--cream-faint)' }}>{r.engine_version}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: prev && prev.engine_version !== r.engine_version ? 'var(--copper-lt)' : 'var(--cream-faint)' }}>
+                    {r.engine_version}
+                    {prev && prev.engine_version !== r.engine_version && ' (engine changed)'}
+                  </td>
                 </tr>
               )
             })}
@@ -78,7 +81,7 @@ export default function RunHistory({ pageId, runs, active }: { pageId: string; r
         </table>
       </div>
       <p className="text-xs" style={{ color: 'var(--cream-faint)' }}>
-        The scores in this table are as each run was first scored, so they can differ across engine versions. Compare two runs to see them scored on the same engine.
+        The scores in this table are as each run was first scored. Where the engine changed between runs, part of the difference can be ours rather than your page&apos;s. Compare two runs to see both scored on the same engine, with the difference split between the page and the engine.
       </p>
 
       {runs.length >= 2 ? (

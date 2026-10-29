@@ -2,6 +2,8 @@ import type { AuditComparison } from '@/lib/geo-audit/compare'
 
 export interface CompareResult {
   summary: string
+  /** Set when the runs were first scored on different engines: how much of the change was the engine. */
+  engineNote?: string | null
   comparison: AuditComparison
   engineVersion: string
   contentChanged: boolean
@@ -23,12 +25,14 @@ export default function ComparisonView({ result }: { result: CompareResult }) {
     <section className="space-y-4">
       <div className="rounded-2xl p-5" style={card}>
         <p className="text-base leading-relaxed" style={{ color: 'var(--cream)' }}>{result.summary}</p>
-        <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--cream-faint)' }}>
-          {result.recordedOn.from !== result.engineVersion || result.recordedOn.to !== result.engineVersion
-            ? `The runs were first scored on engines ${result.recordedOn.from} and ${result.recordedOn.to}; both were scored again on ${result.engineVersion} for this comparison. `
-            : ''}
-          {c.scope}
-        </p>
+        {result.engineNote && (
+          // Not small print: whether a drop came from the page or from our engine is the point.
+          <p className="mt-3 rounded-lg p-3 text-sm leading-relaxed" style={{ background: 'rgba(184,115,51,0.12)', border: '1px solid rgba(184,115,51,0.35)', color: 'var(--cream)' }}>
+            <strong className="block mb-1">Engine version changed between these runs</strong>
+            {result.engineNote}
+          </p>
+        )}
+        <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--cream-faint)' }}>{c.scope}</p>
       </div>
 
       <div className="rounded-2xl p-5" style={card}>
