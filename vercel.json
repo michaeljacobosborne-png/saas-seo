@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/check-ai-visibility",
+      "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/rerun-tracked",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
