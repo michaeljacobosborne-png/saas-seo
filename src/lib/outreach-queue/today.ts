@@ -17,6 +17,9 @@
  * what is live rather than everything once written (added 2026-10-26).
  * A due date in the future holds an item until that day, and an after_ids entry
  * "blog:<slug>" holds it until that blog post is published (added 2026-10-27).
+ * Replies sort above everything else and are never held by a cap or by the
+ * 5-item limit, because a reply loses most of its value by the next day
+ * (added 2026-10-30).
  * Days and weeks are in Michael's time zone; weeks start on Monday.
  */
 
@@ -135,6 +138,9 @@ export function selectToday(rows: QueueRow[], now: Date, opts: SelectOptions = {
   }
 
   eligible.sort((a, b) => {
+    // Replies first: a reply a day late is worth far less than one the same day.
+    if (a.type === 'reply' && b.type !== 'reply') return -1
+    if (a.type !== 'reply' && b.type === 'reply') return 1
     if (a.closes_on && b.closes_on && a.closes_on !== b.closes_on) return a.closes_on < b.closes_on ? -1 : 1
     if (a.closes_on && !b.closes_on) return -1
     if (!a.closes_on && b.closes_on) return 1
@@ -149,7 +155,12 @@ export function selectToday(rows: QueueRow[], now: Date, opts: SelectOptions = {
   const chosen: QueueRow[] = []
   const held: QueueRow[] = []
   for (const r of eligible) {
-    if (chosen.length >= MAX_SHOWN) {
+    // Replies are never held by a cap and do not take one of the MAX_SHOWN slots.
+    if (r.type === 'reply') {
+      chosen.push(r)
+      continue
+    }
+    if (chosen.filter((c) => c.type !== 'reply').length >= MAX_SHOWN) {
       held.push(r)
       continue
     }

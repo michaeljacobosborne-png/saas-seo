@@ -146,9 +146,24 @@ describe('selectToday', () => {
   })
 
   it('never shows more than 5', () => {
-    const rows = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id, i) => row({ id, type: 'comment', account: String(i) }))
-    rows.push(row({ id: 'x', type: 'reply' }), row({ id: 'y', type: 'reply' }))
+    const rows = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id, i) => row({ id, account: String(i) }))
     expect(selectToday(rows, NOW).today).toHaveLength(5)
+  })
+
+  it('puts replies first, above a closing window and a higher priority', () => {
+    const r = selectToday([
+      row({ id: 'CM-06', type: 'comment', priority: 1, closes_on: '2026-10-22' }),
+      row({ id: 'RE-01', type: 'reply', priority: 5 }),
+    ], NOW)
+    expect(r.today.map((x) => x.id)).toEqual(['RE-01', 'CM-06'])
+  })
+
+  it('never holds a reply, and replies do not take one of the 5 slots', () => {
+    const rows = ['a', 'b', 'c', 'd', 'e', 'f'].map((id, i) => row({ id, account: String(i) }))
+    rows.push(row({ id: 'x', type: 'reply' }), row({ id: 'y', type: 'reply' }))
+    const r = selectToday(rows, NOW)
+    expect(r.today.filter((t) => t.type === 'reply').map((t) => t.id)).toEqual(['x', 'y'])
+    expect(r.today.filter((t) => t.type !== 'reply')).toHaveLength(5)
   })
 
   it('never gives a slot to an item waiting on someone else, and fills it with one he can do', () => {
