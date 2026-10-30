@@ -5,7 +5,8 @@
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { compareOverTime } from '@/lib/geo-audit/history'
+import { compareOverTime, rescoreSnapshot } from '@/lib/geo-audit/history'
+import { ENGINE_VERSION } from '@/lib/geo-audit/types'
 import { describeChange, engineSplit } from '@/lib/geo-audit/change-summary'
 import { decodeSnapshot } from '@/lib/geo-audit/snapshot'
 
@@ -26,6 +27,26 @@ export async function GET(request: Request, { params }: Params) {
   const search = new URL(request.url).searchParams
   const from = search.get('from')
   const to = search.get('to')
+
+  // ?rescore=all re-scores every stored run on today's engine, so the history
+  // reads like for like; ?rescore=<run id> does one run.
+  const rescore = search.get('rescore')
+  if (rescore) {
+    let query = supabase.from('audit_snapshots').select('id, snapshot').eq('tracked_page_id', id).order('recorded_at', { ascending: false }).limit(24)
+    if (rescore !== 'all') query = query.eq('id', rescore)
+    const { data: rows } = await query
+    const scored = await Promise.all(
+      (rows ?? []).map(async (r) => {
+        try {
+          const rep = await rescoreSnapshot(decodeSnapshot(r.snapshot as string))
+          return { id: r.id, score: rep.scoreWithheld ? null : (rep.retrievability?.score ?? null), band: rep.citability?.band ?? null }
+        } catch {
+          return { id: r.id, score: null, band: null }
+        }
+      }),
+    )
+    return NextResponse.json({ engineVersion: ENGINE_VERSION, runs: scored })
+  }
   if (from && to) {
     const { data: rows } = await supabase
       .from('audit_snapshots')

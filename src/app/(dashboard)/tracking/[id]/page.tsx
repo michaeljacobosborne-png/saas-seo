@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import RunHistory, { type Run } from './RunHistory'
+import { ENGINE_VERSION } from '@/lib/geo-audit/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,10 @@ export default async function TrackedPageDetail({ params }: { params: Promise<{ 
           ? `Re-checked every ${page.interval_days} days. Next run ${new Date(page.next_run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}.`
           : 'No longer tracked. Its history is kept.'}
       </p>
-      <RunHistory pageId={page.id} runs={(runs ?? []) as Run[]} active={page.active} />
+      <RunHistory pageId={page.id} runs={(runs ?? []) as Run[]} active={page.active} currentEngine={ENGINE_VERSION} />
+      <p className="mt-6 text-xs leading-relaxed" style={{ color: 'var(--cream-faint)' }}>
+        These scores measure how ready the page is for AI search to read and quote, as Byline checks it. A change here is a change in what the page carries, not evidence that any AI system retrieves or cites it more or less.
+      </p>
     </div>
   )
 }

@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Tracked pages are not open yet.', code: 'NOT_OPEN' }, { status: 403 })
   }
 
-  let body: { url?: string; tool?: string }
+  let body: { url?: string; tool?: string; fromSnapshot?: string }
   try {
     body = await request.json()
   } catch {
@@ -74,9 +74,31 @@ export async function POST(request: Request) {
     .single()
   if (error || !page) return NextResponse.json({ error: error?.message ?? 'Could not save the page.' }, { status: 500 })
 
-  // The first run now, so the history starts today rather than at the next cron.
-  const store = supabaseTracking(createServiceClient())
+  const service = createServiceClient()
+  const store = supabaseTracking(service)
   const now = new Date()
+
+  // The free run that led here becomes the first point of the history: the
+  // join between the anonymous tool and an account. Only a run with no owner
+  // (or this user's own), not already tracked, for the same page, can be claimed.
+  if (body.fromSnapshot) {
+    const { data: snap } = await service
+      .from('audit_snapshots')
+      .select('id, url, user_id, tracked_page_id, recorded_at')
+      .eq('id', body.fromSnapshot)
+      .maybeSingle()
+    if (snap && !snap.tracked_page_id && (!snap.user_id || snap.user_id === user.id) && normaliseUrl(snap.url as string) === url) {
+      await service.from('audit_snapshots').update({ tracked_page_id: page.id, user_id: user.id }).eq('id', snap.id)
+      const recordedAt = new Date(snap.recorded_at as string)
+      // Recorded within the last day: that run is the first point, no need to fetch again.
+      if (now.getTime() - recordedAt.getTime() < 86_400_000) {
+        await store.markRan(page as TrackedPage, new Date(recordedAt.getTime() + (page.interval_days as number) * 86_400_000), recordedAt)
+        return NextResponse.json({ page: page.id, firstRun: 'claimed', claimedFrom: snap.id })
+      }
+    }
+  }
+
+  // The first run now, so the history starts today rather than at the next cron.
   try {
     const run = await recordTrackedPage(page as TrackedPage, now)
     await store.saveRun(page as TrackedPage, run)

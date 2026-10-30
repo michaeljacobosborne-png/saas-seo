@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import ComparisonView, { type CompareResult } from './ComparisonView'
+import ScoreChart from './ScoreChart'
 
 export interface Run {
   id: string
@@ -15,10 +16,37 @@ export interface Run {
   content_hash: string | null
 }
 
-const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
 
-export default function RunHistory({ pageId, runs, active }: { pageId: string; runs: Run[]; active: boolean }) {
+export default function RunHistory({ pageId, runs, active, currentEngine }: { pageId: string; runs: Run[]; active: boolean; currentEngine: string }) {
   const router = useRouter()
+  // Scores of every run on today's engine, once asked for: the like-for-like history.
+  const [rescored, setRescored] = useState<Map<string, number | null> | null>(null)
+  const [rescoring, setRescoring] = useState(false)
+  const olderEngine = runs.some((r) => r.engine_version !== currentEngine)
+
+  async function rescoreAll() {
+    setRescoring(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/tracked-pages/${pageId}?rescore=all`)
+      const json = await res.json()
+      if (!res.ok) setError(json.error ?? 'Could not re-score the runs.')
+      else setRescored(new Map((json.runs as { id: string; score: number | null }[]).map((r) => [r.id, r.score])))
+    } catch {
+      setError('Could not reach the server. Try again.')
+    } finally {
+      setRescoring(false)
+    }
+  }
+
+  // Oldest first for the chart.
+  const chronological = [...runs].reverse()
+  const points = chronological.map((r) => ({
+    date: r.recorded_at,
+    score: rescored ? (rescored.get(r.id) ?? null) : r.score_withheld ? null : r.retrievable_score,
+    engine: rescored ? currentEngine : r.engine_version,
+  }))
   // Runs arrive newest first; compare the oldest with the newest by default.
   const [from, setFrom] = useState(runs[runs.length - 1]?.id ?? '')
   const [to, setTo] = useState(runs[0]?.id ?? '')
@@ -51,11 +79,42 @@ export default function RunHistory({ pageId, runs, active }: { pageId: string; r
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-        <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+      {runs.length > 0 && (
+        <ScoreChart
+          points={points}
+          label={rescored ? `Retrievable, every run scored on engine ${currentEngine}` : 'Retrievable, as each run was first scored'}
+        />
+      )}
+
+      {olderEngine && (
+        // The point of keeping every run's recording: an older run can be scored
+        // again on today's engine, so the history compares like with like.
+        <div className="rounded-2xl p-4 text-sm leading-relaxed" style={{ background: 'rgba(184,115,51,0.12)', border: '1px solid rgba(184,115,51,0.35)', color: 'var(--cream)' }}>
+          <strong className="block mb-1">Some runs were scored on an older engine</strong>
+          {rescored
+            ? `Showing every run scored on engine ${currentEngine}. A change in this line is a change in the page, not in how Byline scores.`
+            : `Byline's engine changed since some of these runs. Their scores were right for the engine of the day, but they do not compare directly with today's. Each run kept what it fetched, so it can be scored again on engine ${currentEngine}.`}
+          {!rescored && (
+            <button
+              type="button"
+              onClick={rescoreAll}
+              disabled={rescoring}
+              className="mt-3 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
+              style={{ background: 'var(--copper)', color: '#fff' }}
+            >
+              {rescoring && <Loader2 className="h-4 w-4 animate-spin" />}
+              {rescoring ? 'Scoring every run again…' : `Re-score every run on engine ${currentEngine}`}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Scrolls within its card on a phone so the Engine column is never clipped. */}
+      <div className="rounded-2xl overflow-x-auto" style={{ border: '1px solid var(--border)' }}>
+        <table className="w-full text-sm whitespace-nowrap" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--ink-card)', borderBottom: '1px solid var(--border)' }}>
-              {['Run', 'Retrievable', 'Citable', 'Page text', 'Engine'].map((h) => (
+              {['Run', 'Retrievable', ...(rescored ? [`On ${currentEngine}`] : []), 'Citable', 'Page text', 'Engine'].map((h) => (
                 <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--cream-faint)' }}>{h}</th>
               ))}
             </tr>
@@ -68,6 +127,9 @@ export default function RunHistory({ pageId, runs, active }: { pageId: string; r
                 <tr key={r.id} style={{ background: 'var(--ink-card)', borderBottom: i < runs.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <td className="px-4 py-3" style={{ color: 'var(--cream)' }}>{fmt(r.recorded_at)}</td>
                   <td className="px-4 py-3 tabular-nums" style={{ color: 'var(--cream)' }}>{r.score_withheld ? 'withheld' : r.retrievable_score}</td>
+                  {rescored && (
+                    <td className="px-4 py-3 tabular-nums" style={{ color: 'var(--copper-lt)' }}>{rescored.get(r.id) ?? 'withheld'}</td>
+                  )}
                   <td className="px-4 py-3" style={{ color: 'var(--cream-dim)' }}>{r.citable_band ?? '—'}</td>
                   <td className="px-4 py-3" style={{ color: text === 'changed' ? 'var(--copper-lt)' : 'var(--cream-faint)' }}>{text}</td>
                   <td className="px-4 py-3 text-xs" style={{ color: prev && prev.engine_version !== r.engine_version ? 'var(--copper-lt)' : 'var(--cream-faint)' }}>
