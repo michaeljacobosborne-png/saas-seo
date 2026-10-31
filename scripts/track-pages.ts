@@ -9,7 +9,7 @@
  */
 import { createServiceClient } from '../src/lib/supabase/service'
 import { normaliseUrl } from '../src/lib/geo-audit/fetch'
-import { recordTrackedPage, supabaseTracking, type TrackedPage } from '../src/lib/tracking'
+import { firstRerunAt, recordTrackedPage, supabaseTracking, type TrackedPage } from '../src/lib/tracking'
 
 const OWNER = 'michaeljacobosborne@gmail.com'
 
@@ -34,7 +34,7 @@ async function main() {
     try {
       const run = await recordTrackedPage(page as TrackedPage, now)
       await store.saveRun(page as TrackedPage, run)
-      await store.markRan(page as TrackedPage, new Date(now.getTime() + (page.interval_days as number) * 86_400_000), now)
+      await store.markRan(page as TrackedPage, firstRerunAt(now), now)
       console.log(`${url} | Retrievable ${run.report.scoreWithheld ? 'withheld' : run.report.retrievability?.score} | Citable ${run.report.citability?.band} | content ${run.contentHash}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

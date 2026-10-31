@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { runDuePages, snapshotRow, type TrackedPage, type TrackingStore } from './tracking'
+import { firstRerunAt, runDuePages, snapshotRow, type TrackedPage, type TrackingStore } from './tracking'
 import type { RecordedAudit } from '@/lib/geo-audit/history'
 import { decodeSnapshot } from '@/lib/geo-audit/snapshot'
 
 const page = (id: string, interval = 30): TrackedPage => ({ id, user_id: 'u', url: `https://${id}.test/`, tool: 'geo', interval_days: interval })
 const NOW = new Date('2026-11-01T03:00:00Z')
+
+describe('firstRerunAt', () => {
+  it('is a week after the first run, not a whole interval', () => {
+    expect(firstRerunAt(NOW).toISOString()).toBe('2026-11-08T03:00:00.000Z')
+  })
+})
 
 function memoryStore(due: TrackedPage[], saved = new Map<string, string>()) {
   const log: string[] = []

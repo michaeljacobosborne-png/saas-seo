@@ -13,6 +13,16 @@ const DAY = 86_400_000
 /** A first failure is retried the next day; a repeat failure waits a week, so one dead site cannot sit at the front of the queue every day. */
 const RETRY_AFTER_MS = DAY
 const REPEAT_RETRY_AFTER_MS = 7 * DAY
+/**
+ * The first re-check comes a week after tracking starts, then every
+ * interval_days: something arrives while the sign-up is still remembered.
+ */
+export const FIRST_RERUN_DAYS = 7
+
+/** When the run after the first one is due. */
+export function firstRerunAt(firstRunAt: Date): Date {
+  return new Date(firstRunAt.getTime() + FIRST_RERUN_DAYS * DAY)
+}
 
 export interface TrackedPage {
   id: string

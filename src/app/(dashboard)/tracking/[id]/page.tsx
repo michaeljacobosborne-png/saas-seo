@@ -23,7 +23,7 @@ export default async function TrackedPageDetail({ params }: { params: Promise<{ 
       <h1 className="mt-2 text-xl font-bold break-all" style={{ color: 'var(--cream)' }}>{page.url}</h1>
       <p className="mt-1 mb-6 text-sm" style={{ color: 'var(--cream-dim)' }}>
         {page.active
-          ? `Re-checked every ${page.interval_days} days. Next run ${new Date(page.next_run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}.`
+          ? `Re-checked a week after tracking starts, then every ${page.interval_days} days. Next run ${new Date(page.next_run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}.`
           : 'No longer tracked. Its history is kept.'}
       </p>
       <RunHistory pageId={page.id} runs={(runs ?? []) as Run[]} active={page.active} currentEngine={ENGINE_VERSION} />

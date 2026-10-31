@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { normaliseUrl } from '@/lib/geo-audit/fetch'
 import { trackedPageLimit } from '@/lib/usage'
-import { recordTrackedPage, supabaseTracking, type TrackedPage } from '@/lib/tracking'
+import { firstRerunAt, recordTrackedPage, supabaseTracking, type TrackedPage } from '@/lib/tracking'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       const recordedAt = new Date(snap.recorded_at as string)
       // Recorded within the last day: that run is the first point, no need to fetch again.
       if (now.getTime() - recordedAt.getTime() < 86_400_000) {
-        await store.markRan(page as TrackedPage, new Date(recordedAt.getTime() + (page.interval_days as number) * 86_400_000), recordedAt)
+        await store.markRan(page as TrackedPage, firstRerunAt(recordedAt), recordedAt)
         return NextResponse.json({ page: page.id, firstRun: 'claimed', claimedFrom: snap.id })
       }
     }
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
   try {
     const run = await recordTrackedPage(page as TrackedPage, now)
     await store.saveRun(page as TrackedPage, run)
-    await store.markRan(page as TrackedPage, new Date(now.getTime() + (page.interval_days as number) * 86_400_000), now)
+    await store.markRan(page as TrackedPage, firstRerunAt(now), now)
     return NextResponse.json({ page: page.id, firstRun: { score: run.report.scoreWithheld ? null : run.report.retrievability?.score, band: run.report.citability?.band } })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
