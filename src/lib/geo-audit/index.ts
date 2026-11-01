@@ -184,6 +184,7 @@ export async function runAudit(
       fetchNote: fetched.note,
       chainOfCustody,
       access,
+      probe,
     })
   }
 
@@ -305,6 +306,7 @@ export async function runAudit(
     notes,
     chainOfCustody,
     access,
+    ...(probe ? { crawlerProbe: probe } : {}),
     retrievability,
     citability,
     gap,
@@ -327,8 +329,10 @@ function incompleteReport(args: {
   fetchNote?: string
   chainOfCustody: ChainOfCustody
   access: AccessReport
+  /** Carried for monitoring only; this path does not score it. */
+  probe: ReturnType<typeof crossReferenceRobots> | null
 }): AuditReport {
-  const { type, url, finalUrl, now, home, pagesInspected, notes, fetchNote, chainOfCustody, access } = args
+  const { type, url, finalUrl, now, home, pagesInspected, notes, fetchNote, chainOfCustody, access, probe } = args
 
   const reason = access.jsOnlyContent
     ? `Only ${home.wordCount} words of readable text are present in the raw HTML, so this page's content appears only after JavaScript runs. AI crawlers such as GPTBot and PerplexityBot do not execute JavaScript, so they cannot see this content either.`
@@ -372,6 +376,7 @@ function incompleteReport(args: {
     notes,
     chainOfCustody,
     access,
+    ...(probe ? { crawlerProbe: probe } : {}),
     retrievability: { ...retrievability, scoreWithheld: true, withheldReason: reason },
     citability,
     gap,
@@ -449,6 +454,7 @@ function refusedReport(args: {
     notes,
     chainOfCustody,
     access,
+    ...(probe ? { crawlerProbe: probe } : {}),
     retrievability: { ...retrievability, scoreWithheld: true, withheldReason: reason },
     citability,
     gap,

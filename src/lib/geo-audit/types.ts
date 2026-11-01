@@ -12,6 +12,7 @@
  */
 
 import type { AccessReport } from './access'
+import type { CrawlerAccessReport } from './crawler-access'
 
 export type FactorState = 'present' | 'absent' | 'unverified'
 
@@ -169,6 +170,12 @@ export interface AuditReport {
   chainOfCustody: ChainOfCustody
   /** Crawler access, robots.txt, llms.txt and indexing directives. */
   access: AccessReport
+  /**
+   * The live crawler probe as observed, cross-referenced with robots.txt.
+   * Stored so two runs can be compared crawler by crawler (access alerts);
+   * absent when the probe failed and on reports from before 2026-11.
+   */
+  crawlerProbe?: CrawlerAccessReport
 
   // ── Phase B ────────────────────────────────────────────────────────────────
   /**
