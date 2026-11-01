@@ -35,7 +35,7 @@ describe('accessChanges', () => {
     const [c, ...rest] = accessChanges(allServed(), claudeRefused())
     expect(rest).toHaveLength(0)
     expect(c).toMatchObject({ kind: 'crawler-refused', token: 'Claude-SearchBot', good: false })
-    expect(c.headline).toBe('Your server now refuses requests that identify as Claude-SearchBot (Claude-SearchBot).')
+    expect(c.headline).toBe('Your server now refuses requests that identify as Claude-SearchBot.')
     expect(c.detail).toContain('robots.txt still allows this crawler')
     expect(c.reproduce).toContain(UA['Claude-SearchBot'])
     expect(`${c.headline} ${c.detail}`).not.toMatch(/[—–]/)

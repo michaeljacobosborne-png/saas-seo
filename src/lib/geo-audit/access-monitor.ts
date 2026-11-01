@@ -109,6 +109,9 @@ export function accessStateFromReport(report: { crawlerProbe?: CrawlerAccessRepo
   )
 }
 
+/** "Claude's search crawler (Claude-SearchBot)", or just the token when the label is the token. */
+const named = (c: { label: string; token: string }) => (c.label === c.token ? c.token : `${c.label} (${c.token})`)
+
 const curl = (ua: string, url: string) => `curl -s -o /dev/null -w "%{http_code}\\n" -A "${ua}" "${url}"`
 
 export function accessChanges(prev: AccessState, curr: AccessState): AccessChange[] {
@@ -140,7 +143,7 @@ export function accessChanges(prev: AccessState, curr: AccessState): AccessChang
         kind: 'crawler-refused',
         good: false,
         token: c.token,
-        headline: `Your server now refuses requests that identify as ${c.label} (${c.token}).`,
+        headline: `Your server now refuses requests that identify as ${named(c)}.`,
         detail: `On the previous check it served the page to the same request. Now: HTTP ${c.status ?? 'no response'}, ${describeKind(c.blockKind)}${c.edgeVendor ? ` (${c.edgeVendor})` : ''}. An ordinary browser request was still served, so the difference is the user-agent. ${c.robots === 'allowed' ? 'robots.txt still allows this crawler, so the refusal is happening at the server, not in robots.txt. ' : ''}Evidence: ${plain(c.evidence)}`,
         reproduce: curl(c.userAgent, curr.url),
       })
@@ -150,7 +153,7 @@ export function accessChanges(prev: AccessState, curr: AccessState): AccessChang
         kind: 'crawler-restored',
         good: true,
         token: c.token,
-        headline: `Your server now serves the page to requests that identify as ${c.label} (${c.token}).`,
+        headline: `Your server now serves the page to requests that identify as ${named(c)}.`,
         detail: `On the previous check it refused them (HTTP ${p.status ?? 'no response'}, ${describeKind(p.blockKind)}). Now it returns HTTP ${c.status}.`,
         reproduce: curl(c.userAgent, curr.url),
       })
@@ -164,7 +167,7 @@ export function accessChanges(prev: AccessState, curr: AccessState): AccessChang
           kind: 'robots-disallowed',
           good: false,
           token: c.token,
-          headline: `robots.txt now disallows ${c.label} (${c.token}) for this page.`,
+          headline: `robots.txt now disallows ${named(c)} for this page.`,
           detail: 'It allowed it on the previous check. A compliant crawler will stop fetching the page. If that was not a deliberate choice, check recent edits to robots.txt or a CMS or CDN setting that writes it.',
           reproduce: `curl -s "${new URL('/robots.txt', curr.url).toString()}"`,
         })
@@ -174,7 +177,7 @@ export function accessChanges(prev: AccessState, curr: AccessState): AccessChang
           kind: 'robots-allowed',
           good: true,
           token: c.token,
-          headline: `robots.txt now allows ${c.label} (${c.token}) for this page.`,
+          headline: `robots.txt now allows ${named(c)} for this page.`,
           detail: 'It disallowed it on the previous check.',
           reproduce: `curl -s "${new URL('/robots.txt', curr.url).toString()}"`,
         })
@@ -214,7 +217,7 @@ export function confirmChanges(first: AccessChange[], second: AccessChange[]): A
 
 /** Engine evidence strings can carry dashes; alert copy does not. */
 function plain(s: string): string {
-  return s.replace(/\s*[—–]\s*/g, ', ')
+  return s.replace(/\s*[–—]\s*/g, ', ')
 }
 
 function describeKind(k: BlockKind): string {
