@@ -70,6 +70,11 @@ export async function runDuePages(
     perRunMs?: number
     limit?: number
     clock?: () => number
+    /**
+     * Audits run this many at a time. They spend their time waiting on the
+     * network, so 4 at once fit in the time one would otherwise take.
+     */
+    concurrency?: number
     /** Told about each run that has an earlier one to compare with. Its failures never fail the run. */
     notify?: (page: TrackedPage, previous: PreviousRun, run: RecordedAudit) => Promise<void>
   } = {},
@@ -82,12 +87,9 @@ export async function runDuePages(
   const due = await store.due(now, opts.limit ?? 10)
   const summary: RunSummary = { ran: [], failed: [], deferred: 0 }
 
-  for (const [i, page] of due.entries()) {
-    if (clock() - start + perRun > budget) {
-      summary.deferred = due.length - i
-      break
-    }
-    const ranAt = new Date(now.getTime() + (clock() - start))
+  const step = Math.max(1, opts.concurrency ?? 1)
+
+  async function one(page: TrackedPage, ranAt: Date) {
     try {
       const run = await record(page, ranAt)
       // Read the earlier run before this one is saved, or it would find itself.
@@ -101,6 +103,15 @@ export async function runDuePages(
       await store.markFailed(page, error, new Date(ranAt.getTime() + (page.last_error ? REPEAT_RETRY_AFTER_MS : RETRY_AFTER_MS)))
       summary.failed.push({ id: page.id, error })
     }
+  }
+
+  for (let i = 0; i < due.length; i += step) {
+    if (clock() - start + perRun > budget) {
+      summary.deferred = due.length - i
+      break
+    }
+    const ranAt = new Date(now.getTime() + (clock() - start))
+    await Promise.all(due.slice(i, i + step).map((page) => one(page, ranAt)))
   }
   return summary
 }

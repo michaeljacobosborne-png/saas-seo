@@ -96,6 +96,27 @@ describe('runDuePages', () => {
     expect(s.ran).toEqual(['a', 'b'])
     expect(s.deferred).toBe(1)
   })
+
+  it('runs several audits at once, so one time slot covers a batch rather than one page', async () => {
+    const { store } = memoryStore(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'].map((id) => page(id)))
+    let t = 0
+    let batches = 0
+    let inFlight = 0
+    let most = 0
+    const s = await runDuePages(store, async () => {
+      if (inFlight === 0) batches++
+      most = Math.max(most, ++inFlight)
+      await Promise.resolve()
+      // Each batch costs one 20-second slot, however many pages are in it.
+      if (--inFlight === 0) t += 20_000
+      return fakeRun
+    }, { now: NOW, clock: () => t, budgetMs: 45_000, perRunMs: 20_000, concurrency: 4 })
+    expect(most).toBe(4)
+    // Two slots fit in the budget: 8 pages instead of 2, the last 2 left for tomorrow.
+    expect(batches).toBe(2)
+    expect(s.ran).toHaveLength(8)
+    expect(s.deferred).toBe(2)
+  })
 })
 
 describe('snapshotRow', () => {
