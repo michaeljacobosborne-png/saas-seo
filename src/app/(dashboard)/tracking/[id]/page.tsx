@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import RunHistory, { type Run } from './RunHistory'
 import { ENGINE_VERSION } from '@/lib/geo-audit/types'
+import type { AccessState } from '@/lib/geo-audit/access-monitor'
+import AccessPanel, { type AlertRow } from './AccessPanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +18,12 @@ export default async function TrackedPageDetail({ params }: { params: Promise<{ 
     .select('id, recorded_at, engine_version, retrievable_score, score_withheld, citable_band, content_hash')
     .eq('tracked_page_id', id)
     .order('recorded_at', { ascending: false })
+  // Access alerts need migration 20261101_access_alerts.sql; until it runs these
+  // queries error and the panel is left out.
+  const { data: access, error: accessError } = await supabase.from('tracked_pages').select('access_state, access_checked_at').eq('id', id).maybeSingle()
+  const { data: alerts } = accessError
+    ? { data: null }
+    : await supabase.from('access_alerts').select('id, detected_at, good, headline, detail, reproduce').eq('tracked_page_id', id).order('detected_at', { ascending: false }).limit(20)
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl">
@@ -26,6 +34,9 @@ export default async function TrackedPageDetail({ params }: { params: Promise<{ 
           ? `Re-checked a week after tracking starts, then every ${page.interval_days} days. Next run ${new Date(page.next_run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}.`
           : 'No longer tracked. Its history is kept.'}
       </p>
+      {!accessError && (
+        <AccessPanel state={(access?.access_state as AccessState | null) ?? null} checkedAt={access?.access_checked_at ?? null} alerts={(alerts ?? []) as AlertRow[]} />
+      )}
       <RunHistory pageId={page.id} runs={(runs ?? []) as Run[]} active={page.active} currentEngine={ENGINE_VERSION} />
       <p className="mt-6 text-xs leading-relaxed" style={{ color: 'var(--cream-faint)' }}>
         These scores measure how ready the page is for AI search to read and quote, as Byline checks it. A change here is a change in what the page carries, not evidence that any AI system retrieves or cites it more or less.
