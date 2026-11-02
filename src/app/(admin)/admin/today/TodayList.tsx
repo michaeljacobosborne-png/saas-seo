@@ -2,7 +2,18 @@
 
 import { useState, useTransition } from 'react'
 import { xLength, type QueuePart } from '@/lib/outreach-queue/parse'
-import { blockItem, keepLive, markDone, unblockItem, undoDone, type ActionResult } from './actions'
+import { acceptRequest, blockItem, giveUpOnRequest, keepLive, keepWaitingOnRequest, markDone, unblockItem, undoDone, type ActionResult } from './actions'
+
+/** A sent connection request whose follow-up is held until the person accepts. */
+export interface AwaitingRequest {
+  id: string
+  target: string
+  messages: string[]
+  days: number
+  decide: boolean
+}
+
+const isRequestId = (id: string) => id.startsWith('RQ-')
 
 export interface Item {
   id: string
@@ -171,7 +182,7 @@ function WaitButton({ onWait, busy }: { onWait: (reason: string) => void; busy?:
   )
 }
 
-function ItemCard({ item, onDone, onKeep, onWait, busy }: { item: Item; onDone?: () => void; onKeep?: () => void; onWait?: (reason: string) => void; busy?: boolean }) {
+function ItemCard({ item, onDone, onKeep, onWait, onAccepted, busy }: { item: Item; onDone?: () => void; onKeep?: () => void; onWait?: (reason: string) => void; onAccepted?: () => void; busy?: boolean }) {
   return (
     <article className="rounded-xl p-4 space-y-4" style={card}>
       <header className="space-y-1">
@@ -220,7 +231,19 @@ function ItemCard({ item, onDone, onKeep, onWait, busy }: { item: Item; onDone?:
           className="w-full rounded-lg text-base font-semibold disabled:opacity-50"
           style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}
         >
-          Mark done
+          {isRequestId(item.id) ? 'Sent' : 'Mark done'}
+        </button>
+      )}
+
+      {onAccepted && (
+        <button
+          type="button"
+          onClick={onAccepted}
+          disabled={busy}
+          className="w-full rounded-lg text-sm text-[var(--cream-dim)] disabled:opacity-50"
+          style={{ minHeight: 48, background: 'transparent' }}
+        >
+          Sent earlier, and they already accepted
         </button>
       )}
 
@@ -255,6 +278,7 @@ export default function TodayList(props: {
   blocked: Item[]
   stale: Item[]
   waitingOnOthers: Item[]
+  awaiting: AwaitingRequest[]
   doneToday: Item[]
   pendingCount: number
   caps: { comments: string; outbound: string; requests: string }
@@ -337,8 +361,12 @@ export default function TodayList(props: {
   }
   const wait = (id: string, reason: string) => runChecked(id, () => blockItem(id, reason))
   const unblock = (id: string) => runChecked(id, () => unblockItem(id))
+  const accepted = (id: string) => runChecked(id, () => acceptRequest(id))
+  const keepWaiting = (id: string) => runChecked(id, () => keepWaitingOnRequest(id))
+  const giveUp = (id: string) => runChecked(id, () => giveUpOnRequest(id))
 
   const today = props.today.filter((i) => !hidden.has(i.id))
+  const awaiting = props.awaiting.filter((a) => !hidden.has(a.id))
   const waiting = props.waitingOnOthers.filter((i) => !hidden.has(i.id))
   const held = props.held.filter((i) => !hidden.has(i.id))
   const stale = props.stale.filter((i) => !hidden.has(i.id))
@@ -364,8 +392,67 @@ export default function TodayList(props: {
         </p>
       ) : (
         today.map((item) => (
-          <ItemCard key={item.id} item={item} onDone={() => done(item.id)} onWait={(r) => wait(item.id, r)} busy={pending} />
+          <ItemCard
+            key={item.id}
+            item={item}
+            onDone={() => done(item.id)}
+            onWait={isRequestId(item.id) ? undefined : (r) => wait(item.id, r)}
+            onAccepted={isRequestId(item.id) ? () => accepted(item.id) : undefined}
+            busy={pending}
+          />
         ))
+      )}
+
+      {awaiting.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Requests sent, waiting to be accepted ({awaiting.length})</h2>
+          <ul className="space-y-2">
+            {awaiting.map((a) => (
+              <li key={a.id} className="rounded-lg p-3 space-y-2" style={card}>
+                <p className="text-sm text-[var(--cream)]">
+                  <span className="font-mono text-[var(--cream-dim)]">{a.id}</span> · {a.target}
+                </p>
+                <p className="text-xs text-[var(--cream-faint)]">
+                  Sent {a.days === 0 ? 'today' : `${a.days} day${a.days === 1 ? '' : 's'} ago`}. Accepting releases {a.messages.join(', ')} into today.
+                </p>
+                {a.decide && (
+                  <p className="text-sm text-[var(--cream)]">No answer in three weeks. Keep waiting, or give up and close it?</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => accepted(a.id)}
+                  disabled={pending}
+                  className="w-full rounded-lg text-base font-semibold disabled:opacity-50"
+                  style={{ minHeight: 48, background: 'var(--copper)', color: '#fff' }}
+                >
+                  They accepted
+                </button>
+                {a.decide && (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => keepWaiting(a.id)}
+                      disabled={pending}
+                      className="flex-1 rounded-lg text-sm font-semibold disabled:opacity-50"
+                      style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}
+                    >
+                      Keep waiting
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => giveUp(a.id)}
+                      disabled={pending}
+                      className="flex-1 rounded-lg text-sm text-[var(--cream-dim)] disabled:opacity-50"
+                      style={{ minHeight: 48, border: '1px solid rgba(184,115,51,0.3)', background: 'transparent' }}
+                    >
+                      Give up, close it
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {waiting.length > 0 && (

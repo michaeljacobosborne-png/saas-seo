@@ -81,6 +81,61 @@ export async function unblockItem(id: string): Promise<ActionResult> {
   return { ok: true }
 }
 
+const REQUEST_ID = /^RQ-\d{1,3}$/
+
+/**
+ * They accepted the connection request: the request is done (sent) if it was
+ * not already, and every follow-up held on it goes straight back to today.
+ */
+export async function acceptRequest(id: string): Promise<ActionResult> {
+  await assertOwner()
+  if (typeof id !== 'string' || !REQUEST_ID.test(id)) return { ok: false, message: 'Bad id.' }
+  const db = createServiceClient()
+  const now = new Date().toISOString()
+  const { error: e1 } = await db.from('outreach_queue').update({ status: 'done', completed_at: now, updated_at: now }).eq('id', id).neq('status', 'done')
+  if (e1) return { ok: false, message: explain(e1.message) }
+  const { data, error } = await db
+    .from('outreach_queue')
+    .update({ status: 'pending', blocked_reason: null, blocked_at: null, updated_at: now })
+    .contains('after_ids', [id])
+    .eq('status', 'blocked')
+    .select('id')
+  if (error) return { ok: false, message: explain(error.message) }
+  if (!data?.length) return { ok: false, message: `${id} is marked accepted, but no held message was waiting on it.` }
+  revalidatePath('/admin/today')
+  return { ok: true }
+}
+
+/** Three weeks without an answer, and he wants to keep waiting: ask again in three more. */
+export async function keepWaitingOnRequest(id: string): Promise<ActionResult> {
+  await assertOwner()
+  if (typeof id !== 'string' || !REQUEST_ID.test(id)) return { ok: false, message: 'Bad id.' }
+  const now = new Date().toISOString()
+  const { error } = await createServiceClient()
+    .from('outreach_queue')
+    .update({ blocked_at: now, updated_at: now })
+    .contains('after_ids', [id])
+    .eq('status', 'blocked')
+  if (error) return { ok: false, message: explain(error.message) }
+  revalidatePath('/admin/today')
+  return { ok: true }
+}
+
+/** Never accepted: the held follow-up is withdrawn, so it stops waiting forever. */
+export async function giveUpOnRequest(id: string): Promise<ActionResult> {
+  await assertOwner()
+  if (typeof id !== 'string' || !REQUEST_ID.test(id)) return { ok: false, message: 'Bad id.' }
+  const now = new Date().toISOString()
+  const { error } = await createServiceClient()
+    .from('outreach_queue')
+    .update({ status: 'withdrawn', blocked_reason: `${id} was not accepted.`, updated_at: now })
+    .contains('after_ids', [id])
+    .eq('status', 'blocked')
+  if (error) return { ok: false, message: explain(error.message) }
+  revalidatePath('/admin/today')
+  return { ok: true }
+}
+
 /** Counts as activity, so a stale item returns to the live queue for 7 more days. */
 export async function keepLive(id: string) {
   await assertOwner()

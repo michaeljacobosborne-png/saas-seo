@@ -4,6 +4,7 @@ import type { QueuePart } from '@/lib/outreach-queue/parse'
 import { CAPS, TIME_ZONE, dayKey, isRequest, selectToday, type QueueRow } from '@/lib/outreach-queue/today'
 import { client as sanity } from '@/sanity/lib/client'
 import { isSanityConfigured } from '@/sanity/env'
+import { awaitingAcceptance } from '@/lib/outreach-queue/requests'
 import TodayList, { type Item } from './TodayList'
 
 // Always live: the list changes every time an item is marked done.
@@ -79,9 +80,13 @@ export default async function TodayPage() {
     .filter((r) => r.status === 'done' && r.completed_at && dayKey(new Date(r.completed_at)) === todayKey)
     .sort((a, b) => (a.completed_at! < b.completed_at! ? 1 : -1))
   const pendingCount = rows.filter((r) => r.status === 'pending').length - stale.length
+  // Sent connection requests waiting to be accepted: shown with their own
+  // "they accepted" button, so their held messages are not listed again below.
+  const awaiting = awaitingAcceptance(rows, now)
+  const heldByRequest = new Set(awaiting.flatMap((a) => a.messages.map((m) => m.id)))
   // Waiting on someone else: never in today's slots, never stale.
   const waitingOnOthers = rows
-    .filter((r) => r.status === 'blocked')
+    .filter((r) => r.status === 'blocked' && !heldByRequest.has(r.id))
     .map((r) => {
       const since = r.blocked_at ?? r.updated_at ?? r.created_at
       return toItem(r, [], Math.max(0, Math.floor((now.getTime() - Date.parse(since)) / DAY)))
@@ -98,6 +103,13 @@ export default async function TodayPage() {
       blocked={blocked.map((b) => toItem(b.row as Row, b.waitingFor))}
       stale={stale.map((s) => toItem(s.row as Row, [], s.idleDays))}
       waitingOnOthers={waitingOnOthers}
+      awaiting={awaiting.map((a) => ({
+        id: a.request.id,
+        target: a.request.target ?? a.request.account,
+        messages: a.messages.map((m) => m.id),
+        days: a.days,
+        decide: a.decide,
+      }))}
       doneToday={doneToday.map((r) => toItem(r))}
       pendingCount={pendingCount}
       caps={{
