@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { QueuePart } from '@/lib/outreach-queue/parse'
-import { CAPS, TIME_ZONE, dayKey, selectToday, type QueueRow } from '@/lib/outreach-queue/today'
+import { CAPS, TIME_ZONE, dayKey, isRequest, selectToday, type QueueRow } from '@/lib/outreach-queue/today'
 import { client as sanity } from '@/sanity/lib/client'
 import { isSanityConfigured } from '@/sanity/env'
 import TodayList, { type Item } from './TodayList'
@@ -102,7 +102,8 @@ export default async function TodayPage() {
       pendingCount={pendingCount}
       caps={{
         comments: `${used('comment')}/${CAPS.commentsPerDay}`,
-        outbound: `${used('outbound message')}/${CAPS.outboundPerDay}`,
+        outbound: `${doneToday.filter((r) => r.type === 'outbound message' && !isRequest(r)).length}/${CAPS.outboundPerDay}`,
+        requests: `${doneToday.filter(isRequest).length}/${CAPS.requestsPerDay}`,
       }}
     />
   )

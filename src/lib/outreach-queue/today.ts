@@ -8,7 +8,7 @@
  *      An account is one profile on one platform, so Founder on LinkedIn and
  *      Founder on X are separate accounts.
  *   4. An item stays hidden until every id in after_ids is done.
- *   5. At most 3 outbound messages a day.
+ *   5. At most 5 outbound messages a day (3 until 2026-11-02).
  *   6. 3 to 5 items shown; the rest are held.
  * Items already completed today or this week count against the caps, so the
  * list shrinks as he works rather than refilling.
@@ -17,6 +17,9 @@
  * what is live rather than everything once written (added 2026-10-26).
  * A due date in the future holds an item until that day, and an after_ids entry
  * "blog:<slug>" holds it until that blog post is published (added 2026-10-27).
+ * Plain connection requests (RQ-) have their own cap of 15 a day and do not
+ * take one of the 5 slots; finding messages are capped at 5 (raised
+ * 2026-11-02).
  * Replies sort above everything else and are never held by a cap or by the
  * 5-item limit, because a reply loses most of its value by the next day
  * (added 2026-10-30).
@@ -56,7 +59,16 @@ export function idleDays(r: QueueRow, now: Date, releasedAt = 0): number {
   )
   return Math.max(0, Math.floor((now.getTime() - last) / 86_400_000))
 }
-export const CAPS = { commentsPerDay: 4, socialPerAccountPerDay: 1, socialPerAccountPerWeek: 2, outboundPerDay: 3 }
+/**
+ * Raised 2026-11-02, when the list kept running dry: a plain connection request
+ * (RQ-) takes seconds and is capped on its own, well under LinkedIn's weekly
+ * invitation limit; a message carrying a finding is outbound proper; comments
+ * keep their cap because each one takes real thought.
+ */
+export const CAPS = { commentsPerDay: 4, socialPerAccountPerDay: 1, socialPerAccountPerWeek: 2, outboundPerDay: 5, requestsPerDay: 15 }
+
+/** A plain connection request, no note: queued as an outbound message with an RQ- id. */
+export const isRequest = (r: Pick<QueueRow, 'id' | 'type'>) => r.type === 'outbound message' && r.id.startsWith('RQ-')
 
 /** YYYY-MM-DD in the given time zone. */
 export function dayKey(d: Date, tz = TIME_ZONE): string {
@@ -112,7 +124,8 @@ export function selectToday(rows: QueueRow[], now: Date, opts: SelectOptions = {
   const doneToday = rows.filter((r) => r.status === 'done' && r.completed_at && dayKey(new Date(r.completed_at)) === today)
   const doneWeek = rows.filter((r) => r.status === 'done' && r.completed_at && weekKey(new Date(r.completed_at)) === week)
   let comments = doneToday.filter((r) => r.type === 'comment').length
-  let outbound = doneToday.filter((r) => r.type === 'outbound message').length
+  let outbound = doneToday.filter((r) => r.type === 'outbound message' && !isRequest(r)).length
+  let requests = doneToday.filter(isRequest).length
   const socialDay = new Map<string, number>()
   const socialWeek = new Map<string, number>()
   const acct = (r: QueueRow) => `${r.account} on ${r.platform}`
@@ -160,7 +173,16 @@ export function selectToday(rows: QueueRow[], now: Date, opts: SelectOptions = {
       chosen.push(r)
       continue
     }
-    if (chosen.filter((c) => c.type !== 'reply').length >= MAX_SHOWN) {
+    // Plain requests have their own daily cap and do not take one of the slots.
+    if (isRequest(r)) {
+      if (requests >= CAPS.requestsPerDay) held.push(r)
+      else {
+        requests++
+        chosen.push(r)
+      }
+      continue
+    }
+    if (chosen.filter((c) => c.type !== 'reply' && !isRequest(c)).length >= MAX_SHOWN) {
       held.push(r)
       continue
     }

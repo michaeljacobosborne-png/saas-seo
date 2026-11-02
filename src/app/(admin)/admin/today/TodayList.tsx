@@ -257,7 +257,7 @@ export default function TodayList(props: {
   waitingOnOthers: Item[]
   doneToday: Item[]
   pendingCount: number
-  caps: { comments: string; outbound: string }
+  caps: { comments: string; outbound: string; requests: string }
 }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [showAll, setShowAll] = useState(false)
@@ -350,7 +350,7 @@ export default function TodayList(props: {
         <h1 className="text-2xl font-semibold text-[var(--cream)]">Today</h1>
         <p className="text-sm text-[var(--cream-dim)]">{props.dateLabel}</p>
         <p className="mt-1 text-xs text-[var(--cream-faint)]">
-          Comments {props.caps.comments} · Outbound {props.caps.outbound} · {props.pendingCount} still in the queue
+          Comments {props.caps.comments} · Requests {props.caps.requests} · Messages {props.caps.outbound} · {props.pendingCount} still in the queue
         </p>
       </header>
 

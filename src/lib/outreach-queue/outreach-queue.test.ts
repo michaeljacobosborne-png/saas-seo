@@ -140,9 +140,25 @@ describe('selectToday', () => {
     expect(r.blocked[0]).toMatchObject({ row: { id: 'F-X9' }, waitingFor: ['F-X5'] })
   })
 
-  it('shows at most 3 outbound messages a day', () => {
-    const rows = ['o1', 'o2', 'o3', 'o4'].map((id) => row({ id, type: 'outbound message' }))
-    expect(selectToday(rows, NOW).today).toHaveLength(3)
+  it('shows at most 5 outbound messages a day', () => {
+    const rows = ['o1', 'o2', 'o3', 'o4', 'o5', 'o6'].map((id) => row({ id, type: 'outbound message' }))
+    expect(selectToday(rows, NOW).today).toHaveLength(5)
+  })
+
+  it('caps plain connection requests at 15 a day, counting ones done today, without using the 5 slots', () => {
+    const done = ['RQ-90', 'RQ-91'].map((id) => row({ id, type: 'outbound message', status: 'done', completed_at: '2026-10-21T06:00:00Z' }))
+    const requests = Array.from({ length: 20 }, (_, i) => row({ id: `RQ-${10 + i}`, type: 'outbound message' }))
+    const others = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].map((id, i) => row({ id, account: String(i) }))
+    const r = selectToday([...done, ...requests, ...others], NOW)
+    expect(r.today.filter((t) => t.id.startsWith('RQ-'))).toHaveLength(13)
+    expect(r.today.filter((t) => !t.id.startsWith('RQ-'))).toHaveLength(5)
+    expect(r.held.filter((t) => t.id.startsWith('RQ-'))).toHaveLength(7)
+  })
+
+  it('does not count a request against the finding-message cap', () => {
+    const done = ['RQ-90', 'RQ-91', 'RQ-92', 'RQ-93', 'RQ-94', 'RQ-95'].map((id) => row({ id, type: 'outbound message', status: 'done', completed_at: '2026-10-21T06:00:00Z' }))
+    const r = selectToday([...done, row({ id: 'OB-50', type: 'outbound message' })], NOW)
+    expect(r.today.map((t) => t.id)).toEqual(['OB-50'])
   })
 
   it('never shows more than 5', () => {
