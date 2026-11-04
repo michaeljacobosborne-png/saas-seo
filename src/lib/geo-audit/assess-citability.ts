@@ -25,7 +25,7 @@ import { countWords, truncate, type ContentBlock, type ExtractedPage } from './e
 import { pageForRole, type KeyPageResult } from './crawl'
 import { SignalBuilder, bandCounts, overallBand } from './scoring'
 import { BAND_LABELS, type Citability, type CitabilitySignal, type Evidence } from './types'
-import { brandNames, findPeople, isClientFeedback, mentionsBrand, type BrandNames } from './attribution-names'
+import { brandNames, findPeople, isClientFeedback, mentionsBrand, organizations, type BrandNames } from './attribution-names'
 
 export interface CitabilityInput {
   home: ExtractedPage
@@ -156,14 +156,22 @@ function findCredential(page: ExtractedPage, name: string): { url: string; text:
 function entityResolution({ home }: CitabilityInput): CitabilitySignal {
   const s = new SignalBuilder('entity-resolution', 'Entity resolution')
 
-  const orgNode = home.structuredData.find((n) =>
-    n.types.some((t) => /^(Organization|LocalBusiness|OnlineBusiness|Corporation|ProfessionalService)$/i.test(t)),
-  )
-  const orgName = typeof orgNode?.raw.name === 'string' ? orgNode.raw.name.trim() : null
-  const sameAs = readSameAs(orgNode?.raw.sameAs)
+  // Nested and referenced Organizations count: large publishers declare theirs
+  // as the publisher of the WebSite or Article (DECISIONS 41). Prefer the most
+  // complete declaration on the page.
+  const orgs = organizations(home).sort((a, b) => b.sameAs.length - a.sameAs.length || Number(Boolean(b.name)) - Number(Boolean(a.name)))
+  const org = orgs[0] ?? null
+  const orgName = org?.name ?? null
+  const sameAs = org?.sameAs ?? []
   const contact = [...home.emails, ...home.phones]
 
-  if (orgName && sameAs.length >= 2) {
+  if (org && !orgName) {
+    s.found(
+      'weak',
+      `An Organization is declared as publisher only by reference${org.id ? ` (${org.id})` : ''}, with no name or sameAs on this page, so an engine has nothing here to resolve it to.`,
+      ev(home.url, 'jsonld', `Organization${org.id ? ` @id ${org.id}` : ''}, no name declared`),
+    )
+  } else if (orgName && sameAs.length >= 2) {
     s.found('strong', `An Organization entity is declared as "${orgName}" with ${sameAs.length} sameAs profiles, which is what lets an engine resolve the brand to a known entity rather than a string.`, [
       ev(home.url, 'jsonld', `${orgName}, sameAs: ${sameAs.slice(0, 3).join(', ')}`),
     ])
@@ -180,12 +188,6 @@ function entityResolution({ home }: CitabilityInput): CitabilitySignal {
   }
 
   return s.build()
-}
-
-function readSameAs(v: unknown): string[] {
-  if (typeof v === 'string') return [v]
-  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string')
-  return []
 }
 
 // ── 3. Brand-claim proximity ──────────────────────────────────────────────────
@@ -226,6 +228,11 @@ function brandClaimProximity({ home }: CitabilityInput): CitabilitySignal {
     s.found('adequate', `"${brand}" appears inside ${withBrand.length} of ${substantive.length} substantive sections. The remaining sections carry no attribution anchor, so a quote lifted from them would not name you.`, ev(home.url, 'text', truncate(withBrand[0].text, 200)))
   } else if (withBrand.length > 0) {
     s.found('weak', `"${brand}" appears inside only ${withBrand.length} of ${substantive.length} substantive sections. Most sections carry no attribution anchor of their own.`, ev(home.url, 'text', truncate(withBrand[0].text, 200)))
+  } else if (mentionsBrand(home.mainText, names)) {
+    // Named on the page, for example in testimonials or an FAQ, but in none of
+    // the sections. cedarwood.digital (2026-11-02) was told "present only in
+    // the page chrome" while its testimonials named it 17 times.
+    s.missing(`"${brand}" appears on the page but inside none of the ${substantive.length} substantive sections, so a passage lifted from one of them carries no name.`)
   } else {
     s.missing(`"${brand}" does not appear inside any of the ${substantive.length} substantive sections. It is present only in the page chrome. Passages lifted from this page carry no attribution anchors.`)
   }

@@ -19,9 +19,74 @@ import type { ExtractedPage, Testimonial } from './extract'
 
 // ── Brand names ──────────────────────────────────────────────────────────────
 
-const ORG_TYPES = /^(Organization|LocalBusiness|OnlineBusiness|Corporation|ProfessionalService)$/i
+const ORG_TYPES = /^(Organization|LocalBusiness|OnlineBusiness|Corporation|ProfessionalService|NewsMediaOrganization)$/i
 const LEGAL_SUFFIX = /[\s,]+(?:ltd|limited|llc|l\.l\.c|inc|incorporated|plc|gmbh|llp|corp|corporation|co|pty|bv|sa|ag)\.?$/i
 const GENERIC_TAIL = /\s+(?:agency|digital|media|marketing|group|studio|studios|consulting|consultancy|consultants|seo|solutions|services|partners)$/i
+/** What a site calls its publication, as opposed to the organisation: "HubSpot Blog". */
+const PUBLICATION_TAIL = /\s+(?:blog|news|newsroom|insights|magazine|journal|resources|library|learning centre|learning center|knowledge base)$/i
+
+export interface DeclaredOrganization {
+  name: string | null
+  sameAs: string[]
+  /** The @id it is declared or referenced by, when it has one. */
+  id: string | null
+  /** Where it was found: a node of its own, or inside another node's publisher, author and so on. */
+  via: 'node' | 'nested'
+}
+
+/**
+ * Every Organization the markup declares, wherever it sits. Large publishers
+ * declare it as the publisher of their WebSite and Article rather than as a
+ * node of its own; blog.hubspot.com declares only a reference,
+ * {"@type": "Organization", "@id": ".../#organization"}, with no name.
+ * Entries sharing an @id are merged, so a reference picks up a name declared
+ * elsewhere on the page.
+ */
+export function organizations(page: ExtractedPage): DeclaredOrganization[] {
+  const found: { raw: Record<string, unknown>; via: 'node' | 'nested' }[] = []
+  const walk = (v: unknown, depth: number, top: boolean) => {
+    if (depth > 6 || v == null || typeof v !== 'object') return
+    if (Array.isArray(v)) {
+      for (const x of v) walk(x, depth + 1, false)
+      return
+    }
+    const o = v as Record<string, unknown>
+    const t = o['@type']
+    const types = typeof t === 'string' ? [t] : Array.isArray(t) ? t.filter((x): x is string => typeof x === 'string') : []
+    if (types.some((x) => ORG_TYPES.test(x))) found.push({ raw: o, via: top ? 'node' : 'nested' })
+    for (const [k, child] of Object.entries(o)) if (k !== '@graph') walk(child, depth + 1, false)
+  }
+  for (const node of page.structuredData) walk(node.raw, 0, true)
+
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+  const byKey = new Map<string, DeclaredOrganization>()
+  for (const { raw, via } of found) {
+    const id = str(raw['@id'])
+    const key = id ?? `anon-${byKey.size}`
+    const prev = byKey.get(key)
+    const sameAs = typeof raw.sameAs === 'string' ? [raw.sameAs] : Array.isArray(raw.sameAs) ? raw.sameAs.filter((x): x is string => typeof x === 'string') : []
+    byKey.set(key, {
+      name: prev?.name ?? str(raw.name) ?? str(raw.legalName),
+      sameAs: [...new Set([...(prev?.sameAs ?? []), ...sameAs])],
+      id,
+      via: prev?.via === 'node' || via === 'node' ? 'node' : 'nested',
+    })
+  }
+  return [...byKey.values()]
+}
+
+/** The label a domain is named for: "hubspot" for blog.hubspot.com, "clickslice" for www.clickslice.co.uk. */
+export function domainLabel(url: string): string {
+  try {
+    const labels = new URL(url).hostname.toLowerCase().split('.')
+    const sld = labels.length > 2 && /^(?:co|com|org|net|ac|gov|edu)$/.test(labels[labels.length - 2]) && labels[labels.length - 1].length === 2
+    return labels[labels.length - (sld ? 3 : 2)] ?? ''
+  } catch {
+    return ''
+  }
+}
+
+const squash = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
 
 export interface BrandNames {
   /** What the copy should be checked for, most specific first. */
@@ -31,13 +96,15 @@ export interface BrandNames {
 }
 
 /**
- * Strip a legal suffix, then a generic descriptor, keeping at least one word.
+ * Strip a legal suffix, a generic descriptor, then a publication descriptor,
+ * keeping at least one word.
  * "Candour Agency Ltd" → ["Candour Agency Ltd", "Candour Agency", "Candour"].
+ * "HubSpot Blog" → ["HubSpot Blog", "HubSpot"].
  */
 export function nameVariants(name: string): string[] {
   const out = [name.trim()]
   let n = name.trim()
-  for (const re of [LEGAL_SUFFIX, GENERIC_TAIL]) {
+  for (const re of [LEGAL_SUFFIX, GENERIC_TAIL, PUBLICATION_TAIL]) {
     const stripped = n.replace(re, '').trim()
     if (stripped && stripped !== n && stripped.length >= 2) {
       n = stripped
@@ -47,8 +114,21 @@ export function nameVariants(name: string): string[] {
   return [...new Set(out)]
 }
 
+/**
+ * The brand is the publishing organisation's own name (DECISIONS 41). The rule,
+ * replacing three instance patches (legal name, capitalisation, site name):
+ *   1. Read it from the Organization in the markup, nested or referenced
+ *      included, then the WebSite name, then the title suffix.
+ *   2. Strip legal suffixes, business descriptors and publication descriptors
+ *      from each ("Candour Agency Ltd" → "Candour", "HubSpot Blog" → "HubSpot").
+ *   3. Prefer the form that matches the domain, ignoring case and punctuation.
+ *      If no declared name does, take the page's own spelling of the domain
+ *      name ("Re:signal" for resignal.com), so a tagline never stands in.
+ * Matching (mentionsBrand) then accepts any capitalisation except all lowercase.
+ */
 export function brandNames(page: ExtractedPage): BrandNames | null {
   const raw: string[] = []
+  for (const org of organizations(page)) if (org.name && org.name.length <= 60) raw.push(org.name)
   for (const node of page.structuredData) {
     if (!node.types.some((t) => ORG_TYPES.test(t) || /^WebSite$/i.test(t))) continue
     for (const key of ['name', 'alternateName', 'legalName']) {
@@ -63,32 +143,54 @@ export function brandNames(page: ExtractedPage): BrandNames | null {
   const parts = page.title.split(/\s[|\-–—]\s/)
   if (parts.length > 1 && parts[parts.length - 1].trim()) raw.push(parts[parts.length - 1].trim())
   if (raw.length === 0 && page.title) raw.push(page.title.trim())
-  if (raw.length === 0) return null
 
-  const candidates = [...new Set(raw.flatMap(nameVariants))]
-    .filter((c) => c.split(/\s+/).length <= 5 && !/[:]/.test(c))
+  const label = domainLabel(page.url)
+  let candidates = [...new Set(raw.flatMap(nameVariants))]
+    .filter((c) => (c.split(/\s+/).length <= 5 && !/[:]/.test(c)) || squash(c) === label)
     .sort((a, b) => b.length - a.length)
+
+  let domainForm = label ? candidates.find((c) => squash(c) === label) ?? null : null
+  if (!domainForm && label.length >= 3) {
+    domainForm = spellingOnPage(page, label)
+    if (domainForm) candidates = [domainForm, ...candidates]
+  }
   if (candidates.length === 0) return null
 
-  // Display the shortest candidate that every longer form starts with, which is
-  // the trading name when the variants agree ("Candour"), else the first name.
+  // Display the domain's own name when we have it; else the shortest candidate
+  // every longer form starts with (the trading name), else the first name.
   const shortest = [...candidates].sort((a, b) => a.length - b.length)[0]
-  const display = candidates.every((c) => c.toLowerCase().startsWith(shortest.toLowerCase())) ? shortest : candidates[0]
+  const display =
+    domainForm ?? (candidates.every((c) => c.toLowerCase().startsWith(shortest.toLowerCase())) ? shortest : candidates[0])
   return { candidates, display }
+}
+
+/** The most common capitalised spelling on the page of a word or pair that squashes to the domain label. */
+function spellingOnPage(page: ExtractedPage, label: string): string | null {
+  const text = `${page.title} ${page.bodyText}`
+  const counts = new Map<string, number>()
+  const words = text.match(/[\p{L}\p{N}][\p{L}\p{N}:'’&.-]*/gu) ?? []
+  for (let i = 0; i < words.length; i++) {
+    for (const cand of [words[i], i + 1 < words.length ? `${words[i]} ${words[i + 1]}` : '']) {
+      const c = cand.replace(/[.:'’-]+$/, '')
+      if (c && squash(c) === label && c !== c.toLowerCase()) counts.set(c, (counts.get(c) ?? 0) + 1)
+    }
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
- * Whole-word match. A derived short form ("Candour", "Zelst") is matched with
- * its capitalisation, so the brand "Candour" is found but the noun "candour"
- * in a sentence is not; full declared names match case-insensitively.
+ * Whole-word match in any capitalisation except all lowercase: "AIMCLEAR",
+ * "Aimclear" and "Beam" are the brand, while "candour" in a sentence is the
+ * common noun. A brand written in lowercase as a style ("hubspot") is rare in
+ * running copy and is not counted.
  */
 export function mentionsBrand(text: string, brand: BrandNames): boolean {
   return brand.candidates.some((c) => {
-    const exactCase = c === brand.display && !/\s/.test(c)
-    const re = new RegExp(`(^|[^\\p{L}\\p{N}])${escape(c)}(?=$|[^\\p{L}\\p{N}])`, exactCase ? 'u' : 'iu')
-    return re.test(text)
+    const re = new RegExp(`(?:^|[^\\p{L}\\p{N}])(${escape(c)})(?=$|[^\\p{L}\\p{N}])`, 'giu')
+    for (const m of text.matchAll(re)) if (m[1] !== m[1].toLowerCase()) return true
+    return false
   })
 }
 

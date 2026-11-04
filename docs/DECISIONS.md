@@ -6,6 +6,44 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 41. Engine 2026.15: the brand is the organisation; markup, content and dates read the way a person would
+**Date:** 2026-11-03 (found by hand on blog.hubspot.com before a teardown; teardown dropped)
+**Decision:**
+- **Organizations are found wherever the markup declares them.** Top-level, nested as the publisher or author of a WebSite or Article, or referenced by @id. References sharing an @id are merged. An Organization declared only by reference, with no name on the page, reads as Weak, with that said plainly. It is never "none declared".
+- **The brand is the publishing organisation's own name.** This is the general rule, replacing three instance patches (the legal name, capitalisation, the site name):
+  - Read it from the Organization, then the WebSite name, then the title suffix.
+  - Strip legal suffixes, business descriptors and publication descriptors (Blog, News, Insights, Magazine, Resources).
+  - Prefer the form that matches the domain, ignoring case and punctuation. If none does, use the page's own spelling of the domain name, never a tagline.
+  - A mention counts in any capitalisation except all lowercase.
+  - When the brand appears on the page but in no section, the finding says that rather than "present only in the page chrome".
+- **Paragraphs come from the content region,** like mainText and blocks. Header mega-menus can no longer supply the "opening paragraph".
+- **Contact emails:** a mailto link, or an address in the copy on the site's own domain. Placeholder addresses never count.
+- **Dates:** an impossible date (month 29, 30 February) is rejected rather than rolled forward into the future.
+**Why (evidence, blog.hubspot.com, 3 Nov 2026, three articles):**
+- "No Organization declared" on all three, while each declares one as publisher by @id reference.
+- Brand proximity "absent" because the check searched for "HubSpot Blog", while the copy says "According to HubSpot data, 74%...".
+- Direct answers scored on a 93-character header menu blurb, identical on every article.
+- "email@address.com" in a LinkedIn summary template counted as HubSpot's contact details.
+- `<time datetime="2026-29-10">` read as 2028-05-10 and reported as "a date set after today".
+- The same brand error produced false outreach findings for Cedarwood, Beam and Aimclear (2 Nov).
+- Tests: src/lib/geo-audit/hubspot-markup.test.ts, using the real pages as fixtures.
+**PRIOR SCORES ARE AFFECTED.** Citable signals (entity resolution, brand proximity, authorship credentials) and Direct answers can move. Do not compare 2026.15 with earlier runs without saying so; score-over-time re-scores both runs.
+**Revisit if:** a site's brand is genuinely written in lowercase in its copy as a style, which this rule does not count.
+
+## 40. Facebook posts carry no links in the post body
+**Date:** 2026-11-02
+**Decision:**
+- No Byline Facebook post puts a link in the post body. This covers the brand Facebook page and any future Facebook posting.
+- Where a link is wanted, it goes in the first comment. The post must still read complete on its own and must give a reason to go looking for the link.
+- Preferred alternative: write the post so it needs no link at all. A Facebook post that teaches something complete does not need a destination.
+- "Link in comments" is never the whole payoff. A post whose only value is the pointer is not worth running.
+- Recorded in the saved skill byline-outreach-and-social under Platform constraints, and in the byline-social-posts scheduled task prompt, so neither a future session nor a scheduled run reintroduces it.
+**Why:**
+- Links in the body suppress reach on Facebook. The platform keeps traffic on-platform, so a post with an outbound link is shown to fewer people than the same post without one. Paying that cost for a destination almost nobody will click is a bad trade for a page this small.
+- The first-comment workaround is standard practice and keeps the link available without the body carrying it.
+- The stronger version of the fix is editorial, not mechanical. Facebook is Byline's least technical audience, so a post that delivers the whole finding in plain language is a better fit than a teaser pointing elsewhere.
+**Revisit if:** Facebook's ranking treatment of outbound links changes, or page reach data shows link posts performing at parity with link-free posts.
+
 ## 39. Score over time stores what was fetched, and compares by re-scoring both runs on today's engine
 **Date:** 2026-10-29 (approved: score-over-time before the MCP server)
 **Decision:**

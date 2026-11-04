@@ -79,10 +79,16 @@ export function parseHumanDate(text: string): Date | null {
   return null
 }
 
+/**
+ * A real calendar date or null. Date.UTC rolls impossible values forward, so
+ * blog.hubspot.com's <time datetime="2026-29-10"> (day and month swapped) was
+ * read as 2028-05-10 and reported as a date "set after today" (2026-11-03).
+ */
 function utcDate(year: number, month: number, day: number): Date | null {
-  if (year < 1990 || year > 2100 || day < 1 || day > 31) return null
+  if (year < 1990 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) return null
   const d = new Date(Date.UTC(year, month, day))
-  return Number.isNaN(d.getTime()) ? null : d
+  if (Number.isNaN(d.getTime()) || d.getUTCMonth() !== month || d.getUTCDate() !== day) return null
+  return d
 }
 
 function toIsoDay(d: Date): string {

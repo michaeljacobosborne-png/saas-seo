@@ -203,7 +203,11 @@ export function extractPage(html: string, pageUrl: string): ExtractedPage {
   const blocks = extractBlocks($, pageUrl)
   const wordCount = countWords(mainText)
 
-  const paragraphs = $('p')
+  // From the content region, like mainText and blocks. Read from the whole
+  // document, blog.hubspot.com's "opening paragraph" was a blurb in its header
+  // mega menu, the same on every article (2026-11-03).
+  const contentRoot = pickContentRoot($)
+  const paragraphs = (contentRoot ? contentRoot.find('p') : $('p'))
     .toArray()
     .map((el) => normalise($(el).text()))
     .filter((p) => p.length > 0)
@@ -239,10 +243,17 @@ export function extractPage(html: string, pageUrl: string): ExtractedPage {
       .filter((t) => t.length > 1 && t.length < 80),
   )
 
+  // Published contact details: a mailto link, or an address in the copy on the
+  // site's own domain. An address in running text on another domain is usually
+  // example content: blog.hubspot.com's LinkedIn-summary templates contain
+  // "email@address.com", which was reported as HubSpot's contact details.
+  const site = registrableDomain(safeUrl(pageUrl)?.hostname ?? '')
   const emails = unique([
     ...links.filter((l) => l.href.startsWith('mailto:')).map((l) => l.href.slice(7).split('?')[0]),
-    ...(bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) ?? []),
-  ]).filter((e) => e.includes('@'))
+    ...(bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) ?? []).filter(
+      (e) => site !== '' && registrableDomain(e.split('@')[1]) === site,
+    ),
+  ]).filter((e) => e.includes('@') && !PLACEHOLDER_EMAIL.test(e))
 
   const phones = unique([
     ...links.filter((l) => l.href.startsWith('tel:')).map((l) => l.href.slice(4)),
@@ -442,6 +453,21 @@ function extractLinks($: Cheerio, pageUrl: string): PageLink[] {
       }
     })
     .filter((l) => l.href)
+}
+
+/** Addresses that are templates, not anyone's inbox. */
+const PLACEHOLDER_EMAIL = /@(?:example\.(?:com|org|net)|(?:your)?(?:domain|address|email|company|site|website)\.com)$|^(?:email|name|yourname|firstname|first\.last|user|username|you)@/i
+
+/**
+ * "blog.hubspot.com" and "hubspot.com" are one site; "www.clickslice.co.uk" is
+ * "clickslice.co.uk". Two labels, or three where the second is a common
+ * second-level suffix (co.uk, com.au, org.il and similar).
+ */
+export function registrableDomain(host: string): string {
+  const labels = host.toLowerCase().replace(/\.$/, '').split('.').filter(Boolean)
+  if (labels.length <= 2) return labels.join('.')
+  const take = /^(?:co|com|org|net|ac|gov|edu|ltd|plc)$/.test(labels[labels.length - 2]) && labels[labels.length - 1].length === 2 ? 3 : 2
+  return labels.slice(-take).join('.')
 }
 
 function safeUrl(url: string): URL | null {
