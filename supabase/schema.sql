@@ -183,3 +183,31 @@ create policy "Users can delete their own articles"
 create trigger articles_updated_at
   before update on public.articles
   for each row execute function public.set_updated_at();
+
+-- ─────────────────────────────────────────────
+-- subscriptions
+-- ─────────────────────────────────────────────
+create table public.subscriptions (
+  id                      uuid primary key default gen_random_uuid(),
+  user_id                 uuid not null references auth.users(id) on delete cascade,
+  stripe_customer_id      text,
+  stripe_subscription_id  text unique,
+  plan                    text not null check (plan in ('starter', 'pro', 'agency')),
+  billing_interval        text not null check (billing_interval in ('monthly', 'annual')),
+  status                  text not null default 'active' check (status in ('active', 'cancelled', 'past_due', 'trialing')),
+  current_period_end      timestamptz,
+  cancel_at_period_end    boolean default false,
+  created_at              timestamptz default now(),
+  updated_at              timestamptz default now()
+);
+
+alter table public.subscriptions enable row level security;
+
+create policy "Users can view own subscription"
+  on public.subscriptions for select
+  using (auth.uid() = user_id);
+
+create index idx_subscriptions_user_id on public.subscriptions(user_id);
+create index idx_subscriptions_stripe_customer on public.subscriptions(stripe_customer_id);
+
+alter table public.brand_profiles add column if not exists subscription_id uuid references public.subscriptions(id);

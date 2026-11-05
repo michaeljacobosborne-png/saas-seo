@@ -1,14 +1,8 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { LayoutDashboard, Building2, Search, FileText, LogOut } from 'lucide-react'
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/brand', label: 'Brand', icon: Building2 },
-  { href: '/keywords', label: 'Keywords', icon: Search },
-  { href: '/articles', label: 'Articles', icon: FileText },
-]
+import DashboardSidebar from './DashboardSidebar'
+import SupportWidget from '@/app/_components/SupportWidget'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -16,45 +10,60 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect('/login')
 
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('status', ['active', 'trialing'])
+    .limit(1)
+    .maybeSingle()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
+    .from('profiles')
+    .select('account_type')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!sub) {
+    // No active/trialing subscription: free-tier users now get the stripped-down
+    // in-app experience, and comped/paid profiles pass through (their sub row may
+    // not have landed yet). Only genuinely unprovisioned users (no profile row at
+    // all) are sent to pricing.
+    if (!profile) redirect('/pricing')
+  }
+
+  // Drives the free-tier sidebar (locked nav + Upgrade CTA). A user with an active
+  // subscription is always treated as paid regardless of the stored account_type.
+  const accountType: 'free' | 'paid' = sub ? 'paid' : (profile?.account_type === 'free' ? 'free' : 'paid')
+
+  // Brand-new users must set up their brand profile before doing anything else.
+  // Skip /brand itself (where they set it up) and /settings (account utilities)
+  // so they're never trapped in a redirect loop.
+  const pathname = (await headers()).get('x-pathname') ?? ''
+  if (!pathname.startsWith('/brand') && !pathname.startsWith('/settings') && !pathname.startsWith('/content-audit')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: brandProfile } = await (supabase as any)
+      .from('brand_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!brandProfile) redirect('/brand')
+  }
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <span className="text-lg font-bold text-indigo-600">SEO Studio</span>
-        </div>
+    <div className="flex h-screen" style={{ background: 'var(--ink)' }}>
+      {/* Sidebar: desktop rail + mobile hamburger/drawer (client component) */}
+      <DashboardSidebar userEmail={user.email ?? ''} accountType={accountType} />
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors group"
-            >
-              <Icon className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="px-3 py-4 border-t border-gray-200">
-          <div className="px-3 py-2 text-xs text-gray-400 truncate mb-1">{user.email}</div>
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign out
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      {/* Main content — pt-14 on mobile clears the fixed hamburger top bar */}
+      <main className="flex-1 overflow-y-auto pt-14 md:pt-0" style={{ background: 'var(--ink)' }}>
         {children}
       </main>
+
+      {/* Floating customer-support agent (available across the dashboard) */}
+      <SupportWidget />
     </div>
   )
 }

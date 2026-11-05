@@ -39,3 +39,32 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local-only architecture reference
+ARCHITECTURE.md
+
+# supabase local CLI state
+supabase/.temp/
+
+# scratch dumps, debug artifacts, and source copies
+*-dump.txt
+audit-*.txt
+replacements.txt
+fix.py
+src_app_*.txt
+
+# archives and exported site builds
+*.zip
+byline-site - branded/
+*.tar.gz
+claude-backup.zip
+cowork-audit*
+
+# local-only security audit; must never be committed
+SECURITY-AUDIT.md
+
+# Stale Cowork deploy notes in C:\dev\Byline. They contain a live Vercel deploy
+# hook URL, so a careless git add -A must never pick them up.
+ACTION_REQUIRED.txt
+COMMIT_NOW.md
+DEPLOY.ps1
