@@ -1,0 +1,31 @@
+# Line endings are pinned here so they no longer depend on each machine's Git
+# config. Without this file, Windows checkouts with and without core.autocrlf
+# saw the same tree as clean or as ~400 modified files (2026-11-05).
+#
+# Text is stored and checked out with LF. Vercel builds on Linux, shebang
+# scripts need LF, and every editor in use reads LF.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary: never converted, never diffed as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.mp4 binary
+*.webm binary
+*.mp3 binary
