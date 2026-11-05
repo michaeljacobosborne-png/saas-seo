@@ -73,6 +73,9 @@ describe('2. the brand is the organisation, not the website', () => {
     expect(brandNames(page('Candour Agency Ltd', 'https://withcandour.co.uk/'))?.display).toBe('Candour')
     // inter-dev.co.il: the hyphen in the domain does not stop the match.
     expect(brandNames(page('Inter-Dev B2B Digital Marketing Agency', 'https://inter-dev.co.il/'))?.display).toBe('Inter-Dev')
+    // typeamedia.net and bigfinseo.com: the domain names the full form, which stays.
+    expect(brandNames(page('Type A Media', 'https://typeamedia.net/'))?.display).toBe('Type A Media')
+    expect(brandNames(page('Big Fin SEO', 'https://bigfinseo.com/'))?.display).toBe('Big Fin SEO')
     // aimclear.com declares "AIMCLEAR®": the mark is not part of the name.
     expect(brandNames(page('AIMCLEAR®', 'https://aimclear.com/'))?.display).toBe('AIMCLEAR')
   })

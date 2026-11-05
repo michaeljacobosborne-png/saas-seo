@@ -177,12 +177,16 @@ export function brandNames(page: ExtractedPage): BrandNames | null {
   // A declared organisation name is the brand, unless it starts with the
   // domain's own name, which is then the shorter trading form. withcandour.co.uk
   // declares "Candour Agency Ltd": the brand is "Candour", not "with Candour".
+  // typeamedia.net declares "Type A Media": the domain names the full form, so
+  // that stays rather than the stripped "Type A".
   const orgNames = organizations(page).map((o) => o.name).filter((n): n is string => Boolean(n)).map(clean)
-  const orgShort = orgNames.length ? nameVariants(orgNames[0]).sort((a, b) => a.length - b.length)[0] : null
+  const orgVariants = orgNames.length ? nameVariants(orgNames[0]) : []
+  const orgShort = orgVariants.length ? [...orgVariants].sort((a, b) => a.length - b.length)[0] : null
   const shortest = [...candidates].sort((a, b) => a.length - b.length)[0]
   const fallback = candidates.every((c) => c.toLowerCase().startsWith(shortest.toLowerCase())) ? shortest : candidates[0]
+  const domainIsDeclared = Boolean(domainForm && orgVariants.some((v) => v.toLowerCase() === domainForm!.toLowerCase()))
   const display =
-    orgShort && !(domainForm && orgShort.toLowerCase().startsWith(domainForm.toLowerCase()))
+    orgShort && !domainIsDeclared && !(domainForm && orgShort.toLowerCase().startsWith(domainForm.toLowerCase()))
       ? orgShort
       : (domainForm ?? fallback)
   if (!candidates.includes(display)) candidates.unshift(display)
