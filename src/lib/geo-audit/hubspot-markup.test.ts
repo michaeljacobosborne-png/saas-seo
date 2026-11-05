@@ -66,6 +66,17 @@ describe('2. the brand is the organisation, not the website', () => {
     expect(mentionsBrand('Why Candour?', candour)).toBe(true)
   })
 
+  it('keeps a declared organisation name over a domain that adds a word, and shortens one that starts with the domain name', () => {
+    const page = (org: string, url: string) =>
+      extractPage(`<html><head><title>Home</title><script type="application/ld+json">${JSON.stringify({ '@type': 'Organization', name: org })}</script></head><body><main><p>Body text.</p></main></body></html>`, url)
+    // withcandour.co.uk: the brand is "Candour", not "with Candour".
+    expect(brandNames(page('Candour Agency Ltd', 'https://withcandour.co.uk/'))?.display).toBe('Candour')
+    // inter-dev.co.il: the hyphen in the domain does not stop the match.
+    expect(brandNames(page('Inter-Dev B2B Digital Marketing Agency', 'https://inter-dev.co.il/'))?.display).toBe('Inter-Dev')
+    // aimclear.com declares "AIMCLEAR®": the mark is not part of the name.
+    expect(brandNames(page('AIMCLEAR®', 'https://aimclear.com/'))?.display).toBe('AIMCLEAR')
+  })
+
   it('prefers the page\x27s own spelling of the domain name over a tagline', () => {
     const html = '<html><head><title>Global Ecommerce SEO &amp; GEO | Global Ecommerce SEO &amp; GEO</title></head><body><main><p>Re:signal helps global brands grow. Re:signal works across markets and languages for ecommerce teams with long words to count here.</p></main></body></html>'
     expect(brandNames(extractPage(html, 'https://resignal.com/'))?.display).toBe('Re:signal')

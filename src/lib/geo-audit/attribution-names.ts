@@ -144,23 +144,48 @@ export function brandNames(page: ExtractedPage): BrandNames | null {
   if (parts.length > 1 && parts[parts.length - 1].trim()) raw.push(parts[parts.length - 1].trim())
   if (raw.length === 0 && page.title) raw.push(page.title.trim())
 
-  const label = domainLabel(page.url)
-  let candidates = [...new Set(raw.flatMap(nameVariants))]
+  const label = squash(domainLabel(page.url))
+  const clean = (s: string) => s.replace(/[®™©]/g, '').trim()
+  let candidates = [...new Set(raw.map(clean).flatMap(nameVariants))]
     .filter((c) => (c.split(/\s+/).length <= 5 && !/[:]/.test(c)) || squash(c) === label)
     .sort((a, b) => b.length - a.length)
 
+  // The domain's own name: a declared form that matches it, or the page's
+  // spelling of it. An all-lowercase form defers to the page's capitalised one.
   let domainForm = label ? candidates.find((c) => squash(c) === label) ?? null : null
+  if ((!domainForm || domainForm === domainForm.toLowerCase()) && label.length >= 3) {
+    const spelled = spellingOnPage(page, label)
+    if (spelled) {
+      domainForm = spelled
+      candidates = [spelled, ...candidates.filter((c) => c !== spelled)]
+    }
+  }
+  // Also the domain's name when a declared name starts with it ("Inter-Dev"
+  // inside "Inter-Dev B2B Digital Marketing Agency").
   if (!domainForm && label.length >= 3) {
-    domainForm = spellingOnPage(page, label)
+    for (const c of candidates) {
+      const words = c.split(/\s+/)
+      for (let n = 1; n < words.length && !domainForm; n++) {
+        const head = words.slice(0, n).join(' ')
+        if (squash(head) === label) domainForm = head
+      }
+    }
     if (domainForm) candidates = [domainForm, ...candidates]
   }
   if (candidates.length === 0) return null
 
-  // Display the domain's own name when we have it; else the shortest candidate
-  // every longer form starts with (the trading name), else the first name.
+  // A declared organisation name is the brand, unless it starts with the
+  // domain's own name, which is then the shorter trading form. withcandour.co.uk
+  // declares "Candour Agency Ltd": the brand is "Candour", not "with Candour".
+  const orgNames = organizations(page).map((o) => o.name).filter((n): n is string => Boolean(n)).map(clean)
+  const orgShort = orgNames.length ? nameVariants(orgNames[0]).sort((a, b) => a.length - b.length)[0] : null
   const shortest = [...candidates].sort((a, b) => a.length - b.length)[0]
+  const fallback = candidates.every((c) => c.toLowerCase().startsWith(shortest.toLowerCase())) ? shortest : candidates[0]
   const display =
-    domainForm ?? (candidates.every((c) => c.toLowerCase().startsWith(shortest.toLowerCase())) ? shortest : candidates[0])
+    orgShort && !(domainForm && orgShort.toLowerCase().startsWith(domainForm.toLowerCase()))
+      ? orgShort
+      : (domainForm ?? fallback)
+  if (!candidates.includes(display)) candidates.unshift(display)
   return { candidates, display }
 }
 
