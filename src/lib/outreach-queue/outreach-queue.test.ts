@@ -114,10 +114,10 @@ describe('selectToday', () => {
     expect(r.today.filter((x) => x.type === 'comment')).toHaveLength(3)
   })
 
-  it('shows at most 1 social post per account per day', () => {
-    const r = selectToday([row({ id: 'p1' }), row({ id: 'p2' }), row({ id: 'b1', account: 'Brand' })], NOW)
-    expect(r.today.map((x) => x.id).sort()).toEqual(['b1', 'p1'])
-    expect(r.held.map((x) => x.id)).toEqual(['p2'])
+  it('shows at most 2 social posts per account per day', () => {
+    const r = selectToday([row({ id: 'p1' }), row({ id: 'p2' }), row({ id: 'p3' }), row({ id: 'b1', account: 'Brand' })], NOW)
+    expect(r.today.map((x) => x.id).sort()).toEqual(['b1', 'p1', 'p2'])
+    expect(r.held.map((x) => x.id)).toEqual(['p3'])
   })
 
   it('treats the same person on another platform as another account', () => {
@@ -125,10 +125,13 @@ describe('selectToday', () => {
     expect(r.today).toHaveLength(2)
   })
 
-  it('stops a third social post for an account in the same week', () => {
+  it('stops a sixth social post for an account in the same week', () => {
     const rows = [
-      row({ id: 'mon', status: 'done', completed_at: '2026-10-19T08:00:00Z' }),
-      row({ id: 'tue', status: 'done', completed_at: '2026-10-20T08:00:00Z' }),
+      row({ id: 'mon1', status: 'done', completed_at: '2026-10-19T08:00:00Z' }),
+      row({ id: 'mon2', status: 'done', completed_at: '2026-10-19T09:00:00Z' }),
+      row({ id: 'tue1', status: 'done', completed_at: '2026-10-20T08:00:00Z' }),
+      row({ id: 'tue2', status: 'done', completed_at: '2026-10-20T09:00:00Z' }),
+      row({ id: 'wed1', status: 'done', completed_at: '2026-10-21T05:00:00Z' }),
       row({ id: 'next' }),
     ]
     expect(selectToday(rows, NOW).today).toHaveLength(0)

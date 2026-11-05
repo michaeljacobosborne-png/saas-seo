@@ -4,7 +4,8 @@
  * Rules, in order (agreed 2026-10-21):
  *   1. Items with a closing window (closes_on) come first, soonest first.
  *   2. At most 4 comments a day.
- *   3. At most 1 social post per account per day, and 2 per account per week.
+ *   3. At most 2 social posts per account per day, and 5 per account per week
+ *      (1 and 2 until 2026-11-05).
  *      An account is one profile on one platform, so Founder on LinkedIn and
  *      Founder on X are separate accounts.
  *   4. An item stays hidden until every id in after_ids is done.
@@ -65,7 +66,7 @@ export function idleDays(r: QueueRow, now: Date, releasedAt = 0): number {
  * invitation limit; a message carrying a finding is outbound proper; comments
  * keep their cap because each one takes real thought.
  */
-export const CAPS = { commentsPerDay: 4, socialPerAccountPerDay: 1, socialPerAccountPerWeek: 2, outboundPerDay: 5, requestsPerDay: 15 }
+export const CAPS = { commentsPerDay: 4, socialPerAccountPerDay: 2, socialPerAccountPerWeek: 5, outboundPerDay: 5, requestsPerDay: 15 }
 
 /** A plain connection request, no note: queued as an outbound message with an RQ- id. */
 export const isRequest = (r: Pick<QueueRow, 'id' | 'type'>) => r.type === 'outbound message' && r.id.startsWith('RQ-')
