@@ -18,6 +18,26 @@ scheduled task can still draft, but its output is not delivered until a host
 session runs the scripts below. Never report work as "in the queue" until the
 rows have been read back.
 
+## Two rules learned the hard way
+
+- **A draft that exists only in a chat reply is lost.** Write anything drafted
+  to a file (the JSON the script takes) in the same turn it is drafted, before
+  reporting it as done. On 5 Nov four comments survived because they were in
+  `comments-2026-11-05.json`; a fifth was drafted only in chat and had to be
+  rebuilt from the send log.
+- **Before inserting a comment or reply, check the queue for the same person
+  and post.** If one is already there, and especially if it is marked done, do
+  not insert a second; Michael would be commenting twice on one post. On 6 Nov
+  a rewritten comment for Eli Schwartz was held back because the first version
+  (CM-08) had already been posted the day before.
+
+## Capture the permalink
+
+When a post is first read, capture its permalink (the post's own URL, from
+"Copy link to post") and put it in `postUrl`. Today's comment rows name a
+profile's recent-activity page and an opening line to scan for, which works
+but is slow on a phone. Capturing it costs one extra page load per post.
+
 ## Daily routine
 
 Run everything from `C:\dev\Byline`. Every script takes `--dry`. Run that first:
