@@ -10,7 +10,9 @@
  *      Founder on X are separate accounts.
  *   4. An item stays hidden until every id in after_ids is done.
  *   5. At most 5 outbound messages a day (3 until 2026-11-02).
- *   6. 3 to 5 items shown; the rest are held.
+ *   6. No shared limit on how many are shown: the page shows each column
+ *      separately (columns.ts), so a busy day in one type never buries another.
+ *      Until 2026-11-06 a single MAX_SHOWN of 5 was shared across every type.
  * Items already completed today or this week count against the caps, so the
  * list shrinks as he works rather than refilling.
  * A pending item with no activity (created or updated) for more than 7 days is
@@ -18,12 +20,11 @@
  * what is live rather than everything once written (added 2026-10-26).
  * A due date in the future holds an item until that day, and an after_ids entry
  * "blog:<slug>" holds it until that blog post is published (added 2026-10-27).
- * Plain connection requests (RQ-) have their own cap of 15 a day and do not
- * take one of the 5 slots; finding messages are capped at 5 (raised
- * 2026-11-02).
- * Replies sort above everything else and are never held by a cap or by the
- * 5-item limit, because a reply loses most of its value by the next day
- * (added 2026-10-30).
+ * Plain connection requests (RQ-) have their own cap of 15 a day; finding
+ * messages are capped at 5 (raised 2026-11-02).
+ * Replies sort above everything else and are never held by a cap, because a
+ * reply loses most of its value by the next day (added 2026-10-30).
+ * Every held item carries the cap that held it, so the page can say why.
  * Days and weeks are in Michael's time zone; weeks start on Monday.
  */
 
@@ -44,7 +45,6 @@ export interface QueueRow {
 }
 
 export const TIME_ZONE = 'Asia/Jerusalem'
-export const MAX_SHOWN = 5
 export const STALE_AFTER_DAYS = 7
 
 /**
@@ -90,10 +90,19 @@ export interface TodayResult {
   today: QueueRow[]
   /** Pending items whose prerequisites are not done yet, with what they wait for. */
   blocked: { row: QueueRow; waitingFor: string[] }[]
-  /** Eligible but held back by a cap or the 5-item limit. */
+  /** Eligible but held back by a daily or weekly cap. */
   held: QueueRow[]
+  /** The same items, each with the cap that held it, in words the page can show. */
+  holds: Hold[]
   /** Pending, but untouched for more than STALE_AFTER_DAYS. Never shown as today. */
   stale: { row: QueueRow; idleDays: number }[]
+}
+
+/** Why an item is held, and the key the page groups identical reasons by. */
+export interface Hold {
+  row: QueueRow
+  /** "for Brand on X, at today's cap of 2": completes "Held: 2 " on the page. */
+  reason: string
 }
 
 export interface SelectOptions {
@@ -167,41 +176,34 @@ export function selectToday(rows: QueueRow[], now: Date, opts: SelectOptions = {
   })
 
   const chosen: QueueRow[] = []
-  const held: QueueRow[] = []
+  const holds: Hold[] = []
+  const hold = (row: QueueRow, reason: string) => holds.push({ row, reason })
+  const who = (r: QueueRow) => `${r.account.split(',')[0].trim()} on ${r.platform}`
   for (const r of eligible) {
-    // Replies are never held by a cap and do not take one of the MAX_SHOWN slots.
+    // Replies are never held by a cap.
     if (r.type === 'reply') {
       chosen.push(r)
       continue
     }
-    // Plain requests have their own daily cap and do not take one of the slots.
     if (isRequest(r)) {
-      if (requests >= CAPS.requestsPerDay) held.push(r)
-      else {
-        requests++
-        chosen.push(r)
-      }
-      continue
-    }
-    if (chosen.filter((c) => c.type !== 'reply' && !isRequest(c)).length >= MAX_SHOWN) {
-      held.push(r)
-      continue
-    }
-    if (r.type === 'comment') {
-      if (comments >= CAPS.commentsPerDay) { held.push(r); continue }
+      if (requests >= CAPS.requestsPerDay) { hold(r, `over today's cap of ${CAPS.requestsPerDay} requests`); continue }
+      requests++
+    } else if (r.type === 'comment') {
+      if (comments >= CAPS.commentsPerDay) { hold(r, `over today's cap of ${CAPS.commentsPerDay}`); continue }
       comments++
     } else if (r.type === 'outbound message') {
-      if (outbound >= CAPS.outboundPerDay) { held.push(r); continue }
+      if (outbound >= CAPS.outboundPerDay) { hold(r, `over today's cap of ${CAPS.outboundPerDay} messages`); continue }
       outbound++
     } else if (r.type === 'social post') {
       const d = socialDay.get(acct(r)) ?? 0
       const w = socialWeek.get(acct(r)) ?? 0
-      if (d >= CAPS.socialPerAccountPerDay || w >= CAPS.socialPerAccountPerWeek) { held.push(r); continue }
+      if (w >= CAPS.socialPerAccountPerWeek) { hold(r, `for ${who(r)}, at this week's cap of ${CAPS.socialPerAccountPerWeek}`); continue }
+      if (d >= CAPS.socialPerAccountPerDay) { hold(r, `for ${who(r)}, at today's cap of ${CAPS.socialPerAccountPerDay}`); continue }
       socialDay.set(acct(r), d + 1)
       socialWeek.set(acct(r), w + 1)
     }
     chosen.push(r)
   }
 
-  return { today: chosen, blocked, held, stale }
+  return { today: chosen, blocked, held: holds.map((h) => h.row), holds, stale }
 }

@@ -148,14 +148,15 @@ describe('selectToday', () => {
     expect(selectToday(rows, NOW).today).toHaveLength(5)
   })
 
-  it('caps plain connection requests at 15 a day, counting ones done today, without using the 5 slots', () => {
+  it('caps plain connection requests at 15 a day, counting ones done today, separately from other types', () => {
     const done = ['RQ-90', 'RQ-91'].map((id) => row({ id, type: 'outbound message', status: 'done', completed_at: '2026-10-21T06:00:00Z' }))
     const requests = Array.from({ length: 20 }, (_, i) => row({ id: `RQ-${10 + i}`, type: 'outbound message' }))
     const others = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].map((id, i) => row({ id, account: String(i) }))
     const r = selectToday([...done, ...requests, ...others], NOW)
     expect(r.today.filter((t) => t.id.startsWith('RQ-'))).toHaveLength(13)
-    expect(r.today.filter((t) => !t.id.startsWith('RQ-'))).toHaveLength(5)
+    expect(r.today.filter((t) => !t.id.startsWith('RQ-'))).toHaveLength(6)
     expect(r.held.filter((t) => t.id.startsWith('RQ-'))).toHaveLength(7)
+    expect(r.holds.find((h) => h.row.id.startsWith('RQ-'))?.reason).toBe("over today's cap of 15 requests")
   })
 
   it('does not count a request against the finding-message cap', () => {
@@ -164,9 +165,22 @@ describe('selectToday', () => {
     expect(r.today.map((t) => t.id)).toEqual(['OB-50'])
   })
 
-  it('never shows more than 5', () => {
+  it('has no shared limit: every item within its own cap is due (the page splits them into columns)', () => {
     const rows = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id, i) => row({ id, account: String(i) }))
-    expect(selectToday(rows, NOW).today).toHaveLength(5)
+    expect(selectToday(rows, NOW).today).toHaveLength(7)
+  })
+
+  it('says why each held item is held', () => {
+    const rows = [
+      ...['p1', 'p2', 'p3'].map((id) => row({ id, account: 'Brand, Byline', platform: 'X' })),
+      ...['c1', 'c2', 'c3', 'c4', 'c5'].map((id) => row({ id, type: 'comment' })),
+    ]
+    const r = selectToday(rows, NOW)
+    expect(r.holds.map((h) => [h.row.id, h.reason])).toEqual([
+      ['p3', "for Brand on X, at today's cap of 2"],
+      ['c5', "over today's cap of 4"],
+    ])
+    expect(r.held.map((x) => x.id)).toEqual(['p3', 'c5'])
   })
 
   it('puts replies first, above a closing window and a higher priority', () => {
@@ -177,12 +191,13 @@ describe('selectToday', () => {
     expect(r.today.map((x) => x.id)).toEqual(['RE-01', 'CM-06'])
   })
 
-  it('never holds a reply, and replies do not take one of the 5 slots', () => {
+  it('never holds a reply', () => {
     const rows = ['a', 'b', 'c', 'd', 'e', 'f'].map((id, i) => row({ id, account: String(i) }))
     rows.push(row({ id: 'x', type: 'reply' }), row({ id: 'y', type: 'reply' }))
     const r = selectToday(rows, NOW)
     expect(r.today.filter((t) => t.type === 'reply').map((t) => t.id)).toEqual(['x', 'y'])
-    expect(r.today.filter((t) => t.type !== 'reply')).toHaveLength(5)
+    expect(r.today.filter((t) => t.type !== 'reply')).toHaveLength(6)
+    expect(r.holds).toEqual([])
   })
 
   it('never gives a slot to an item waiting on someone else, and fills it with one he can do', () => {
