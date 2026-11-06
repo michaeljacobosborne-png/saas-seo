@@ -469,10 +469,12 @@ export default function TodayList(props: TodayView) {
   const waitingOnOthers = live(props.waitingOnOthers)
 
   const columns = [
-    { key: 'social' as const, label: props.social.label, count: social.length },
-    { key: 'comments' as const, label: props.comments.label, count: comments.length },
-    { key: 'outreach' as const, label: props.outreach.label, count: outreach.length },
+    { key: 'social' as const, label: props.social.label, short: 'Posts', count: social.length },
+    { key: 'comments' as const, label: props.comments.label, short: 'Comments', count: comments.length },
+    { key: 'outreach' as const, label: props.outreach.label, short: 'Outreach', count: outreach.length },
   ]
+  // On a phone one column shows at a time; start on the first with work in it.
+  const [tab, setTab] = useState<'social' | 'comments' | 'outreach'>(() => columns.find((c) => c.count > 0)?.key ?? 'social')
   const limit = props.shownPerColumn
 
   const head = (label: string, n: number) => (
@@ -552,9 +554,26 @@ export default function TodayList(props: TodayView) {
         </section>
       )}
 
+      {/* Phone: one column at a time, with the counts on the switch. */}
+      <nav className="md:hidden sticky top-0 z-10 grid grid-cols-3 gap-1 rounded-xl p-1" style={{ background: 'var(--ink)', border: '1px solid rgba(184,115,51,0.25)' }} aria-label="Columns">
+        {columns.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => setTab(c.key)}
+            aria-pressed={tab === c.key}
+            className="rounded-lg py-1.5 text-xs"
+            style={tab === c.key ? { background: 'var(--copper)', color: '#1a1210', fontWeight: 700 } : { color: 'var(--cream-dim)' }}
+          >
+            <span className="block text-base tabular-nums">{c.count}</span>
+            {c.short}
+          </button>
+        ))}
+      </nav>
+
       <div className="grid gap-3 md:grid-cols-3 md:items-start">
         {columns.map((c) => (
-          <section key={c.key} className="space-y-2 rounded-xl p-3" style={panel} aria-label={c.label}>
+          <section key={c.key} className={`${tab === c.key ? '' : 'hidden'} md:block space-y-2 rounded-xl p-3`} style={panel} aria-label={c.label}>
             {columnBody[c.key]}
           </section>
         ))}
