@@ -20,6 +20,46 @@ import { CAPS, dayKey, isRequest, BLOG_GATE, type QueueRow, type TodayResult } f
 
 export const SHOWN_PER_COLUMN = 3
 
+/**
+ * The rule every plain request carries, shown once at the top of the Outreach
+ * column instead of on each card (on 6 Nov it repeated on 15 cards and filled
+ * a phone screen). Each card keeps only what is specific to it.
+ */
+export const REQUEST_RULE = 'Send every request plain, with no note: the free account has used its custom notes for the month.'
+const RULE_SENTENCE = /^\s*No note\.\s*The free account has used its custom notes for the month[^.]*\.\s*/i
+
+/** A request's warning with the shared no-note rule removed; null when nothing specific is left. */
+export function requestCaveat(warning: string | null | undefined): string | null {
+  const rest = (warning ?? '').replace(RULE_SENTENCE, '').trim()
+  return rest || null
+}
+
+/**
+ * A follow-up message's warning without "Send only after X accepts RQ-nn.",
+ * which the card's two stages already show; null when nothing specific is left.
+ */
+export function messageCaveat(warning: string | null | undefined): string | null {
+  const rest = (warning ?? '').replace(/^\s*Send only after [^.]*? accepts? (?:the connection request )?\(?RQ-\d+\)?\.\s*/i, '').trim()
+  return rest || null
+}
+
+/**
+ * Where to reach the person: a LinkedIn profile URL on the row if there is one,
+ * otherwise a LinkedIn people search for "Name Company", built from targets
+ * written "Name, Role, Company (domain)". Opens the LinkedIn app on a phone.
+ */
+export function profileLink(row: { target: string | null; note?: string | null; warning?: string | null }): { url: string; direct: boolean } | null {
+  const text = [row.target, row.note, row.warning].filter(Boolean).join(' ')
+  const direct = /https?:\/\/(?:[a-z]{2,3}\.)?(?:www\.)?linkedin\.com\/in\/[A-Za-z0-9_%-]+\/?/.exec(text)
+  if (direct) return { url: direct[0], direct: true }
+  const parts = (row.target ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  if (!parts.length) return null
+  const name = parts[0]
+  const company = (parts.length > 2 ? parts[parts.length - 1] : '').replace(/\s*\(.*$/, '').trim()
+  const keywords = [name, company].filter(Boolean).join(' ')
+  return { url: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(keywords)}`, direct: false }
+}
+
 export type ColumnKey = 'social' | 'comments' | 'outreach'
 
 type Row = QueueRow & { blocked_at?: string | null; blocked_reason?: string | null }

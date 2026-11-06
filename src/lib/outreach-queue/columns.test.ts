@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrangeColumns, SHOWN_PER_COLUMN } from './columns'
+import { arrangeColumns, messageCaveat, profileLink, requestCaveat, SHOWN_PER_COLUMN } from './columns'
 import { selectToday, type QueueRow } from './today'
 
 let seq = 0
@@ -114,5 +114,39 @@ describe('arrangeColumns', () => {
     const l = layout([row({ id: 'OB-19', type: 'outbound message', created_at: '2026-10-20T08:00:00Z' })])
     expect(l.stale.map((s) => s.row.id)).toEqual(['OB-19'])
     expect(l.outreach.due).toEqual([])
+  })
+})
+
+describe('requestCaveat', () => {
+  it('drops the shared no-note rule in both wordings the queue uses, keeping anything specific', () => {
+    expect(requestCaveat('No note. The free account has used its custom notes for the month.')).toBeNull()
+    expect(requestCaveat('No note. The free account has used its custom notes for the month, and the finding goes in the message after he accepts.')).toBeNull()
+    expect(requestCaveat('No note. The free account has used its custom notes for the month. Confirm Dana is still at Kanopy first.')).toBe('Confirm Dana is still at Kanopy first.')
+    expect(requestCaveat('Check he is still at the company.')).toBe('Check he is still at the company.')
+    expect(requestCaveat(null)).toBeNull()
+  })
+})
+
+describe('profileLink', () => {
+  it('uses a LinkedIn profile URL on the row when there is one', () => {
+    expect(profileLink({ target: 'Ross Tavendale, Managing Director, Type A Media (typeamedia.net)', note: 'Profile: https://www.linkedin.com/in/rosstavendale/' })).toEqual({ url: 'https://www.linkedin.com/in/rosstavendale/', direct: true })
+    expect(profileLink({ target: 'Aia Laser', note: 'Profile: https://il.linkedin.com/in/aialaser' })).toEqual({ url: 'https://il.linkedin.com/in/aialaser', direct: true })
+  })
+
+  it('otherwise searches LinkedIn for the name and company from the target', () => {
+    expect(profileLink({ target: 'Nate Turner, Co-Founder and CEO, Ten Speed (tenspeed.io)' })).toEqual({
+      url: 'https://www.linkedin.com/search/results/people/?keywords=Nate%20Turner%20Ten%20Speed',
+      direct: false,
+    })
+    expect(profileLink({ target: 'Ihsan Haider' })?.url).toBe('https://www.linkedin.com/search/results/people/?keywords=Ihsan%20Haider')
+    expect(profileLink({ target: null })).toBeNull()
+  })
+})
+
+describe('messageCaveat', () => {
+  it('drops "Send only after X accepts RQ-nn", which the card already shows, keeping the rest', () => {
+    expect(messageCaveat('Send only after James Brockbank accepts RQ-12.')).toBeNull()
+    expect(messageCaveat('Send only after Peter Van Zelst accepts RQ-13. This is our request being refused, not a crawler block.')).toBe('This is our request being refused, not a crawler block.')
+    expect(messageCaveat('Re-run before sending.')).toBe('Re-run before sending.')
   })
 })

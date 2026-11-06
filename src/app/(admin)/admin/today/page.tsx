@@ -4,7 +4,7 @@ import type { QueuePart } from '@/lib/outreach-queue/parse'
 import { CAPS, TIME_ZONE, dayKey, isRequest, selectToday, type QueueRow } from '@/lib/outreach-queue/today'
 import { client as sanity } from '@/sanity/lib/client'
 import { isSanityConfigured } from '@/sanity/env'
-import { arrangeColumns, SHOWN_PER_COLUMN, type OutreachCard } from '@/lib/outreach-queue/columns'
+import { arrangeColumns, messageCaveat, profileLink, REQUEST_RULE, requestCaveat, SHOWN_PER_COLUMN, type OutreachCard } from '@/lib/outreach-queue/columns'
 import TodayList, { type ColumnView, type Item, type OutreachCardView } from './TodayList'
 
 // Always live: the list changes every time an item is marked done.
@@ -101,11 +101,18 @@ export default async function TodayPage() {
   const card = (c: OutreachCard<Row>): OutreachCardView => ({
     key: c.key,
     stage: c.stage,
-    request: c.request ? toItem(c.request) : null,
-    message: c.message ? toItem(c.message) : null,
+    // The shared no-note rule shows once at the top of the column; the card keeps only its own caveat.
+    request: c.request ? { ...toItem(c.request), warning: requestCaveat(c.request.warning) } : null,
+    message: c.message ? { ...toItem(c.message), warning: messageCaveat(c.message.warning) } : null,
     waitingReason: c.waitingReason ?? null,
     days: c.days,
     decide: c.decide,
+    // The profile URL may be on either row of the pair.
+    profile: profileLink({
+      target: (c.request ?? c.message)!.target,
+      note: [c.request?.note, c.message?.note].filter(Boolean).join(' '),
+      warning: [c.request?.warning, c.message?.warning].filter(Boolean).join(' '),
+    }),
   })
 
   return (
@@ -115,6 +122,7 @@ export default async function TodayPage() {
       social={column(layout.social, (r: Row) => toItem(r))}
       comments={column(layout.comments, (r: Row) => toItem(r))}
       outreach={{ ...column(layout.outreach, card), awaiting: layout.outreach.awaiting.map(card) }}
+      requestRule={layout.outreach.due.some((c) => c.stage === 'request') ? REQUEST_RULE : null}
       stale={layout.stale.map((s) => toItem(s.row as Row, [], s.idleDays))}
       waitingOnOthers={waitingOnOthers}
       doneToday={doneToday.map((r) => toItem(r))}

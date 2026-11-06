@@ -31,6 +31,8 @@ export interface OutreachCardView {
   waitingReason?: string | null
   days?: number
   decide?: boolean
+  /** The person on LinkedIn: their profile when we have it, else a search for name and company. */
+  profile?: { url: string; direct: boolean } | null
 }
 
 export interface ColumnView<I> {
@@ -52,6 +54,8 @@ export interface TodayView {
   waitingOnOthers: Item[]
   doneToday: Item[]
   shownPerColumn: number
+  /** The rule every plain request follows, shown once at the top of Outreach. */
+  requestRule: string | null
   caps: { comments: string; outbound: string; requests: string }
 }
 
@@ -284,6 +288,18 @@ function OutreachCard({ c, act, busy }: { c: OutreachCardView; act: Actions; bus
   return (
     <article className="rounded-xl p-3 space-y-2" style={card}>
       <Meta left={`${ids} · ${shortTarget(lead.target)}`} right={right} />
+      {/* The one thing a request card needs: a way to reach the person. */}
+      {c.profile && (
+        <a
+          href={c.profile.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-center rounded-lg text-sm font-semibold"
+          style={{ minHeight: 44, border: '1px solid rgba(184,115,51,0.35)', color: 'var(--copper-lt)' }}
+        >
+          {c.profile.direct ? 'Open LinkedIn profile' : 'Find on LinkedIn'}
+        </a>
+      )}
 
       {c.request && (
         <div className="flex gap-2 py-1">
@@ -510,6 +526,11 @@ export default function TodayList(props: TodayView) {
     outreach: (
       <>
         {head(props.outreach.label, outreach.length)}
+        {props.requestRule && (
+          <p role="note" className="rounded-lg p-2.5 text-xs leading-relaxed" style={{ background: 'rgba(229,160,13,0.10)', border: '1px solid rgba(229,160,13,0.35)', color: 'var(--cream-dim)' }}>
+            {props.requestRule}
+          </p>
+        )}
         {outreach.length === 0 ? (
           <Empty text={props.outreach.empty ?? 'Everything here is done for today.'} />
         ) : (
@@ -562,18 +583,18 @@ export default function TodayList(props: TodayView) {
             type="button"
             onClick={() => setTab(c.key)}
             aria-pressed={tab === c.key}
-            className="rounded-lg py-1.5 text-xs"
+            className="min-w-0 overflow-hidden whitespace-nowrap rounded-lg px-1 py-1.5 text-xs"
             style={tab === c.key ? { background: 'var(--copper)', color: '#1a1210', fontWeight: 700 } : { color: 'var(--cream-dim)' }}
           >
-            <span className="block text-base tabular-nums">{c.count}</span>
-            {c.short}
+            <span className="block text-base leading-tight tabular-nums">{c.count}</span>
+            <span className="block truncate">{c.short}</span>
           </button>
         ))}
       </nav>
 
-      <div className="grid gap-3 md:grid-cols-3 md:items-start">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
         {columns.map((c) => (
-          <section key={c.key} className={`${tab === c.key ? '' : 'hidden'} md:block space-y-2 rounded-xl p-3`} style={panel} aria-label={c.label}>
+          <section key={c.key} className={`${tab === c.key ? '' : 'hidden'} md:block min-w-0 space-y-2 rounded-xl p-3`} style={panel} aria-label={c.label}>
             {columnBody[c.key]}
           </section>
         ))}
