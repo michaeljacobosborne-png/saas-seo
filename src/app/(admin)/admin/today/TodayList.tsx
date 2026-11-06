@@ -4,17 +4,6 @@ import { useState, useTransition } from 'react'
 import { xLength, type QueuePart } from '@/lib/outreach-queue/parse'
 import { acceptRequest, blockItem, giveUpOnRequest, keepLive, keepWaitingOnRequest, markDone, unblockItem, undoDone, type ActionResult } from './actions'
 
-/** A sent connection request whose follow-up is held until the person accepts. */
-export interface AwaitingRequest {
-  id: string
-  target: string
-  messages: string[]
-  days: number
-  decide: boolean
-}
-
-const isRequestId = (id: string) => id.startsWith('RQ-')
-
 export interface Item {
   id: string
   type: string
@@ -33,8 +22,42 @@ export interface Item {
   blockedReason?: string | null
 }
 
+/** One person in the outreach column: the request and the message behind it. */
+export interface OutreachCardView {
+  key: string
+  stage: 'request' | 'accept' | 'message'
+  request: Item | null
+  message: Item | null
+  waitingReason?: string | null
+  days?: number
+  decide?: boolean
+}
+
+export interface ColumnView<I> {
+  key: 'social' | 'comments' | 'outreach'
+  label: string
+  due: I[]
+  held: string[]
+  waiting: string[]
+  empty: string | null
+}
+
+export interface TodayView {
+  dateLabel: string
+  replies: Item[]
+  social: ColumnView<Item>
+  comments: ColumnView<Item>
+  outreach: ColumnView<OutreachCardView> & { awaiting: OutreachCardView[] }
+  stale: Item[]
+  waitingOnOthers: Item[]
+  doneToday: Item[]
+  shownPerColumn: number
+  caps: { comments: string; outbound: string; requests: string }
+}
+
 const X_LIMIT = 280
 const card = { background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }
+const panel = { background: 'rgba(36,25,22,0.6)', border: '1px solid rgba(184,115,51,0.18)' }
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -70,6 +93,15 @@ function closesLabel(d: string): string {
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, dd)))
 }
 
+function shortAccount(a: string): string {
+  return a.split(',')[0].trim()
+}
+
+/** "Dan Taylor" from "Dan Taylor, SALT.agency, on his post ...". */
+function shortTarget(t: string | null): string {
+  return (t ?? '').split(',')[0].trim()
+}
+
 function CopyButton({ text }: { text: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
   return (
@@ -81,11 +113,7 @@ function CopyButton({ text }: { text: string }) {
         setTimeout(() => setState('idle'), 1800)
       }}
       className="w-full rounded-lg text-base font-semibold active:scale-[0.99] transition"
-      style={{
-        minHeight: 52,
-        background: state === 'copied' ? '#2f6b3a' : 'var(--copper)',
-        color: '#fff',
-      }}
+      style={{ minHeight: 48, background: state === 'copied' ? '#2f6b3a' : 'var(--copper)', color: '#fff' }}
     >
       {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed, select the text' : 'Copy'}
     </button>
@@ -108,10 +136,7 @@ function Part({ part, platform }: { part: QueuePart; platform: string }) {
           )}
         </div>
       )}
-      <div
-        className="whitespace-pre-wrap break-words rounded-lg p-3 text-[15px] leading-relaxed text-[var(--cream)] select-text"
-        style={{ background: 'var(--ink-deep)' }}
-      >
+      <div className="whitespace-pre-wrap break-words rounded-lg p-3 text-[15px] leading-relaxed text-[var(--cream)] select-text" style={{ background: 'var(--ink-deep)' }}>
         {part.text}
       </div>
       <CopyButton text={part.text} />
@@ -119,18 +144,39 @@ function Part({ part, platform }: { part: QueuePart; platform: string }) {
   )
 }
 
-/** after_ids entries are queue ids, "blog:<slug>" or "date:<YYYY-MM-DD>". */
-function waitingLabel(waitingFor: string[]): string {
-  const ids = waitingFor.filter((w) => !w.startsWith('blog:') && !w.startsWith('date:'))
-  const parts: string[] = []
-  if (ids.length) parts.push(`${ids.join(', ')} to be done first`)
-  for (const w of waitingFor.filter((x) => x.startsWith('blog:'))) parts.push(`the blog post "${w.slice(5)}" to be published`)
-  for (const w of waitingFor.filter((x) => x.startsWith('date:'))) parts.push(`${closesLabel(w.slice(5))} (scheduled)`)
-  return `Waiting for ${parts.join(', and ')}.`
+/** Warnings sit above every copy button, never below. */
+function Warning({ item }: { item: Item }) {
+  if (!item.warning) return null
+  return (
+    <div role="note" className="rounded-lg p-3 text-sm leading-relaxed" style={{ background: 'rgba(229,160,13,0.14)', border: '1px solid rgba(229,160,13,0.5)', color: 'var(--cream)' }}>
+      <strong className="block mb-1">{item.needsRerun ? 'Re-run first' : 'Before you send'}</strong>
+      {item.warning}
+    </div>
+  )
 }
 
-function shortAccount(a: string): string {
-  return a.split(',')[0].trim()
+function Context({ item }: { item: Item }) {
+  if (!item.note) return null
+  return (
+    <details className="text-sm text-[var(--cream-dim)]">
+      <summary className="cursor-pointer py-2">Context</summary>
+      <p className="leading-relaxed">{item.note}</p>
+    </details>
+  )
+}
+
+function DoneButton({ onDone, busy, label = 'Mark done' }: { onDone: () => void; busy?: boolean; label?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onDone}
+      disabled={busy}
+      className="w-full rounded-lg text-base font-semibold disabled:opacity-50"
+      style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}
+    >
+      {label}
+    </button>
+  )
 }
 
 function WaitButton({ onWait, busy }: { onWait: (reason: string) => void; busy?: boolean }) {
@@ -138,12 +184,7 @@ function WaitButton({ onWait, busy }: { onWait: (reason: string) => void; busy?:
   const [reason, setReason] = useState('')
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-full rounded-lg text-sm text-[var(--cream-dim)]"
-        style={{ minHeight: 48, background: 'transparent' }}
-      >
+      <button type="button" onClick={() => setOpen(true)} className="w-full rounded-lg text-sm text-[var(--cream-dim)]" style={{ minHeight: 44, background: 'transparent' }}>
         Waiting on someone else
       </button>
     )
@@ -169,12 +210,7 @@ function WaitButton({ onWait, busy }: { onWait: (reason: string) => void; busy?:
         >
           Move to waiting
         </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="rounded-lg px-4 text-base text-[var(--cream-dim)]"
-          style={{ minHeight: 48, background: 'transparent' }}
-        >
+        <button type="button" onClick={() => setOpen(false)} className="rounded-lg px-4 text-base text-[var(--cream-dim)]" style={{ minHeight: 48, background: 'transparent' }}>
           Cancel
         </button>
       </div>
@@ -182,322 +218,388 @@ function WaitButton({ onWait, busy }: { onWait: (reason: string) => void; busy?:
   )
 }
 
-function ItemCard({ item, onDone, onKeep, onWait, onAccepted, busy }: { item: Item; onDone?: () => void; onKeep?: () => void; onWait?: (reason: string) => void; onAccepted?: () => void; busy?: boolean }) {
+function Meta({ left, right }: { left: string; right?: string | null }) {
   return (
-    <article className="rounded-xl p-4 space-y-4" style={card}>
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded px-2 py-0.5 font-mono font-semibold" style={{ background: 'rgba(184,115,51,0.2)', color: 'var(--copper-lt)' }}>
-            {item.id}
-          </span>
-          <span className="text-[var(--cream-dim)]">
-            {item.type} · {item.platform} · {shortAccount(item.account)}
-          </span>
-          {item.closesOn && (
-            <span className="rounded px-2 py-0.5 font-semibold" style={{ background: '#7a2e1c', color: '#fff' }}>
-              Closes {closesLabel(item.closesOn)}
-            </span>
-          )}
-          {item.idleDays !== undefined && (
-            <span className="rounded px-2 py-0.5 font-semibold" style={{ background: 'rgba(122,101,85,0.35)', color: 'var(--cream)' }}>
-              Stale, untouched {item.idleDays} days
-            </span>
-          )}
-        </div>
-        {item.target && <p className="text-sm text-[var(--cream)]">To: {item.target}</p>}
-      </header>
+    <div className="flex items-baseline justify-between gap-2 text-xs text-[var(--cream-faint)]">
+      <span className="min-w-0 truncate">{left}</span>
+      {right && <span className="shrink-0">{right}</span>}
+    </div>
+  )
+}
 
-      {item.waitingFor.length > 0 && (
-        <p className="text-sm text-[var(--cream-dim)]">{waitingLabel(item.waitingFor)}</p>
-      )}
-
-      {/* Warnings sit above every copy button, never below. */}
-      {item.warning && (
-        <div role="note" className="rounded-lg p-3 text-sm leading-relaxed" style={{ background: 'rgba(229,160,13,0.14)', border: '1px solid rgba(229,160,13,0.5)', color: 'var(--cream)' }}>
-          <strong className="block mb-1">{item.needsRerun ? 'Re-run first' : 'Before you send'}</strong>
-          {item.warning}
-        </div>
-      )}
-
+/** A post, comment or reply: its text, warnings above the copy button, one tap to mark done. */
+function ItemCard({ item, onDone, onWait, onKeep, busy }: { item: Item; onDone?: () => void; onWait?: (reason: string) => void; onKeep?: () => void; busy?: boolean }) {
+  const who = item.type === 'social post' ? `${shortAccount(item.account)}, ${item.platform}` : shortTarget(item.target) || shortAccount(item.account)
+  const right = item.idleDays !== undefined ? `idle ${item.idleDays} days` : item.closesOn ? `closes ${closesLabel(item.closesOn)}` : null
+  return (
+    <article className="rounded-xl p-3 space-y-3" style={card}>
+      <Meta left={`${item.id} · ${who}`} right={right} />
+      <Warning item={item} />
       {item.parts.map((p, i) => (
         <Part key={i} part={p} platform={item.platform} />
       ))}
-
-      {onDone && (
-        <button
-          type="button"
-          onClick={onDone}
-          disabled={busy}
-          className="w-full rounded-lg text-base font-semibold disabled:opacity-50"
-          style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}
-        >
-          {isRequestId(item.id) ? 'Sent' : 'Mark done'}
-        </button>
-      )}
-
-      {onAccepted && (
-        <button
-          type="button"
-          onClick={onAccepted}
-          disabled={busy}
-          className="w-full rounded-lg text-sm text-[var(--cream-dim)] disabled:opacity-50"
-          style={{ minHeight: 48, background: 'transparent' }}
-        >
-          Sent earlier, and they already accepted
-        </button>
-      )}
-
+      {onDone && <DoneButton onDone={onDone} busy={busy} />}
       {onKeep && (
         <button
           type="button"
           onClick={onKeep}
           disabled={busy}
-          className="w-full rounded-lg text-base font-semibold disabled:opacity-50 text-[var(--cream-dim)]"
-          style={{ minHeight: 48, border: '1px solid rgba(184,115,51,0.3)', background: 'transparent' }}
+          className="w-full rounded-lg text-sm font-semibold disabled:opacity-50 text-[var(--cream-dim)]"
+          style={{ minHeight: 44, border: '1px solid rgba(184,115,51,0.3)', background: 'transparent' }}
         >
           Still live, keep it 7 more days
         </button>
       )}
-
       {onWait && <WaitButton onWait={onWait} busy={busy} />}
+      <Context item={item} />
+    </article>
+  )
+}
 
-      {item.note && (
-        <details className="text-sm text-[var(--cream-dim)]">
-          <summary className="cursor-pointer py-2">Context</summary>
-          <p className="leading-relaxed">{item.note}</p>
-        </details>
+function Pip({ n, on }: { n: string; on: boolean }) {
+  return (
+    <span
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+      style={on ? { background: 'var(--copper)', color: '#1a1210' } : { border: '1px solid rgba(184,115,51,0.3)', color: 'var(--cream-faint)' }}
+    >
+      {n}
+    </span>
+  )
+}
+
+function messageLength(m: Item | null): string {
+  const t = m?.parts[0]?.text
+  return t ? `${t.length} characters` : 'no message drafted'
+}
+
+/**
+ * One person, two stages: the plain connection request, then the message that
+ * follows it once they accept. The waiting stage says what it waits for.
+ */
+function OutreachCard({ c, act, busy }: { c: OutreachCardView; act: Actions; busy: boolean }) {
+  const lead = c.request ?? c.message!
+  const ids = [c.request?.id, c.message?.id].filter(Boolean).join(' → ')
+  const right = c.stage === 'accept' && c.days !== undefined ? `sent ${c.days === 0 ? 'today' : `${c.days} day${c.days === 1 ? '' : 's'} ago`}` : null
+  const releaseId = c.request?.id ?? null
+  return (
+    <article className="rounded-xl p-3 space-y-2" style={card}>
+      <Meta left={`${ids} · ${shortTarget(lead.target)}`} right={right} />
+
+      {c.request && (
+        <div className="flex gap-2 py-1">
+          <Pip n={c.stage === 'request' ? '1' : '✓'} on={c.stage === 'request'} />
+          <div className="min-w-0 flex-1 space-y-2">
+            {c.stage === 'request' ? (
+              <>
+                <p className="text-sm text-[var(--cream)]">Send the connection request, no note.</p>
+                <Warning item={c.request} />
+                <DoneButton onDone={() => act.done(c.request!.id)} busy={busy} label="Mark sent" />
+                <button type="button" onClick={() => act.accepted(c.request!.id)} disabled={busy} className="w-full rounded-lg text-sm text-[var(--cream-dim)] disabled:opacity-50" style={{ minHeight: 44, background: 'transparent' }}>
+                  Sent earlier, and they already accepted
+                </button>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--cream-dim)]">Request sent.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {c.message && (
+        <div className="flex gap-2 py-1" style={c.request ? { borderTop: '1px dashed rgba(184,115,51,0.25)', paddingTop: 10 } : undefined}>
+          <Pip n="2" on={c.stage === 'message'} />
+          <div className="min-w-0 flex-1 space-y-2">
+            {c.stage === 'message' ? (
+              <>
+                <p className="text-sm text-[var(--cream)]">Message ready, {messageLength(c.message)}.</p>
+                <Warning item={c.message} />
+                {c.message.parts.map((p, i) => (
+                  <Part key={i} part={p} platform={c.message!.platform} />
+                ))}
+                <DoneButton onDone={() => act.done(c.message!.id)} busy={busy} />
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-[var(--cream-dim)]">Message, {messageLength(c.message)}.</p>
+                <p className="text-xs text-[var(--cream-faint)]">{c.waitingReason ?? 'Unlocks when they accept.'}</p>
+                {c.stage === 'accept' && (
+                  <button
+                    type="button"
+                    onClick={() => (releaseId ? act.accepted(releaseId) : act.unblock(c.message!.id))}
+                    disabled={busy}
+                    className="w-full rounded-lg text-base font-semibold disabled:opacity-50"
+                    style={{ minHeight: 48, background: 'var(--copper)', color: '#fff' }}
+                  >
+                    They accepted
+                  </button>
+                )}
+                {c.stage === 'accept' && c.decide && releaseId && (
+                  <>
+                    <p className="text-sm text-[var(--cream)]">No answer in three weeks. Keep waiting, or give up?</p>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => act.keepWaiting(releaseId)} disabled={busy} className="flex-1 rounded-lg text-sm font-semibold disabled:opacity-50" style={{ minHeight: 44, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}>
+                        Keep waiting
+                      </button>
+                      <button type="button" onClick={() => act.giveUp(releaseId)} disabled={busy} className="flex-1 rounded-lg text-sm text-[var(--cream-dim)] disabled:opacity-50" style={{ minHeight: 44, border: '1px solid rgba(184,115,51,0.3)', background: 'transparent' }}>
+                        Give up, close it
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       )}
     </article>
   )
 }
 
-export default function TodayList(props: {
-  dateLabel: string
-  today: Item[]
-  held: Item[]
-  blocked: Item[]
-  stale: Item[]
-  waitingOnOthers: Item[]
-  awaiting: AwaitingRequest[]
-  doneToday: Item[]
-  pendingCount: number
-  caps: { comments: string; outbound: string; requests: string }
-}) {
+interface Actions {
+  done: (id: string) => void
+  wait: (id: string, reason: string) => void
+  keep: (id: string) => void
+  unblock: (id: string) => void
+  accepted: (id: string) => void
+  keepWaiting: (id: string) => void
+  giveUp: (id: string) => void
+}
+
+/** Held and waiting lines, then the empty state: always visible, no tap. */
+function ColumnFoot({ held, waiting }: { held: string[]; waiting: string[] }) {
+  if (!held.length && !waiting.length) return null
+  return (
+    <div className="space-y-1 pt-2 text-xs text-[var(--cream-faint)]" style={{ borderTop: '1px solid rgba(184,115,51,0.18)' }}>
+      {held.map((h) => (
+        <p key={h}>
+          <b className="font-semibold text-[var(--cream-dim)]">Held:</b> {h}
+        </p>
+      ))}
+      {waiting.map((w) => (
+        <p key={w}>
+          <b className="font-semibold text-[var(--cream-dim)]">Waiting:</b> {w}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+function Empty({ text }: { text: string }) {
+  return (
+    <div className="py-3 text-sm text-[var(--cream-faint)]">
+      <b className="block font-semibold text-[var(--cream-dim)]">Nothing due</b>
+      {text}
+    </div>
+  )
+}
+
+function MoreButton({ n, open, onClick }: { n: number; open: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full rounded-lg text-sm text-[var(--copper-lt)]"
+      style={{ minHeight: 44, border: '1px dashed rgba(184,115,51,0.35)', background: 'transparent' }}
+      aria-expanded={open}
+    >
+      {open ? 'Show fewer' : `${n} more`}
+    </button>
+  )
+}
+
+/** Shows the first `limit` items; the rest expand in place. */
+function Limited<I>({ items, limit, render }: { items: I[]; limit: number; render: (i: I) => React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const extra = items.length - limit
+  return (
+    <>
+      {(open ? items : items.slice(0, limit)).map(render)}
+      {extra > 0 && <MoreButton n={extra} open={open} onClick={() => setOpen((v) => !v)} />}
+    </>
+  )
+}
+
+export default function TodayList(props: TodayView) {
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const [showAll, setShowAll] = useState(false)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  const done = (id: string) => {
-    setHidden((s) => new Set(s).add(id))
-    setError(null)
-    startTransition(async () => {
-      try {
-        await markDone(id)
-      } catch {
-        setHidden((s) => {
-          const n = new Set(s)
-          n.delete(id)
-          return n
-        })
-        setError(`Could not mark ${id} done. Try again.`)
-      }
+  const hide = (id: string) => setHidden((s) => new Set(s).add(id))
+  const unhide = (id: string) =>
+    setHidden((s) => {
+      const n = new Set(s)
+      n.delete(id)
+      return n
     })
-  }
 
-  const undo = (id: string) => {
+  const run = (id: string, fn: () => Promise<void | ActionResult>, fail: string, optimistic = true) => {
+    if (optimistic) hide(id)
     setError(null)
     startTransition(async () => {
       try {
-        await undoDone(id)
-        setHidden((s) => {
-          const n = new Set(s)
-          n.delete(id)
-          return n
-        })
-      } catch {
-        setError(`Could not undo ${id}. Try again.`)
-      }
-    })
-  }
-
-  const keep = (id: string) => {
-    setHidden((s) => new Set(s).add(id))
-    setError(null)
-    startTransition(async () => {
-      try {
-        await keepLive(id)
-      } catch {
-        setHidden((s) => {
-          const n = new Set(s)
-          n.delete(id)
-          return n
-        })
-        setError(`Could not keep ${id}. Try again.`)
-      }
-    })
-  }
-
-  // These return the reason rather than throwing, so the message can be shown.
-  const checked = (fn: () => Promise<ActionResult>) => async () => {
-    const r = await fn()
-    if (!r.ok) throw new Error(r.message)
-  }
-  const runChecked = (id: string, fn: () => Promise<ActionResult>) => {
-    setHidden((s) => new Set(s).add(id))
-    setError(null)
-    startTransition(async () => {
-      try {
-        await checked(fn)()
+        const r = await fn()
+        if (r && !r.ok) throw new Error(r.message)
       } catch (e) {
-        setHidden((s) => {
-          const n = new Set(s)
-          n.delete(id)
-          return n
-        })
-        setError(e instanceof Error && e.message ? e.message : `Could not save ${id}. Try again.`)
+        unhide(id)
+        setError(e instanceof Error && e.message && !/fetch|server/i.test(e.message) ? e.message : fail)
       }
     })
   }
-  const wait = (id: string, reason: string) => runChecked(id, () => blockItem(id, reason))
-  const unblock = (id: string) => runChecked(id, () => unblockItem(id))
-  const accepted = (id: string) => runChecked(id, () => acceptRequest(id))
-  const keepWaiting = (id: string) => runChecked(id, () => keepWaitingOnRequest(id))
-  const giveUp = (id: string) => runChecked(id, () => giveUpOnRequest(id))
 
-  const today = props.today.filter((i) => !hidden.has(i.id))
-  const awaiting = props.awaiting.filter((a) => !hidden.has(a.id))
-  const waiting = props.waitingOnOthers.filter((i) => !hidden.has(i.id))
-  const held = props.held.filter((i) => !hidden.has(i.id))
-  const stale = props.stale.filter((i) => !hidden.has(i.id))
-  const rest = held.length + props.blocked.length + stale.length
+  const act: Actions = {
+    done: (id) => run(id, () => markDone(id), `Could not mark ${id} done. Try again.`),
+    wait: (id, reason) => run(id, () => blockItem(id, reason), `Could not move ${id}. Try again.`),
+    keep: (id) => run(id, () => keepLive(id), `Could not keep ${id}. Try again.`),
+    unblock: (id) => run(id, () => unblockItem(id), `Could not release ${id}. Try again.`),
+    accepted: (id) => run(id, () => acceptRequest(id), `Could not mark ${id} accepted. Try again.`),
+    keepWaiting: (id) => run(id, () => keepWaitingOnRequest(id), `Could not save ${id}. Try again.`),
+    giveUp: (id) => run(id, () => giveUpOnRequest(id), `Could not close ${id}. Try again.`),
+  }
+  const undo = (id: string) => run(id, () => undoDone(id).then(() => unhide(id)), `Could not undo ${id}. Try again.`, false)
+
+  const live = (items: Item[]) => items.filter((i) => !hidden.has(i.id))
+  const liveCards = (cards: OutreachCardView[]) => cards.filter((c) => !hidden.has(c.key) && !(c.message && hidden.has(c.message.id)))
+
+  const replies = live(props.replies)
+  const social = live(props.social.due)
+  const comments = live(props.comments.due)
+  const outreach = liveCards(props.outreach.due)
+  const awaiting = liveCards(props.outreach.awaiting)
+  const stale = live(props.stale)
+  const waitingOnOthers = live(props.waitingOnOthers)
+
+  const columns = [
+    { key: 'social' as const, label: props.social.label, count: social.length },
+    { key: 'comments' as const, label: props.comments.label, count: comments.length },
+    { key: 'outreach' as const, label: props.outreach.label, count: outreach.length },
+  ]
+  const limit = props.shownPerColumn
+
+  const head = (label: string, n: number) => (
+    <div className="flex items-baseline justify-between pb-2 mb-1" style={{ borderBottom: '1px solid rgba(184,115,51,0.18)' }}>
+      <h2 className="text-sm font-bold text-[var(--cream)]">{label}</h2>
+      <span className="text-xs tabular-nums text-[var(--cream-faint)]">{Math.min(n, limit)} of {n}</span>
+    </div>
+  )
+
+  const columnBody = {
+    social: (
+      <>
+        {head(props.social.label, social.length)}
+        {social.length === 0 ? (
+          <Empty text={props.social.empty ?? 'Everything here is done for today.'} />
+        ) : (
+          <Limited items={social} limit={limit} render={(i) => <ItemCard key={i.id} item={i} onDone={() => act.done(i.id)} onWait={(r) => act.wait(i.id, r)} busy={pending} />} />
+        )}
+        <ColumnFoot held={props.social.held} waiting={props.social.waiting} />
+      </>
+    ),
+    comments: (
+      <>
+        {head(props.comments.label, comments.length)}
+        {comments.length === 0 ? (
+          <Empty text={props.comments.empty ?? 'Everything here is done for today.'} />
+        ) : (
+          <Limited items={comments} limit={limit} render={(i) => <ItemCard key={i.id} item={i} onDone={() => act.done(i.id)} onWait={(r) => act.wait(i.id, r)} busy={pending} />} />
+        )}
+        <ColumnFoot held={props.comments.held} waiting={props.comments.waiting} />
+      </>
+    ),
+    outreach: (
+      <>
+        {head(props.outreach.label, outreach.length)}
+        {outreach.length === 0 ? (
+          <Empty text={props.outreach.empty ?? 'Everything here is done for today.'} />
+        ) : (
+          <Limited items={outreach} limit={limit} render={(c) => <OutreachCard key={c.key} c={c} act={act} busy={pending} />} />
+        )}
+        {awaiting.length > 0 && (
+          <div className="space-y-2 pt-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Sent, waiting to accept ({awaiting.length})</h3>
+            <Limited items={awaiting} limit={limit} render={(c) => <OutreachCard key={c.key} c={c} act={act} busy={pending} />} />
+          </div>
+        )}
+        <ColumnFoot held={props.outreach.held} waiting={props.outreach.waiting} />
+      </>
+    ),
+  }
 
   return (
-    <main className="mx-auto max-w-xl px-4 py-6 space-y-5">
+    <main className="mx-auto max-w-6xl px-4 py-5 space-y-4">
       <header>
         <h1 className="text-2xl font-semibold text-[var(--cream)]">Today</h1>
         <p className="text-sm text-[var(--cream-dim)]">{props.dateLabel}</p>
         <p className="mt-1 text-xs text-[var(--cream-faint)]">
-          Comments {props.caps.comments} · Requests {props.caps.requests} · Messages {props.caps.outbound} · {props.pendingCount} still in the queue
+          Done today: comments {props.caps.comments} · requests {props.caps.requests} · messages {props.caps.outbound}
         </p>
       </header>
 
       {error && (
-        <p role="alert" className="rounded-lg p-3 text-sm" style={{ background: '#7a2e1c', color: '#fff' }}>{error}</p>
-      )}
-
-      {today.length === 0 ? (
-        <p className="rounded-xl p-4 text-[var(--cream)]" style={card}>
-          Nothing left for today. Anything else is held by the daily and weekly limits, waiting on another item, or stale.
+        <p role="alert" className="rounded-lg p-3 text-sm" style={{ background: '#7a2e1c', color: '#fff' }}>
+          {error}
         </p>
-      ) : (
-        today.map((item) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            onDone={() => done(item.id)}
-            onWait={isRequestId(item.id) ? undefined : (r) => wait(item.id, r)}
-            onAccepted={isRequestId(item.id) ? () => accepted(item.id) : undefined}
-            busy={pending}
-          />
-        ))
       )}
 
-      {awaiting.length > 0 && (
+      {/* Replies: never capped, never held, never in a column. */}
+      {replies.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Requests sent, waiting to be accepted ({awaiting.length})</h2>
-          <ul className="space-y-2">
-            {awaiting.map((a) => (
-              <li key={a.id} className="rounded-lg p-3 space-y-2" style={card}>
-                <p className="text-sm text-[var(--cream)]">
-                  <span className="font-mono text-[var(--cream-dim)]">{a.id}</span> · {a.target}
-                </p>
-                <p className="text-xs text-[var(--cream-faint)]">
-                  Sent {a.days === 0 ? 'today' : `${a.days} day${a.days === 1 ? '' : 's'} ago`}. Accepting releases {a.messages.join(', ')} into today.
-                </p>
-                {a.decide && (
-                  <p className="text-sm text-[var(--cream)]">No answer in three weeks. Keep waiting, or give up and close it?</p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => accepted(a.id)}
-                  disabled={pending}
-                  className="w-full rounded-lg text-base font-semibold disabled:opacity-50"
-                  style={{ minHeight: 48, background: 'var(--copper)', color: '#fff' }}
-                >
-                  They accepted
-                </button>
-                {a.decide && (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => keepWaiting(a.id)}
-                      disabled={pending}
-                      className="flex-1 rounded-lg text-sm font-semibold disabled:opacity-50"
-                      style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}
-                    >
-                      Keep waiting
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => giveUp(a.id)}
-                      disabled={pending}
-                      className="flex-1 rounded-lg text-sm text-[var(--cream-dim)] disabled:opacity-50"
-                      style={{ minHeight: 48, border: '1px solid rgba(184,115,51,0.3)', background: 'transparent' }}
-                    >
-                      Give up, close it
-                    </button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+          {replies.map((i) => (
+            <div key={i.id} className="rounded-xl p-1" style={{ background: 'rgba(199,91,74,0.1)', border: '1px solid rgba(199,91,74,0.45)' }}>
+              <p className="px-2 pt-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: '#d9776a' }}>Reply · today</p>
+              <ItemCard item={i} onDone={() => act.done(i.id)} busy={pending} />
+            </div>
+          ))}
         </section>
       )}
 
-      {waiting.length > 0 && (
+      <div className="grid gap-3 md:grid-cols-3 md:items-start">
+        {columns.map((c) => (
+          <section key={c.key} className="space-y-2 rounded-xl p-3" style={panel} aria-label={c.label}>
+            {columnBody[c.key]}
+          </section>
+        ))}
+      </div>
+
+      {stale.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Waiting on others ({waiting.length})</h2>
-          <ul className="space-y-2">
-            {waiting.map((i) => (
-              <li key={i.id} className="rounded-lg p-3 space-y-2" style={card}>
-                <p className="text-sm text-[var(--cream-dim)]">
-                  <span className="font-mono">{i.id}</span> · {i.platform} · {i.target ?? shortAccount(i.account)}
-                </p>
-                <p className="text-sm text-[var(--cream)]">
-                  {i.blockedReason ?? 'Waiting on someone else.'}
-                  {i.idleDays !== undefined && <span className="text-[var(--cream-faint)]"> ({i.idleDays === 0 ? 'since today' : `${i.idleDays} day${i.idleDays === 1 ? '' : 's'}`})</span>}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => unblock(i.id)}
-                    disabled={pending}
-                    className="flex-1 rounded-lg text-sm font-semibold disabled:opacity-50"
-                    style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}
-                  >
-                    It came through, back to today
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => done(i.id)}
-                    disabled={pending}
-                    className="rounded-lg px-4 text-sm text-[var(--cream-dim)] disabled:opacity-50"
-                    style={{ minHeight: 48, background: 'transparent' }}
-                  >
-                    Done
-                  </button>
-                </div>
-              </li>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Stale, nothing changed in 7 days ({stale.length})</h2>
+          <p className="text-sm text-[var(--cream-dim)]">These no longer reach the columns. Re-run the finding and keep it, or mark it done if it went out.</p>
+          <div className="grid gap-3 md:grid-cols-3">
+            {stale.map((i) => (
+              <div key={i.id} style={{ opacity: 0.75 }}>
+                <ItemCard item={i} onDone={() => act.done(i.id)} onKeep={() => act.keep(i.id)} busy={pending} />
+              </div>
             ))}
-          </ul>
+          </div>
+        </section>
+      )}
+
+      {waitingOnOthers.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Waiting on others ({waitingOnOthers.length})</h2>
+          {waitingOnOthers.map((i) => (
+            <div key={i.id} className="rounded-lg p-3 space-y-2" style={card}>
+              <p className="text-sm text-[var(--cream-dim)]">
+                <span className="font-mono">{i.id}</span> · {i.platform} · {i.target ?? shortAccount(i.account)}
+              </p>
+              <p className="text-sm text-[var(--cream)]">{i.blockedReason ?? 'Waiting on someone else.'}</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => act.unblock(i.id)} disabled={pending} className="flex-1 rounded-lg text-sm font-semibold disabled:opacity-50" style={{ minHeight: 48, border: '1px solid var(--copper)', color: 'var(--copper-lt)', background: 'transparent' }}>
+                  It came through, back to today
+                </button>
+                <button type="button" onClick={() => act.done(i.id)} disabled={pending} className="rounded-lg px-4 text-sm text-[var(--cream-dim)] disabled:opacity-50" style={{ minHeight: 48, background: 'transparent' }}>
+                  Done
+                </button>
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
       {props.doneToday.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Done today</h2>
-          <ul className="space-y-2">
+          <ul className="grid gap-2 md:grid-cols-3">
             {props.doneToday.map((i) => (
               <li key={i.id} className="flex items-center justify-between rounded-lg px-3" style={{ ...card, minHeight: 48 }}>
                 <span className="text-sm text-[var(--cream-dim)]">
@@ -510,42 +612,6 @@ export default function TodayList(props: {
             ))}
           </ul>
         </section>
-      )}
-
-      {rest > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowAll((v) => !v)}
-          className="w-full rounded-lg text-base font-semibold text-[var(--cream)]"
-          style={{ ...card, minHeight: 48 }}
-          aria-expanded={showAll}
-        >
-          {showAll ? 'Hide the rest' : `See all (${rest} more)`}
-        </button>
-      )}
-
-      {showAll && (
-        <div className="space-y-5">
-          {held.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Held by today&apos;s limits ({held.length})</h2>
-              {held.map((item) => <ItemCard key={item.id} item={item} onDone={() => done(item.id)} busy={pending} />)}
-            </section>
-          )}
-          {props.blocked.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Waiting on another item ({props.blocked.length})</h2>
-              {props.blocked.map((item) => <ItemCard key={item.id} item={item} />)}
-            </section>
-          )}
-          {stale.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--cream-faint)]">Stale, nothing changed in 7 days ({stale.length})</h2>
-              <p className="text-sm text-[var(--cream-dim)]">These no longer reach today&apos;s list. Mark one done if it went out, or keep it if it is still worth sending.</p>
-              {stale.map((item) => <ItemCard key={item.id} item={item} onDone={() => done(item.id)} onKeep={() => keep(item.id)} busy={pending} />)}
-            </section>
-          )}
-        </div>
       )}
     </main>
   )

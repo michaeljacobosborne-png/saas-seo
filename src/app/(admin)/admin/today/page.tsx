@@ -4,8 +4,8 @@ import type { QueuePart } from '@/lib/outreach-queue/parse'
 import { CAPS, TIME_ZONE, dayKey, isRequest, selectToday, type QueueRow } from '@/lib/outreach-queue/today'
 import { client as sanity } from '@/sanity/lib/client'
 import { isSanityConfigured } from '@/sanity/env'
-import { awaitingAcceptance } from '@/lib/outreach-queue/requests'
-import TodayList, { type Item } from './TodayList'
+import { arrangeColumns, SHOWN_PER_COLUMN, type OutreachCard } from '@/lib/outreach-queue/columns'
+import TodayList, { type ColumnView, type Item, type OutreachCardView } from './TodayList'
 
 // Always live: the list changes every time an item is marked done.
 export const dynamic = 'force-dynamic'
@@ -74,19 +74,15 @@ export default async function TodayPage() {
 
   const rows = (data ?? []) as Row[]
   const now = new Date()
-  const { today, blocked, held, stale } = selectToday(rows, now, { published: await publishedPosts() })
+  const result = selectToday(rows, now, { published: await publishedPosts() })
+  const layout = arrangeColumns(rows, result, now)
   const todayKey = dayKey(now)
   const doneToday = rows
     .filter((r) => r.status === 'done' && r.completed_at && dayKey(new Date(r.completed_at)) === todayKey)
     .sort((a, b) => (a.completed_at! < b.completed_at! ? 1 : -1))
-  const pendingCount = rows.filter((r) => r.status === 'pending').length - stale.length
-  // Sent connection requests waiting to be accepted: shown with their own
-  // "they accepted" button, so their held messages are not listed again below.
-  const awaiting = awaitingAcceptance(rows, now)
-  const heldByRequest = new Set(awaiting.flatMap((a) => a.messages.map((m) => m.id)))
-  // Waiting on someone else: never in today's slots, never stale.
+  // Waiting on someone else, outside outreach (which shows its own on each card).
   const waitingOnOthers = rows
-    .filter((r) => r.status === 'blocked' && !heldByRequest.has(r.id))
+    .filter((r) => r.status === 'blocked' && r.type !== 'outbound message')
     .map((r) => {
       const since = r.blocked_at ?? r.updated_at ?? r.created_at
       return toItem(r, [], Math.max(0, Math.floor((now.getTime() - Date.parse(since)) / DAY)))
@@ -94,24 +90,35 @@ export default async function TodayPage() {
 
   const used = (type: string) => doneToday.filter((r) => r.type === type).length
   const dateLabel = new Intl.DateTimeFormat('en-GB', { timeZone: TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long' }).format(now)
+  const column = <I, O>(c: { key: ColumnView<O>['key']; label: string; due: I[]; held: string[]; waiting: string[]; empty: string | null }, map: (i: I) => O): ColumnView<O> => ({
+    key: c.key,
+    label: c.label,
+    due: c.due.map(map),
+    held: c.held,
+    waiting: c.waiting,
+    empty: c.empty,
+  })
+  const card = (c: OutreachCard<Row>): OutreachCardView => ({
+    key: c.key,
+    stage: c.stage,
+    request: c.request ? toItem(c.request) : null,
+    message: c.message ? toItem(c.message) : null,
+    waitingReason: c.waitingReason ?? null,
+    days: c.days,
+    decide: c.decide,
+  })
 
   return (
     <TodayList
       dateLabel={dateLabel}
-      today={(today as Row[]).map((r) => toItem(r))}
-      held={(held as Row[]).map((r) => toItem(r))}
-      blocked={blocked.map((b) => toItem(b.row as Row, b.waitingFor))}
-      stale={stale.map((s) => toItem(s.row as Row, [], s.idleDays))}
+      replies={layout.replies.map((r) => toItem(r))}
+      social={column(layout.social, (r: Row) => toItem(r))}
+      comments={column(layout.comments, (r: Row) => toItem(r))}
+      outreach={{ ...column(layout.outreach, card), awaiting: layout.outreach.awaiting.map(card) }}
+      stale={layout.stale.map((s) => toItem(s.row as Row, [], s.idleDays))}
       waitingOnOthers={waitingOnOthers}
-      awaiting={awaiting.map((a) => ({
-        id: a.request.id,
-        target: a.request.target ?? a.request.account,
-        messages: a.messages.map((m) => m.id),
-        days: a.days,
-        decide: a.decide,
-      }))}
       doneToday={doneToday.map((r) => toItem(r))}
-      pendingCount={pendingCount}
+      shownPerColumn={SHOWN_PER_COLUMN}
       caps={{
         comments: `${used('comment')}/${CAPS.commentsPerDay}`,
         outbound: `${doneToday.filter((r) => r.type === 'outbound message' && !isRequest(r)).length}/${CAPS.outboundPerDay}`,
