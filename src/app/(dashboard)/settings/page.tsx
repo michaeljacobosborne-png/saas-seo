@@ -9,9 +9,9 @@ import SearchConsoleSection from './search-console-section'
 // Maps the internal plan key stored on the subscription (set from checkout
 // metadata) to the customer-facing plan name shown on /pricing.
 const PLAN_NAMES: Record<string, string> = {
-  starter: 'Starter',
-  pro: 'Growth',
-  agency: 'Multi-Brand',
+  starter: 'Solo',
+  pro: 'Pro',
+  agency: 'Agency',
 }
 
 const STATUS_LABELS: Record<string, string> = {

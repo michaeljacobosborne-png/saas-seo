@@ -85,12 +85,12 @@ function priceLabel(priceId: string | null | undefined): string | null {
     const v = process.env[env]
     if (v) map[v] = label
   }
-  add('STRIPE_PRICE_STARTER_MONTHLY', 'Starter (monthly)')
-  add('STRIPE_PRICE_STARTER_ANNUAL', 'Starter (annual)')
-  add('STRIPE_PRICE_PRO_MONTHLY', 'Growth (monthly)')
-  add('STRIPE_PRICE_PRO_ANNUAL', 'Growth (annual)')
-  add('STRIPE_PRICE_AGENCY_MONTHLY', 'Multi-Brand (monthly)')
-  add('STRIPE_PRICE_AGENCY_ANNUAL', 'Multi-Brand (annual)')
+  add('STRIPE_PRICE_STARTER_MONTHLY', 'Solo (monthly)')
+  add('STRIPE_PRICE_STARTER_ANNUAL', 'Solo (annual)')
+  add('STRIPE_PRICE_PRO_MONTHLY', 'Pro (monthly)')
+  add('STRIPE_PRICE_PRO_ANNUAL', 'Pro (annual)')
+  add('STRIPE_PRICE_AGENCY_MONTHLY', 'Agency (monthly)')
+  add('STRIPE_PRICE_AGENCY_ANNUAL', 'Agency (annual)')
   return map[priceId] ?? null
 }
 

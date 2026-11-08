@@ -20,9 +20,9 @@ const featureLabel = (f: string) => FEATURE_LABELS[f] ?? f
 
 // subscriptions.plan is one of starter|pro|agency — map to the public plan names.
 const PLAN_LABELS: Record<string, string> = {
-  starter: 'Starter',
-  pro: 'Growth',
-  agency: 'Multi-Brand',
+  starter: 'Solo',
+  pro: 'Pro',
+  agency: 'Agency',
 }
 
 function usd(n: number): string {

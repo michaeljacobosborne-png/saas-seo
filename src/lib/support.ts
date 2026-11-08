@@ -31,11 +31,11 @@ export interface AccountInfo {
 export function planLabel(plan?: string | null): string {
   switch (plan) {
     case 'starter':
-      return 'Starter'
+      return 'Solo'
     case 'pro':
-      return 'Growth'
+      return 'Pro'
     case 'agency':
-      return 'Team'
+      return 'Agency'
     default:
       return 'None'
   }

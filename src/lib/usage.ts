@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { FREE_LIMITS, PLAN_ALIASES, PLAN_LIMITS, type PaidPlan, type PlanLimits } from '@/lib/plans'
 
 // ─── AI cost tracking ────────────────────────────────────────────────────────
 // Token pricing in USD per token (rates as of mid-2025 — update as needed).
@@ -50,43 +51,41 @@ export async function logUsageEvent(params: {
   }
 }
 
-export const PLAN_LIMITS = {
-  // trackedPages: pages re-checked monthly for score over time (DECISIONS 39, proposed).
-  starter: { articles: 8, keywordSessions: 10, brandProfiles: 1, trackedPages: 3 },
-  pro: { articles: 30, keywordSessions: 60, brandProfiles: 1, trackedPages: 10 },
-  agency: { articles: 100, keywordSessions: 200, brandProfiles: 3, trackedPages: 25 },
+export { PLAN_LIMITS } from '@/lib/plans'
+
+/** Resolved plan for an account: the limits that apply and which key they came from. */
+export async function resolveLimits(
+  userId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  accountType?: string,
+): Promise<{ plan: PaidPlan | 'free'; limits: PlanLimits | typeof FREE_LIMITS }> {
+  if (accountType === 'free') return { plan: 'free', limits: FREE_LIMITS }
+  const plan = await resolvePlan(userId, supabase, accountType)
+  return { plan, limits: PLAN_LIMITS[plan] }
 }
 
-/** How many pages a user may track. Free accounts track one, enough to see a change proven. */
+/** How many pages a user may monitor. Free accounts monitor none. */
 export async function trackedPageLimit(
   userId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   accountType?: string,
 ): Promise<number> {
-  if (accountType === 'free') return 1
-  const plan = await resolvePlan(userId, supabase, accountType)
-  return PLAN_LIMITS[plan].trackedPages
+  return (await resolveLimits(userId, supabase, accountType)).limits.trackedPages
 }
 
-// DB subscription plan values map onto PLAN_LIMITS keys. 'team' is the renamed
-// 'agency' tier — both spellings exist in the DB (see ARCHITECTURE.md).
-const PLAN_ALIASES: Record<string, keyof typeof PLAN_LIMITS> = {
-  starter: 'starter',
-  pro: 'pro',
-  agency: 'agency',
-  team: 'agency',
-}
-
-// Resolve a user's plan tier. Free accounts get the lowest (starter) tier.
-// Paid accounts read their tier from the active subscription, defaulting to
-// starter when no active subscription row is found yet (e.g. comped accounts).
+// Resolve a user's plan. Paid accounts read their tier from the active
+// subscription row, defaulting to the entry plan when none is found. That
+// default is what keeps an account with paid access but no subscription row
+// working. Free accounts are handled by resolveLimits and only reach here via
+// the keyword-session check, which has always given them the entry allowance.
 async function resolvePlan(
   userId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   accountType?: string
-): Promise<keyof typeof PLAN_LIMITS> {
+): Promise<PaidPlan> {
   if (accountType === 'free') return 'starter'
 
   const { data: sub } = await supabase
@@ -108,7 +107,7 @@ export async function checkKeywordSessionLimit(
   userId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any
-): Promise<{ allowed: boolean; used: number; limit: number; plan: keyof typeof PLAN_LIMITS }> {
+): Promise<{ allowed: boolean; used: number; limit: number; plan: PaidPlan }> {
   const { data: profile } = await supabase
     .from('profiles')
     .select('account_type, keyword_sessions_used, keyword_sessions_reset_at')

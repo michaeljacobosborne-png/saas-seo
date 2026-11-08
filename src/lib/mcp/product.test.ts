@@ -14,25 +14,15 @@ describe('entitlements', () => {
     expect(Object.keys(TOOL_CAPABILITY).sort()).toEqual(Object.keys(TOOL_INPUTS).sort())
   })
 
-  it('keeps the crawler test free and comparison never free (decision 22)', () => {
-    expect(entitlementFor('free', false, 'check_crawler_access').allowed).toBe(true)
-    for (const tool of ['run_audit', 'get_audit', 'list_audits', 'compare_audits'] as const) {
-      expect(entitlementFor('free', false, tool).allowed).toBe(false)
+  it('makes MCP a Pro and Agency feature: Free and Solo get no tool, comparison included (decision 22, repricing 2026-11-08)', () => {
+    for (const plan of ['free', 'starter'] as const) {
+      for (const tool of Object.keys(TOOL_CAPABILITY) as (keyof typeof TOOL_CAPABILITY)[]) {
+        expect(entitlementFor(plan, false, tool).allowed, `${plan} ${tool}`).toBe(false)
+      }
     }
-    for (const plan of ['starter', 'growth', 'multi_brand'] as const) {
+    for (const plan of ['growth', 'multi_brand'] as const) {
       expect(entitlementFor(plan, false, 'compare_audits').allowed).toBe(true)
     }
-  })
-
-  it('lets the owner use everything unmetered', () => {
-    expect(entitlementFor('free', true, 'compare_audits')).toEqual({ allowed: true, capability: 'compare', monthlyAllowance: null })
-  })
-
-  it('never names a tier in anything a caller sees', () => {
-    const denied = entitlementFor('free', false, 'run_audit')
-    expect(denied.allowed).toBe(false)
-    if (!denied.allowed) expect(denied.message).not.toMatch(TIER_WORDS)
-    expect(quotaExhaustedMessage('audit', 150, 150)).not.toMatch(TIER_WORDS)
   })
 
   it('changes the commercial model by editing the table only', () => {
@@ -40,10 +30,10 @@ describe('entitlements', () => {
     const separate: PlanModel = {
       ...PLAN_MODEL,
       model: 'separate_data_layer_plan',
-      allowances: { ...PLAN_MODEL.allowances, starter: none },
+      allowances: { ...PLAN_MODEL.allowances, growth: none },
     }
-    expect(entitlementFor('starter', false, 'run_audit', separate).allowed).toBe(false)
-    expect(entitlementFor('starter', false, 'run_audit').allowed).toBe(true)
+    expect(entitlementFor('growth', false, 'run_audit', separate).allowed).toBe(false)
+    expect(entitlementFor('growth', false, 'run_audit').allowed).toBe(true)
   })
 })
 

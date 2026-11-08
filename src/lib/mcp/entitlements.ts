@@ -7,8 +7,9 @@
  * table, not to tools, routes or messages.
  *
  * Rules carried here:
- *   - Crawler access test is free; audits, stored audits and comparison are
- *     paid; comparison is never free (decision 22). score_draft ships (24).
+ *   - MCP is a Pro and Agency feature; Free and Solo have no MCP access at all
+ *     (repricing 2026-11-08, which supersedes the free crawler test of decision
+ *     22). Comparison is never free (decision 22). score_draft ships (24).
  *   - Quotas are a happy medium, metered from day one (23).
  *   - No plan names or tier assumptions in anything a caller sees: denial and
  *     quota wording below never mentions a tier (27).
@@ -39,18 +40,23 @@ export interface PlanModel {
 }
 
 /**
- * PROPOSED allowances (decision 23, awaiting Michael's confirmation).
- * Cost at full use per account per month, at about $0.0015/audit (model plus
- * function time) and $0.0001/crawler check:
- * Starter ≈ $0.28, Growth ≈ $0.90, Multi-Brand ≈ $2.70, Free ≈ $0.01.
+ * Allowances after the repricing of 2026-11-08: MCP and API keys are a Pro and
+ * Agency feature. Free and Solo (internal tiers `free` and `starter`) get none.
+ * `growth` is the Pro plan and `multi_brand` the Agency plan; those internal
+ * names are never shown to a caller. Audit allowances match the plan's monthly
+ * one-off audit allowance (src/lib/plans.ts).
+ * Cost at full use per account per month, at about $0.0015/audit and
+ * $0.0001/crawler check: Pro about $0.90, Agency about $3.20.
  */
+const NONE = { crawler_check: 0, audit: 0, stored_audits: 0, compare: 0, score_draft: 0 }
+
 export const PLAN_MODEL: PlanModel = {
   model: 'feature_of_existing_plans',
   allowances: {
-    free: { crawler_check: 30, audit: 0, stored_audits: 0, compare: 0, score_draft: 30 },
-    starter: { crawler_check: 500, audit: 150, stored_audits: null, compare: null, score_draft: 500 },
+    free: NONE,
+    starter: NONE,
     growth: { crawler_check: 1500, audit: 500, stored_audits: null, compare: null, score_draft: 2000 },
-    multi_brand: { crawler_check: 4500, audit: 1500, stored_audits: null, compare: null, score_draft: 5000 },
+    multi_brand: { crawler_check: 4500, audit: 2000, stored_audits: null, compare: null, score_draft: 5000 },
   },
   upgradeUrl: 'https://app.bylineseo.com/pricing',
 }
