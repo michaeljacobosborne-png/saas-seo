@@ -21,9 +21,10 @@ describe('pricing copy', () => {
     for (const p of PLANS) expect(p.features.map((f) => f.text)).toContain('Daily crawler access checks with change alerts')
   })
 
-  it('has no em or en dashes and no spot counter language', () => {
+  it('has no em or en dashes, no spot counter and no founder pricing', () => {
     expect(allCopy).not.toMatch(/[–—]/)
-    expect(allCopy).not.toMatch(/spots?\s+(left|remaining)|first 100|limited spots/i)
+    expect(allCopy).not.toMatch(/spots?\s+(left|remaining)|first 100|limited spots|founder|founding|locked/i)
+    expect(JSON.stringify(PLANS)).not.toMatch(/founder/i)
   })
 
   it('takes every number from the enforced plan table', () => {

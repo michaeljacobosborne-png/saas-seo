@@ -15,7 +15,7 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 - Never sell daily re-scoring: `tracked_pages.interval_days` allows 7 to 90 days. What is daily is the crawler access check (`access_alerts`, confirmed by a second check).
 - Enforced where tracked pages are created (POST `/api/tracked-pages`: pages, domains) and where audits run (`/api/free-tools/analyze`: monthly count from `audit_snapshots`). Refusals state the limit and never name a tier.
 - Not enforced as cutoffs: history windows (kept at least that long, nothing is deleted) and the 10 free draft scores in the web editor (only MCP `score_draft` is metered). MCP access and unbranded share links are tagged "Coming soon" on the pricing page until they ship.
-- The founder discount stays as a founding rate with no spot count; the "100 of 100 spots left" counter is gone.
+- Founder pricing is removed entirely: no founder tier, no discounted duplicate prices, no lock-in promise, no spot counter. Three plans, one price each (plus the annual price), priced plainly. The `founder-spots` route, the `*_founder` checkout and webhook branches and the founder price env vars are deleted. `subscriptions.is_founder` stays as history; nothing reads or writes it.
 **Drivers:** the audit was identical on every tier, so the differentiated thing was free and the commodity was charged for. Monitoring is the only inherently recurring part of the product and was invisible on the pricing page.
 **Revisit if:** Solo's 15 pages proves too tight or too loose, or $599 is wrong for agencies watching twenty client domains.
 

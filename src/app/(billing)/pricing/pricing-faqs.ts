@@ -38,10 +38,6 @@ export const PRICING_FAQS = [
     a: 'Yes. There are no contracts, and you can cancel from your account settings at any time. Your access continues until the end of the billing period.',
   },
   {
-    q: 'What is the founding rate?',
-    a: 'A reduced monthly price on Solo and Pro for people who subscribe early. It is locked for as long as your subscription stays active, and your rate does not increase when prices change. It is monthly billing only.',
-  },
-  {
     q: 'Is the agent really different from just using ChatGPT?',
     a: "Yes. ChatGPT has no access to your article, your scores, your keyword data, or your brand profile. Byline's agent has all of that in context, including the findings the scorer flagged and where, and can apply the fix without you leaving the editor.",
   },

@@ -25,9 +25,6 @@ export interface PlanCard {
   monthlyPrice: number
   annualPrice: number
   popular: boolean
-  /** Founding rate, monthly only. No spot count: see docs/stripe-reprice-checklist.md. */
-  founderPrice?: number
-  founderPlanId?: 'starter_founder' | 'pro_founder'
   features: Feature[]
 }
 
@@ -53,8 +50,6 @@ export const PLANS: PlanCard[] = [
     monthlyPrice: 49,
     annualPrice: 470,
     popular: false,
-    founderPrice: 39,
-    founderPlanId: 'starter_founder',
     features: [
       { text: `${pages('starter')} on ${domains('starter')}` },
       MONITORING,
@@ -73,8 +68,6 @@ export const PLANS: PlanCard[] = [
     monthlyPrice: 129,
     annualPrice: 1238,
     popular: true,
-    founderPrice: 99,
-    founderPlanId: 'pro_founder',
     features: [
       { text: `${pages('pro')} across ${domains('pro')}` },
       MONITORING,

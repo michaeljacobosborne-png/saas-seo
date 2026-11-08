@@ -24,8 +24,8 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   const [loading, setLoading] = useState<string | null>(null)
   const [error] = useState<string | null>(null)
 
-  async function handleCheckout(plan: Plan, founderPlanId?: string) {
-    setLoading(founderPlanId ?? plan)
+  async function handleCheckout(plan: Plan) {
+    setLoading(plan)
 
     const planConfig = PLANS.find((p) => p.id === plan)
     const value = planConfig
@@ -33,17 +33,13 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
         ? planConfig.monthlyPrice
         : planConfig.annualPrice
       : 0
-    analytics.beginCheckout(founderPlanId ?? plan, value)
-
-    const checkoutPlan = founderPlanId ?? plan
-    // Founding-rate plans are monthly-only
-    const checkoutInterval = founderPlanId ? 'monthly' : interval
+    analytics.beginCheckout(plan, value)
 
     try {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: checkoutPlan, interval: checkoutInterval }),
+        body: JSON.stringify({ plan, interval }),
       })
       const data = await res.json()
       if (!res.ok || !data.url) {
@@ -240,35 +236,6 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           <p className="text-center text-[#A89070] text-xs mt-6">
             30-day money-back guarantee on all paid plans. No questions asked: email us and we&apos;ll refund in full.
           </p>
-
-          {/* Founding rate: a reduced monthly price, no spot count */}
-          <div className="mt-10 rounded-2xl border border-[rgba(184,115,51,0.4)] bg-[#231F1B] p-6">
-            <div className="text-center mb-5">
-              <h2 className="text-xl font-bold text-[#F7F3EC] mb-1">Founding rate</h2>
-              <p className="text-sm text-[#A89070] max-w-xl mx-auto">
-                A reduced monthly price on Solo and Pro, locked for as long as your subscription stays active. Monthly billing only.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              {PLANS.filter((p) => p.founderPlanId && p.founderPrice).map((plan) => (
-                <div key={plan.id} className="rounded-xl border border-[rgba(184,115,51,0.25)] bg-[#1C1917] p-5 flex flex-col">
-                  <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">{plan.name} (founding rate)</div>
-                  <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-3xl font-bold text-[#F7F3EC]">${plan.founderPrice}</span>
-                    <span className="text-sm text-[#7A6555]">/mo</span>
-                    <span className="text-sm line-through text-[#7A6555]">${plan.monthlyPrice}</span>
-                  </div>
-                  <button
-                    onClick={() => handleCheckout(plan.id, plan.founderPlanId)}
-                    disabled={loading === plan.founderPlanId}
-                    className="mt-auto w-full py-2 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[rgba(184,115,51,0.08)] transition-colors disabled:opacity-60"
-                  >
-                    {loading === plan.founderPlanId ? 'Loading…' : `Start ${plan.name} at the founding rate`}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Free */}
           <div className="mt-6 rounded-2xl border border-[rgba(184,115,51,0.2)] px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 bg-[#231F1B]">

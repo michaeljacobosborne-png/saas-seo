@@ -17,12 +17,6 @@ export const CHECKOUT_PRICE_IDS: Record<string, Record<string, string>> = {
     monthly: process.env.STRIPE_PRICE_AGENCY_MONTHLY!,
     annual: process.env.STRIPE_PRICE_AGENCY_ANNUAL!,
   },
-  starter_founder: {
-    monthly: process.env.STRIPE_PRICE_STARTER_FOUNDER ?? '',
-  },
-  pro_founder: {
-    monthly: process.env.STRIPE_PRICE_PRO_FOUNDER ?? '',
-  },
 }
 
 export function isValidPlanInterval(plan: string | null | undefined, interval: string | null | undefined): boolean {
@@ -117,7 +111,6 @@ export async function resolveCheckoutUrl(
     return `${origin}/dashboard`
   }
 
-  const isFounder = plan.endsWith('_founder')
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     customer: customerId,
@@ -125,9 +118,9 @@ export async function resolveCheckoutUrl(
     success_url: `${origin}/welcome`,
     cancel_url: `${origin}/pricing`,
     allow_promotion_codes: true,
-    metadata: { userId: user.id, plan, interval, ...(isFounder ? { founder: 'true' } : {}) },
+    metadata: { userId: user.id, plan, interval },
     subscription_data: {
-      metadata: { userId: user.id, plan, interval, ...(isFounder ? { founder: 'true' } : {}) },
+      metadata: { userId: user.id, plan, interval },
     },
   })
 
