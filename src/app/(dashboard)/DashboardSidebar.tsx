@@ -39,7 +39,7 @@ const navItems = [
   { href: '/geo-lab', label: 'GEO Analyzer', icon: Bot, freeAccess: false, adminOnly: true },
   { href: '/reports', label: 'Audit Reports', icon: FileText, freeAccess: true, adminOnly: false },
   // Owner-only until the score-over-time migration has run and the plan limits are confirmed (DECISIONS 39).
-  { href: '/tracking', label: 'Tracked Pages', icon: LineChart, freeAccess: true, adminOnly: true },
+  { href: '/tracking', label: 'Tracked Pages', icon: LineChart, freeAccess: true, adminOnly: false },
   { href: '/settings', label: 'Settings', icon: Settings, freeAccess: true, adminOnly: false },
 ]
 
