@@ -111,7 +111,7 @@
         "pass 1 pass 2",
         "expansion pass"
       ],
-      "agent_response": "After the first draft is written, Byline checks it before handing it over. If the draft is well short of your target length, a second pass deepens the thin sections with explanation (never with invented figures or examples). Growth and Multi-Brand plans also get a polish pass on the paragraph after the opening answer and on the close. Then every figure, source, quote or case study is checked against the evidence you supplied for the article: anything without a source becomes a visible [ADD EVIDENCE: …] note for you to fill. Finally the draft is scored on structure and given one targeted revision. That is why generation can take a minute or two.",
+      "agent_response": "After the first draft is written, Byline checks it before handing it over. If the draft is well short of your target length, a second pass deepens the thin sections with explanation (never with invented figures or examples). Pro and Agency plans also get a polish pass on the paragraph after the opening answer and on the close. Then every figure, source, quote or case study is checked against the evidence you supplied for the article: anything without a source becomes a visible [ADD EVIDENCE: …] note for you to fill. Finally the draft is scored on structure and given one targeted revision. That is why generation can take a minute or two.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Pipeline is src/lib/generator/pipeline.ts, called from /api/articles/generate-draft (maxDuration 300). Expansion runs under 70% of target. Evidence guard: src/lib/generator/evidence-guard.ts. Per-article evidence comes from the 'Evidence for this article' field and is stored in brief.user_evidence; brief.generation_report records what was replaced. Rule (Michael, 2026-10-04): only real citable information or information the user supplied for that piece."
@@ -239,7 +239,7 @@
         "agent feedback",
         "how does the agent review work"
       ],
-      "agent_response": "Review mode is available on all paid plans including Starter. It's a chat interface where the agent reads your full article, your brand profile, and your score breakdown, then gives specific paragraph-level editorial feedback. It quotes the actual lines that need work and suggests concrete rewrites. It also tracks memory across sessions so it doesn't repeat the same feedback on subsequent visits. Ask it anything: 'What's the weakest section?', 'Rewrite this intro', 'Add a FAQ question about X'.",
+      "agent_response": "Review mode is available on all paid plans including Solo. It's a chat interface where the agent reads your full article, your brand profile, and your score breakdown, then gives specific paragraph-level editorial feedback. It quotes the actual lines that need work and suggests concrete rewrites. It also tracks memory across sessions so it doesn't repeat the same feedback on subsequent visits. Ask it anything: 'What's the weakest section?', 'Rewrite this intro', 'Add a FAQ question about X'.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Review mode is the default mode in /api/articles/[id]/agent/route.ts. Uses Claude Sonnet 4.6. Memory is stored in agent_memory table (memory_type: 'account' or 'article'). Weak areas from scores are passed to system prompt. No plan gating for review mode."
@@ -257,10 +257,10 @@
         "targeted rewrite",
         "can't access assist mode"
       ],
-      "agent_response": "Assist mode lets you select any text in your article, then ask the agent to rewrite just that selection. You highlight a sentence or paragraph, give an instruction ('make this more direct', 'add the target keyword here naturally'), and the agent returns a rewrite in-place. Assist mode is available on Growth plan and above. If you're on Starter, you'll see the mode locked. Upgrading to Growth at $99/mo unlocks it along with 30 articles/month.",
+      "agent_response": "Assist mode lets you select any text in your article, then ask the agent to rewrite just that selection. You highlight a sentence or paragraph, give an instruction ('make this more direct', 'add the target keyword here naturally'), and the agent returns a rewrite in-place. Assist mode is available on the Pro plan and above. If you're on Solo, you'll see the mode locked. Upgrading to Pro at $129/mo unlocks it along with 30 articles/month.",
       "escalate_to_human": false,
       "escalation_reason": "",
-      "internal_notes": "canAssist = plan === 'pro' || plan === 'team' || plan === 'agency'. Plan 'pro' maps to 'Growth' in pricing UI. Returns 403 with upgrade message if plan is 'starter'. Streams via Claude Sonnet 4.6. Selection is passed as selectedText, instruction as fixInstruction."
+      "internal_notes": "canAssist = plan === 'pro' || plan === 'team' || plan === 'agency'. Plan 'pro' maps to 'Pro' in pricing UI. Returns 403 with upgrade message if plan is 'starter'. Streams via Claude Sonnet 4.6. Selection is passed as selectedText, instruction as fixInstruction."
     },
     {
       "id": "kb_014",
@@ -275,7 +275,7 @@
         "auto fix article",
         "full article rewrite"
       ],
-      "agent_response": "Auto mode rewrites the entire article in one pass, applying all failing score criteria automatically. It works from the Retrievable and Citable gaps in your draft and the SEO basics checklist, then produces a complete revised article that preserves your voice and structure while fixing the issues. Auto mode is available on the Team plan. If you're on Growth or Starter, you'll see it locked in the UI. For most users, Assist mode (Growth plan) gives you more control anyway, because you can target specific sections instead of replacing the whole article.",
+      "agent_response": "Auto mode rewrites the entire article in one pass, applying all failing score criteria automatically. It works from the Retrievable and Citable gaps in your draft and the SEO basics checklist, then produces a complete revised article that preserves your voice and structure while fixing the issues. Auto mode is available on the Agency plan. If you're on Pro or Solo, you'll see it locked in the UI. For most users, Assist mode (Pro plan) gives you more control anyway, because you can target specific sections instead of replacing the whole article.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "canAuto = plan === 'team' || plan === 'agency'. Returns 403 with 'Auto mode is available on the Team plan' message for others. Streams via Claude Sonnet 4.6 with max_tokens: 8192. System prompt includes full article content and all failing criteria."
@@ -329,7 +329,7 @@
         "multiple clients",
         "agency brand profiles"
       ],
-      "agent_response": "Multiple brand profiles are available on the Team plan, which supports up to 3 brand profiles. Starter and Growth plans support one brand profile. If you're an agency or running content for multiple clients, the Team plan at $249/month includes 3 brand profiles, 100 articles/month, 2 team seats, and a dedicated onboarding call. For more than 3 brands or higher volumes, contact hi@bylineseo.com about enterprise options.",
+      "agent_response": "Multiple brand profiles are available on the Agency plan, which supports up to 3 brand profiles. Solo and Pro plans support one brand profile. If you're an agency or running content for multiple clients, the Agency plan at $599/month includes 3 brand profiles, 100 articles/month, 2 team seats, and a dedicated onboarding call. For more than 3 brands or higher volumes, contact hi@bylineseo.com about enterprise options.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "The pricing page lists 'Up to 3 brand profiles' as a Team feature. The current DB schema supports multiple brand_profiles per user_id. The article generation pipeline selects by brandProfileId, so users can create multiple and switch between them manually. The UI currently shows only the first profile — Team plan multi-brand UI may be a future feature."
@@ -338,7 +338,7 @@
       "id": "kb_018",
       "category": "billing",
       "priority": "p2",
-      "title": "Pricing plans overview (Starter, Growth, Team)",
+      "title": "Pricing plans overview (Solo, Pro, Agency)",
       "trigger_phrases": [
         "how much does byline cost",
         "pricing",
@@ -347,10 +347,10 @@
         "what's included",
         "plan comparison"
       ],
-      "agent_response": "Byline has three plans. Starter ($49/mo): 8 articles/month, 10 keyword sessions, agent Review mode, SEO scoring and GEO/AEO readiness scoring (Retrievable and Citable). Growth ($99/mo): 30 articles/month, 60 keyword sessions, agent Assist mode (select-and-rewrite), persistent agent memory, polish pass on article generation. Team ($249/mo): 100 articles/month, 200 keyword sessions, 3 brand profiles, 2 seats, Auto mode, dedicated onboarding. All plans billed monthly or annually (20% discount). 30-day money-back guarantee on all plans.",
+      "agent_response": "Byline's plans are sized by pages monitored. Every paid plan checks AI crawler access to each monitored page every day and emails an alert when it changes (a change is confirmed by a second daily check). Pages are re-scored weekly on Pro and Agency and every 30 days on Solo; scores are not re-recorded daily. Solo ($49/mo): 15 pages on 1 domain, 100 one-off audits a month, 90 days of history, share links, 8 articles/month, 10 keyword sessions. Pro ($129/mo): 100 pages across 5 domains, 500 audits a month, 12 months of history, 30 articles/month, 60 keyword sessions, agent Assist mode, priority support. Agency ($599/mo): 500 pages across 20 domains, 2,000 audits a month, unlimited history, 100 articles/month, 200 keyword sessions, 3 brand profiles, Auto mode, onboarding call. MCP access and API keys (Pro and Agency) and unbranded share links (Agency) are coming soon and are not live yet. Free accounts get 10 audits a month with the crawler probe and no monitoring. Plans are billed monthly or annually (20% discount). 30-day money-back guarantee on paid plans.",
       "escalate_to_human": false,
       "escalation_reason": "",
-      "internal_notes": "Pricing defined in pricing-cards.tsx. Plan IDs in code: starter, pro (=Growth), team. Annual pricing: Starter $470/yr, Growth $950/yr, Team $2390/yr. Stripe price IDs are in env vars. Team plan contact is mailto:hi@bylineseo.com — it goes through a manual sales touch."
+      "internal_notes": "Pricing is shown from pricing-plans.ts, with limits from src/lib/plans.ts. Plan IDs in code: starter (=Solo), pro, agency (old rows may say team). Annual pricing: Solo $470/yr, Pro $1,238/yr, Agency $5,750/yr. Stripe price IDs are in env vars. Team plan contact is mailto:hi@bylineseo.com — it goes through a manual sales touch."
     },
     {
       "id": "kb_019",
@@ -476,7 +476,7 @@
         "article quota",
         "out of articles"
       ],
-      "agent_response": "When you hit your monthly article limit (8 for Starter, 30 for Growth, 100 for Team), you'll see a 'limit reached' message when you try to generate a new brief. Your existing articles are untouched. Limits reset at the start of each billing cycle. To get more articles now: upgrade your plan from the Pricing page. Byline won't cut off an article that's already in progress. It only blocks starting new generation once the limit is hit.",
+      "agent_response": "When you hit your monthly article limit (8 for Solo, 30 for Pro, 100 for Agency), you'll see a 'limit reached' message when you try to generate a new brief. Your existing articles are untouched. Limits reset at the start of each billing cycle. To get more articles now: upgrade your plan from the Pricing page. Byline won't cut off an article that's already in progress. It only blocks starting new generation once the limit is hit.",
       "escalate_to_human": false,
       "escalation_reason": "",
       "internal_notes": "Article limit check is in lib/usage.ts (checkArticleLimit). Called in generate-brief route. Returns {allowed, used, limit}. Limit is enforced at brief generation, not at the article creation step. Articles with status 'generating' or 'complete' count toward the limit. Reset logic should be time-windowed per billing cycle — verify this in usage.ts."

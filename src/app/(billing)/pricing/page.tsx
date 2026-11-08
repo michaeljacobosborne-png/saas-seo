@@ -21,13 +21,13 @@ function JsonLd() {
 export const metadata: Metadata = {
   title: 'Pricing | Byline AI SEO Platform',
   description:
-    'Simple, transparent pricing for Byline. Start free and upgrade when you\'re ready. Plans for solo creators, agencies, and enterprise teams.',
+    'Byline plans are sized by pages monitored: daily crawler access checks, change alerts and scored history. Start free with 10 audits a month.',
   alternates: {
     canonical: 'https://app.bylineseo.com/pricing',
   },
   openGraph: {
-    title: 'Byline Pricing: AI SEO Plans for Every Team',
-    description: 'Start free. Upgrade when you\'re ready. AI keyword research, content generation, and editorial rewrites in one platform.',
+    title: 'Byline Pricing: Plans by Pages Monitored',
+    description: 'Daily crawler access checks, change alerts and scored history for the pages you choose. Start free.',
     url: 'https://app.bylineseo.com/pricing',
     type: 'website',
   },

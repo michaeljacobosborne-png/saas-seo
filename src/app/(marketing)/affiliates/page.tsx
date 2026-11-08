@@ -160,18 +160,18 @@ export default function AffiliatePage() {
               <tbody className="divide-y divide-[#E7E0D6]">
                 <tr>
                   <td className="px-6 py-4 text-[#1C1917]">5</td>
-                  <td className="px-6 py-4 text-[#57534E]">Starter ($49/mo)</td>
+                  <td className="px-6 py-4 text-[#57534E]">Solo ($49/mo)</td>
                   <td className="px-6 py-4 font-semibold text-[#16a34a]">$73.50/mo</td>
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-[#1C1917]">10</td>
-                  <td className="px-6 py-4 text-[#57534E]">Growth ($99/mo)</td>
-                  <td className="px-6 py-4 font-semibold text-[#16a34a]">$297/mo</td>
+                  <td className="px-6 py-4 text-[#57534E]">Pro ($129/mo)</td>
+                  <td className="px-6 py-4 font-semibold text-[#16a34a]">$387/mo</td>
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-[#1C1917]">20</td>
-                  <td className="px-6 py-4 text-[#57534E]">Multi-Brand ($249/mo)</td>
-                  <td className="px-6 py-4 font-semibold text-[#16a34a]">$1,494/mo</td>
+                  <td className="px-6 py-4 text-[#57534E]">Agency ($599/mo)</td>
+                  <td className="px-6 py-4 font-semibold text-[#16a34a]">$3,594/mo</td>
                 </tr>
               </tbody>
             </table>

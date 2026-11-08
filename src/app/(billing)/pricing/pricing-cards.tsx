@@ -1,17 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
 import { analytics } from '@/lib/analytics'
 import { PRICING_FAQS } from './pricing-faqs'
-
-interface FounderSpots {
-  available: boolean
-  used: number
-  total: number
-  remaining: number
-}
+import { FREE_FEATURES, MONITORING_POINTS, PLANS } from './pricing-plans'
 
 type Plan = 'starter' | 'pro' | 'agency'
 type Interval = 'monthly' | 'annual'
@@ -22,83 +16,15 @@ interface PricingCardsProps {
   hasActiveSubscription: boolean
 }
 
-const PLANS = [
-  {
-    id: 'starter' as Plan,
-    name: 'Starter',
-    tagline: 'Everything you need to write and score your first drafts.',
-    cta: 'Start with Starter',
-    monthlyPrice: 49,
-    annualPrice: 470,
-    popular: false,
-    features: [
-      'AI keyword discovery agent',
-      '8 articles per month',
-      '10 keyword sessions per month',
-      'Retrievable score and Citable band, with evidence',
-      'Agent review mode',
-      'Global keyword cache',
-      'Email support',
-    ],
-  },
-  {
-    id: 'pro' as Plan,
-    name: 'Growth',
-    tagline: 'The full editorial workflow, end to end.',
-    cta: 'Start with Growth',
-    monthlyPrice: 99,
-    annualPrice: 950,
-    popular: true,
-    features: [
-      'Everything in Starter',
-      '30 articles per month',
-      '60 keyword sessions per month',
-      'Agent Assist mode: select text and the agent rewrites it in place',
-      'Score-based one-click fixes',
-      'Persistent agent memory across sessions',
-      'Priority support',
-    ],
-  },
-  {
-    id: 'agency' as Plan,
-    name: 'Multi-Brand',
-    tagline: 'Full agent operations for multiple brands.',
-    cta: 'Start with Multi-Brand',
-    monthlyPrice: 249,
-    annualPrice: 2390,
-    popular: false,
-    features: [
-      'Everything in Growth',
-      '100 articles per month',
-      '200 keyword sessions per month',
-      'Up to 3 brand profiles',
-      'Switch brands in one click',
-      'Dedicated onboarding call',
-      'Priority email + chat support',
-    ],
-  },
-]
-
 // The first two answers lead the page as sections; the rest are the FAQ list.
 const [CHOOSE, HOW_SCORED, ...FAQS] = PRICING_FAQS
 
 export default function PricingCards({ currentPlan, currentInterval, hasActiveSubscription }: PricingCardsProps) {
   const [interval, setInterval] = useState<Interval>(currentInterval ?? 'monthly')
   const [loading, setLoading] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [founderSpots, setFounderSpots] = useState<FounderSpots | null>(null)
-
-  useEffect(() => {
-    fetch('/api/billing/founder-spots')
-      .then((r) => r.ok ? r.json() : null)
-      .then((data: FounderSpots | null) => {
-        if (data?.available) setFounderSpots(data)
-      })
-      .catch(() => {/* ignore — founder banner is non-critical */})
-  }, [])
+  const [error] = useState<string | null>(null)
 
   async function handleCheckout(plan: Plan, founderPlanId?: string) {
-    setError(null)
     setLoading(founderPlanId ?? plan)
 
     const planConfig = PLANS.find((p) => p.id === plan)
@@ -110,7 +36,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
     analytics.beginCheckout(founderPlanId ?? plan, value)
 
     const checkoutPlan = founderPlanId ?? plan
-    // Founder plans are monthly-only
+    // Founding-rate plans are monthly-only
     const checkoutInterval = founderPlanId ? 'monthly' : interval
 
     try {
@@ -135,7 +61,6 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
   }
 
   async function handleManageBilling() {
-    setError(null)
     setLoading('portal')
     try {
       const res = await fetch('/api/billing/portal', { method: 'POST' })
@@ -159,100 +84,30 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
 
       {/* Hero */}
       <div className="px-6 pt-16 pb-10 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 max-w-2xl mx-auto leading-tight">
-          Scored from your page. An agent that fixes it.
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 max-w-3xl mx-auto leading-tight">
+          Know the day an AI crawler stops reaching your pages.
         </h1>
-        <p className="text-[#A89070] text-lg max-w-xl mx-auto leading-relaxed">
-          Byline is an AI search readiness tool for SEOs. Every plan scores pages and drafts in code, with the
-          evidence under every finding, and includes an editorial agent that rewrites what the scorer flags.
+        <p className="text-[#A89070] text-lg max-w-2xl mx-auto leading-relaxed">
+          Byline watches the pages you choose. Every day it checks whether each AI crawler is served, emails you when
+          that changes, and keeps a scored history so you can see what moved. Plans are sized by how many pages you
+          need watched.
         </p>
       </div>
 
-      {/* Objection bar */}
-      <div className="px-6 pb-12">
-        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-sm text-[#7A6555]">
-          <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
-            One SEO workflow, from keyword to scored draft
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
-            Agent applies fixes directly to your article
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B87333] flex-shrink-0" />
-            The editorial agent runs on Claude Sonnet
-          </span>
-        </div>
-      </div>
-
-      {/* Founder pricing banner */}
-      {founderSpots && (
-        <div className="px-6 pb-10">
-          <div className="max-w-3xl mx-auto rounded-2xl border border-[rgba(184,115,51,0.4)] bg-[#231F1B] p-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 bg-[rgba(184,115,51,0.12)] border border-[rgba(184,115,51,0.3)] rounded-full px-4 py-1.5 text-xs font-semibold text-[#D4954A] tracking-wide uppercase mb-3">
-                Founder Pricing: Limited Spots
+      {/* What monitoring does */}
+      <div className="px-6 pb-14">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-[#D4954A] mb-6">What monitoring does</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {MONITORING_POINTS.map((point) => (
+              <div key={point.title} className="rounded-2xl border border-[rgba(184,115,51,0.2)] bg-[#231F1B] p-6">
+                <h3 className="text-base font-bold text-[#F7F3EC] mb-2">{point.title}</h3>
+                <p className="text-sm text-[#A89070] leading-relaxed">{point.body}</p>
               </div>
-              <h2 className="text-2xl font-bold text-[#F7F3EC] mb-2">
-                Lock in your rate. Forever.
-              </h2>
-              <p className="text-[#A89070] text-sm max-w-md mx-auto">
-                The first 100 subscribers get permanently reduced pricing. Your rate never increases.
-              </p>
-              <div className="mt-4 flex items-center justify-center gap-3">
-                <div className="h-2 w-40 rounded-full bg-[#2A2420] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#B87333] transition-all"
-                    style={{ width: `${(founderSpots.used / founderSpots.total) * 100}%` }}
-                  />
-                </div>
-                <span className="text-sm font-semibold text-[#D4954A]">
-                  {founderSpots.remaining} of {founderSpots.total} spots left
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Starter founder */}
-              <div className="rounded-xl border border-[rgba(184,115,51,0.25)] bg-[#1C1917] p-5 flex flex-col">
-                <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Starter (Founder)</div>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-bold text-[#F7F3EC]">$39</span>
-                  <span className="text-sm text-[#7A6555]">/mo</span>
-                  <span className="text-sm line-through text-[#7A6555]">$49</span>
-                </div>
-                <p className="text-xs text-[#D4954A] font-semibold mb-4">Monthly, locked forever</p>
-                <button
-                  onClick={() => handleCheckout('starter', 'starter_founder')}
-                  disabled={loading === 'starter_founder'}
-                  className="mt-auto w-full py-2 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[rgba(184,115,51,0.08)] transition-colors disabled:opacity-60"
-                >
-                  {loading === 'starter_founder' ? 'Loading…' : 'Claim Starter Founder'}
-                </button>
-              </div>
-              {/* Growth founder */}
-              <div className="rounded-xl border-2 border-[#B87333] bg-[#1C1917] p-5 flex flex-col">
-                <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">Growth (Founder)</div>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-bold text-[#F7F3EC]">$79</span>
-                  <span className="text-sm text-[#7A6555]">/mo</span>
-                  <span className="text-sm line-through text-[#7A6555]">$99</span>
-                </div>
-                <p className="text-xs text-[#D4954A] font-semibold mb-4">Monthly, locked forever</p>
-                <button
-                  onClick={() => handleCheckout('pro', 'pro_founder')}
-                  disabled={loading === 'pro_founder'}
-                  className="mt-auto w-full py-2 rounded-lg bg-[#B87333] text-[#F7F3EC] text-sm font-semibold hover:bg-[#A0622A] transition-colors disabled:opacity-60"
-                >
-                  {loading === 'pro_founder' ? 'Loading…' : 'Claim Growth Founder'}
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      )}
-
-      {/* Social proof — trust signals right before the price */}
+      </div>
 
       {/* Pricing section */}
       <div className="px-6 pb-20">
@@ -331,16 +186,23 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
                     <span className="text-sm ml-1 text-[#7A6555]">/mo</span>
                     {interval === 'annual' && (
                       <p className="text-xs mt-1 text-[#A89070]">
-                        ${plan.annualPrice}/yr billed annually
+                        ${plan.annualPrice.toLocaleString('en-US')}/yr billed annually
                       </p>
                     )}
                   </div>
 
                   <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2.5 text-sm">
+                      <li key={feature.text} className="flex items-start gap-2.5 text-sm">
                         <Check className="w-4 h-4 flex-shrink-0 text-[#D4954A] mt-0.5" />
-                        <span className="text-[#A89070] leading-snug">{feature}</span>
+                        <span className="text-[#A89070] leading-snug">
+                          {feature.text}
+                          {feature.soon && (
+                            <span className="ml-2 inline-block rounded-full border border-[rgba(184,115,51,0.4)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#D4954A] align-middle">
+                              Coming soon
+                            </span>
+                          )}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -376,14 +238,64 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
           </div>
 
           <p className="text-center text-[#A89070] text-xs mt-6">
-            30-day money-back guarantee on all plans. No questions asked: email us and we'll refund in full.
+            30-day money-back guarantee on all paid plans. No questions asked: email us and we&apos;ll refund in full.
           </p>
 
+          {/* Founding rate: a reduced monthly price, no spot count */}
+          <div className="mt-10 rounded-2xl border border-[rgba(184,115,51,0.4)] bg-[#231F1B] p-6">
+            <div className="text-center mb-5">
+              <h2 className="text-xl font-bold text-[#F7F3EC] mb-1">Founding rate</h2>
+              <p className="text-sm text-[#A89070] max-w-xl mx-auto">
+                A reduced monthly price on Solo and Pro, locked for as long as your subscription stays active. Monthly billing only.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+              {PLANS.filter((p) => p.founderPlanId && p.founderPrice).map((plan) => (
+                <div key={plan.id} className="rounded-xl border border-[rgba(184,115,51,0.25)] bg-[#1C1917] p-5 flex flex-col">
+                  <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-1">{plan.name} (founding rate)</div>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-3xl font-bold text-[#F7F3EC]">${plan.founderPrice}</span>
+                    <span className="text-sm text-[#7A6555]">/mo</span>
+                    <span className="text-sm line-through text-[#7A6555]">${plan.monthlyPrice}</span>
+                  </div>
+                  <button
+                    onClick={() => handleCheckout(plan.id, plan.founderPlanId)}
+                    disabled={loading === plan.founderPlanId}
+                    className="mt-auto w-full py-2 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[rgba(184,115,51,0.08)] transition-colors disabled:opacity-60"
+                  >
+                    {loading === plan.founderPlanId ? 'Loading…' : `Start ${plan.name} at the founding rate`}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Free */}
+          <div className="mt-6 rounded-2xl border border-[rgba(184,115,51,0.2)] px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 bg-[#231F1B]">
+            <div>
+              <p className="text-sm font-semibold text-[#F7F3EC] mb-2">Free</p>
+              <ul className="space-y-1.5">
+                {FREE_FEATURES.map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-[#A89070]">
+                    <Check className="w-4 h-4 flex-shrink-0 text-[#D4954A] mt-0.5" />
+                    <span className="leading-snug">{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <Link
+              href="/signup"
+              className="shrink-0 px-6 py-2.5 rounded-lg text-sm font-semibold border border-[rgba(184,115,51,0.4)] text-[#D4954A] hover:border-[#B87333] hover:text-[#B87333] transition-colors whitespace-nowrap"
+            >
+              Start free
+            </Link>
+          </div>
+
           {/* Enterprise strip */}
-          <div className="mt-10 rounded-2xl border border-[rgba(184,115,51,0.2)] px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#231F1B' }}>
+          <div className="mt-6 rounded-2xl border border-[rgba(184,115,51,0.2)] px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#231F1B' }}>
             <div>
               <p className="text-sm font-semibold text-[#F7F3EC] mb-0.5">Need more capacity?</p>
-              <p className="text-sm text-[#A89070]">Custom brand profiles, higher article and keyword limits, team seats, and white-glove onboarding for larger operations.</p>
+              <p className="text-sm text-[#A89070]">More than 500 pages or 20 domains, team seats, and white-glove onboarding for larger operations.</p>
             </div>
             <a
               href="mailto:hi@bylineseo.com?subject=Enterprise%20Inquiry"
@@ -436,7 +348,7 @@ export default function PricingCards({ currentPlan, currentInterval, hasActiveSu
       {/* Bottom CTA */}
       <div className="px-6 py-16 text-center border-t border-[rgba(184,115,51,0.15)]">
         <h2 className="text-3xl font-bold mb-6 max-w-lg mx-auto leading-tight">
-          Start with a keyword. Leave with a draft you can check line by line.
+          Watch the pages that matter. Check every number yourself.
         </h2>
         <Link
           href="/signup"

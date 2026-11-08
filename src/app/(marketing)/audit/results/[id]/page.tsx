@@ -280,7 +280,7 @@ export default async function AuditResultsPage({ params }: { params: Promise<{ i
             Start with Byline →
           </Link>
           <p className="text-[#57534e] text-xs mt-4">
-            Starter plan from $49/mo · No long-term contract
+            Plans from $49/mo · No long-term contract
           </p>
         </div>
 
