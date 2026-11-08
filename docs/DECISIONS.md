@@ -6,6 +6,21 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 42. Plans are metered on pages monitored, not articles written
+**Date:** 2026-11-08
+**Decision:**
+- Free: 10 audits a month, crawler probe included, no monitoring, 10 draft scores. Solo $49: 1 domain, 15 pages, 100 audits, 90 days of history, 8 articles. Pro $129: 5 domains, 100 pages, 500 audits, 12 months, MCP and API keys, 30 articles. Agency $599: 20 domains, 500 pages, 2,000 audits, unlimited history, MCP and API keys, unbranded share links, 100 articles. Daily crawler access checks with change alerts on every paid tier.
+- The numbers live in `src/lib/plans.ts` (app limits) and `PLAN_MODEL` in `src/lib/mcp/entitlements.ts` (MCP, Pro and Agency only; decision 22's free crawler test is superseded). The pricing page reads `plans.ts`, so a card cannot drift from what is enforced.
+- Plan keys stay `starter`, `pro`, `agency` because `subscriptions.plan` identifies existing accounts, comped ones included. Only display names changed (Solo, Pro, Agency).
+- Never sell daily re-scoring: `tracked_pages.interval_days` allows 7 to 90 days. What is daily is the crawler access check (`access_alerts`, confirmed by a second check).
+- Enforced where tracked pages are created (POST `/api/tracked-pages`: pages, domains) and where audits run (`/api/free-tools/analyze`: monthly count from `audit_snapshots`). Refusals state the limit and never name a tier.
+- Not enforced as cutoffs: history windows (kept at least that long, nothing is deleted) and the 10 free draft scores in the web editor (only MCP `score_draft` is metered). MCP access and unbranded share links are tagged "Coming soon" on the pricing page until they ship.
+- The founder discount stays as a founding rate with no spot count; the "100 of 100 spots left" counter is gone.
+**Drivers:** the audit was identical on every tier, so the differentiated thing was free and the commodity was charged for. Monitoring is the only inherently recurring part of the product and was invisible on the pricing page.
+**Revisit if:** Solo's 15 pages proves too tight or too loose, or $599 is wrong for agencies watching twenty client domains.
+
+---
+
 ## 41. Engine 2026.15: the brand is the organisation; markup, content and dates read the way a person would
 **Date:** 2026-11-03 (found by hand on blog.hubspot.com before a teardown; teardown dropped)
 **Decision:**
