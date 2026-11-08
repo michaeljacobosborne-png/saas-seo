@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { Search, FileText, Sparkles, Check } from 'lucide-react'
 import type { Metadata } from 'next'
 import NavLinks from './_components/NavLinks'
-import FounderBanner from './_components/FounderBanner'
+import { FREE_LIMITS } from '@/lib/plans'
+import { PLANS } from './(billing)/pricing/pricing-plans'
 import { ORG_ID, SITE_URL, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
 import { ENGINE_VERSION } from '@/lib/geo-audit/types'
 
@@ -268,15 +269,17 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold mb-6 text-[#F7F3EC]">What did we find on eight SEO agency homepages?</h2>
             <div className="space-y-5">
               <p>
-                In October 2026 we audited the homepages of eight SEO agencies in the UK and US. All eight could be
-                read well enough to score, between 62 and 79 on engine 2026.10. Wherever the crawler check could be
-                attributed, every AI crawler was served the page. On two sites an ordinary browser request was
-                refused too, so every crawler row there was reported as unknown, not blocked.
+                In October 2026 we audited the homepages of eight SEO agencies in the UK and US, and on 8 November 2026
+                we re-ran all eight on engine 2026.15. The figures here are from that re-run. All eight could be
+                read well enough to score, between 62 and 88. Every one of the six AI crawlers we probe was served the
+                page on all eight sites. On two of them an ordinary browser request was refused too, so every crawler
+                row there is reported as unknown, not blocked.
               </p>
               <p>
-                The gaps were on the page. Seven of the eight had fewer than eight sections that stand alone when
-                quoted. Four had no heading phrased as a question. One had its main Organization markup fail to
-                parse because of a line break inside a text string.
+                The gaps were on the page. Six of the eight had fewer than eight sections that stand alone when
+                quoted. Three had no heading phrased as a question. The first pass, on engine 2026.10, scored them
+                between 62 and 79; engine changes since then moved scores, so we re-ran the audits instead of
+                updating the old figures by hand.
               </p>
               <p>
                 Those runs also exposed errors in our own engine: a CAPTCHA script on a contact form read as a bot
@@ -433,76 +436,51 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Social proof ── */}
-
-      <FounderBanner />
-
       {/* ── Section 5: Pricing preview ── */}
       <section className="px-6 py-20">
         <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4 text-[#F7F3EC]">Simple pricing. Start small, scale when you&apos;re ready.</h2>
-          <p className="text-[#A89070] mb-14 max-w-xl mx-auto">
-            Pick a plan and score every draft before you publish it. Upgrade or cancel anytime.
+          <h2 className="text-3xl font-bold mb-4 text-[#F7F3EC]">Plans sized by the pages you need watched.</h2>
+          <p className="text-[#A89070] mb-14 max-w-2xl mx-auto">
+            Every paid plan checks AI crawler access to your monitored pages every day and emails you when it changes.
+            Start free with {FREE_LIMITS.auditsPerMonth} audits a month.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Starter */}
-            <div className="rounded-2xl border border-[rgba(184,115,51,0.2)] p-7 text-left">
-              <div className="text-sm font-semibold text-[#A89070] mb-1">Starter</div>
-              <div className="text-3xl font-bold text-[#F7F3EC] mb-4">
-                $49<span className="text-base font-normal text-[#7A6555]">/mo</span>
-              </div>
-              <p className="text-sm text-[#A89070] leading-relaxed mb-6">
-                Research, generate, and score articles. 8 articles per month, 10 keyword sessions.
-              </p>
-              <Link
-                href="/pricing"
-                className="block w-full text-center py-2.5 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[rgba(184,115,51,0.08)] transition-colors"
+            {PLANS.map((plan) => (
+              <div
+                key={plan.id}
+                className={`rounded-2xl p-7 text-left relative ${plan.popular ? 'border-2 border-[#B87333] shadow-lg' : 'border border-[rgba(184,115,51,0.2)]'}`}
               >
-                Get started
-              </Link>
-            </div>
-            {/* Growth */}
-            <div className="rounded-2xl border-2 border-[#B87333] p-7 text-left relative shadow-lg">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <span className="bg-[#B87333] text-[#F7F3EC] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
-                  MOST POPULAR
-                </span>
+                {plan.popular && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="bg-[#B87333] text-[#F7F3EC] text-xs font-bold px-3 py-1 rounded-full tracking-wide whitespace-nowrap">
+                      MOST POPULAR
+                    </span>
+                  </div>
+                )}
+                <div className={`text-sm font-semibold mb-1 ${plan.popular ? 'text-[#B87333]' : 'text-[#A89070]'}`}>{plan.name}</div>
+                <div className="text-3xl font-bold text-[#F7F3EC] mb-4">
+                  ${plan.monthlyPrice}<span className="text-base font-normal text-[#7A6555]">/mo</span>
+                </div>
+                <p className="text-sm text-[#A89070] leading-relaxed mb-6">
+                  {plan.features[0].text}. Crawler access checked every day, with change alerts.
+                </p>
+                <Link
+                  href="/pricing"
+                  className={`block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                    plan.popular
+                      ? 'bg-[#B87333] text-[#F7F3EC] hover:bg-[#A0622A]'
+                      : 'border border-[#B87333] text-[#B87333] hover:bg-[rgba(184,115,51,0.08)]'
+                  }`}
+                >
+                  See {plan.name}
+                </Link>
               </div>
-              <div className="text-sm font-semibold text-[#B87333] mb-1">Growth</div>
-              <div className="text-3xl font-bold text-[#F7F3EC] mb-4">
-                $99<span className="text-base font-normal text-[#7A6555]">/mo</span>
-              </div>
-              <p className="text-sm text-[#A89070] leading-relaxed mb-6">
-                Full agent access, 30 articles a month, Assist mode, and persistent memory.
-              </p>
-              <Link
-                href="/pricing"
-                className="block w-full text-center py-2.5 rounded-lg bg-[#B87333] text-[#F7F3EC] text-sm font-semibold hover:bg-[#A0622A] transition-colors"
-              >
-                Get started
-              </Link>
-            </div>
-            {/* Multi-Brand */}
-            <div className="rounded-2xl border border-[rgba(184,115,51,0.2)] p-7 text-left">
-              <div className="text-sm font-semibold text-[#A89070] mb-1">Multi-Brand</div>
-              <div className="text-3xl font-bold text-[#F7F3EC] mb-4">
-                $249<span className="text-base font-normal text-[#7A6555]">/mo</span>
-              </div>
-              <p className="text-sm text-[#A89070] leading-relaxed mb-6">
-                Multiple brand profiles, team seats, and priority support.
-              </p>
-              <Link
-                href="/pricing"
-                className="block w-full text-center py-2.5 rounded-lg border border-[#B87333] text-[#B87333] text-sm font-semibold hover:bg-[rgba(184,115,51,0.08)] transition-colors"
-              >
-                Get started
-              </Link>
-            </div>
+            ))}
           </div>
           <Link href="/pricing" className="text-sm text-[#B87333] hover:text-[#A0622A] font-medium transition-colors">
             See full plan details →
           </Link>
-          <p className="text-xs text-[#7A6555] mt-4">30-day money-back guarantee. No questions asked.</p>
+          <p className="text-xs text-[#7A6555] mt-4">30-day money-back guarantee on paid plans. No questions asked.</p>
         </div>
       </section>
 
