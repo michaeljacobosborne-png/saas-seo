@@ -24,6 +24,9 @@ describe('isQuotaExempt', () => {
 
 const getUser = vi.fn()
 const consumeRun = vi.fn()
+const monthlyAuditBudget = vi.fn()
+
+vi.mock('@/lib/audit-quota', () => ({ monthlyAuditBudget: (...args: unknown[]) => monthlyAuditBudget(...args) }))
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser } }),
@@ -54,6 +57,7 @@ describe('POST /api/free-tools/analyze quota', () => {
   beforeEach(() => {
     getUser.mockReset()
     consumeRun.mockReset().mockResolvedValue(exhausted)
+    monthlyAuditBudget.mockReset()
   })
 
   it('lets the signed-in owner run past the limit, counted under their account', async () => {
@@ -72,10 +76,24 @@ describe('POST /api/free-tools/analyze quota', () => {
     expect(consumeRun).toHaveBeenCalledWith(identityFor(req().headers), { tool: 'geo' })
   })
 
-  it('still limits a signed-in non-owner', async () => {
+  it('limits a signed-in non-owner by their monthly allowance, not the daily one, and names no tier', async () => {
     getUser.mockResolvedValue({ data: { user: { ...OWNER, id: 'u2', email: 'customer@example.com' } } })
+    monthlyAuditBudget.mockResolvedValue({ allowed: false, remaining: 0, limit: 10, used: 10, resetsAt: '2026-12-01T00:00:00.000Z' })
     const { POST } = await import('@/app/api/free-tools/analyze/route')
-    expect((await POST(req())).status).toBe(429)
+    const res = await POST(req())
+    expect(res.status).toBe(429)
+    expect(monthlyAuditBudget).toHaveBeenCalledWith('u2')
+    expect(consumeRun).not.toHaveBeenCalled()
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toContain("this month's 10 audits")
+    expect(body.error).not.toMatch(/(solo|starter|growth|pro|agency|free)/i)
+  })
+
+  it('lets a signed-in non-owner run while they are inside their monthly allowance', async () => {
+    getUser.mockResolvedValue({ data: { user: { ...OWNER, id: 'u2', email: 'customer@example.com' } } })
+    monthlyAuditBudget.mockResolvedValue({ allowed: true, remaining: 4, limit: 10, used: 5, resetsAt: '2026-12-01T00:00:00.000Z' })
+    const { POST } = await import('@/app/api/free-tools/analyze/route')
+    expect((await POST(req())).status).toBe(200)
   })
 
   it('treats an auth lookup failure as anonymous', async () => {

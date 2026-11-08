@@ -2,14 +2,16 @@
  * GET  /api/tracked-pages  the user's tracked pages, each with its latest run
  * POST /api/tracked-pages  { url, tool? } start tracking a page and record the first run now
  *
- * Score over time (DECISIONS 39). Reads go through the user's own session (RLS);
+ * Score over time (DECISIONS 39). Open to every paid plan; free accounts are
+ * refused (page and domain limits: src/lib/plans.ts). Reads go through the user's own session (RLS);
  * snapshots are written with the service client.
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { normaliseUrl } from '@/lib/geo-audit/fetch'
-import { trackedPageLimit } from '@/lib/usage'
+import { resolveLimits } from '@/lib/usage'
+import { PLAN_LIMITS, UPGRADE_URL, checkTrackedPageAllowance } from '@/lib/plans'
 import { firstRerunAt, recordTrackedPage, supabaseTracking, type TrackedPage } from '@/lib/tracking'
 
 export const maxDuration = 60
@@ -43,12 +45,6 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Owner-only until the migration has run and the plan limits are confirmed
-  // (DECISIONS 39). Remove this check to open it to every plan.
-  if (user.email?.toLowerCase() !== 'michaeljacobosborne@gmail.com') {
-    return NextResponse.json({ error: 'Tracked pages are not open yet.', code: 'NOT_OPEN' }, { status: 403 })
-  }
-
   let body: { url?: string; tool?: string; fromSnapshot?: string }
   try {
     body = await request.json()
@@ -59,17 +55,28 @@ export async function POST(request: Request) {
   const tool = body.tool === 'ao' ? 'ao' : 'geo'
   if (!url) return NextResponse.json({ error: 'A page URL is required.' }, { status: 400 })
 
+  // Plan limits bind here (repricing 2026-11-08): pages monitored and domains.
+  // Free accounts monitor nothing. Refusals state the limit, never a tier name.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (supabase as any).from('profiles').select('account_type').eq('user_id', user.id).maybeSingle()
-  const limit = await trackedPageLimit(user.id, supabase, profile?.account_type)
-  const { count } = await supabase.from('tracked_pages').select('id', { count: 'exact', head: true }).eq('active', true)
-  if ((count ?? 0) >= limit) {
-    return NextResponse.json({ error: `Your plan tracks up to ${limit} page${limit === 1 ? '' : 's'}.`, code: 'LIMIT_REACHED' }, { status: 403 })
+  const { plan, limits } = await resolveLimits(user.id, supabase, profile?.account_type)
+  const { data: activeRows } = await supabase.from('tracked_pages').select('url, tool').eq('active', true)
+  const activeUrls = (activeRows ?? []).map((r) => r.url as string)
+  const allowance = checkTrackedPageAllowance({ limits, activeUrls, newUrl: url })
+  if (!allowance.ok) {
+    return NextResponse.json(
+      { error: allowance.message, code: allowance.code === 'NOT_INCLUDED' ? 'NOT_INCLUDED' : 'LIMIT_REACHED', upgradeUrl: UPGRADE_URL },
+      { status: 403 },
+    )
   }
+
+  // A new page is re-scored at the plan's interval; a page already tracked keeps its own.
+  const alreadyTracked = (activeRows ?? []).some((r) => r.url === url && r.tool === tool)
+  const interval_days = plan === 'free' ? undefined : PLAN_LIMITS[plan].rescoreIntervalDays
 
   const { data: page, error } = await supabase
     .from('tracked_pages')
-    .upsert({ user_id: user.id, url, tool, active: true }, { onConflict: 'user_id,url,tool' })
+    .upsert({ user_id: user.id, url, tool, active: true, ...(!alreadyTracked && interval_days ? { interval_days } : {}) }, { onConflict: 'user_id,url,tool' })
     .select('id, user_id, url, tool, interval_days')
     .single()
   if (error || !page) return NextResponse.json({ error: error?.message ?? 'Could not save the page.' }, { status: 500 })

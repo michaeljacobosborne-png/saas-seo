@@ -32,10 +32,19 @@ export default function AddTrackedPage({ atLimit, limit }: { atLimit: boolean; l
     }
   }
 
+  if (limit === 0) {
+    return (
+      <p className="text-sm" style={{ color: 'var(--cream-dim)' }}>
+        Page monitoring is not included in your current Byline subscription.{' '}
+        <a href="/pricing" className="underline">See what monitoring includes</a>.
+      </p>
+    )
+  }
+
   if (atLimit) {
     return (
       <p className="text-sm" style={{ color: 'var(--cream-dim)' }}>
-        You are tracking {limit} page{limit === 1 ? '' : 's'}, the most your plan allows. Stop tracking one to add another.
+        You are tracking {limit} page{limit === 1 ? '' : 's'}, the most your subscription allows. Stop tracking one to add another, or <a href="/pricing" className="underline">see the plans</a>.
       </p>
     )
   }

@@ -37,7 +37,7 @@ export default async function TrackingPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--cream)' }}>Tracked pages</h1>
         <p className="mt-1 text-sm max-w-2xl" style={{ color: 'var(--cream-dim)' }}>
-          Each page is re-checked every month, and every run is kept. When you compare two runs, both are scored again on today&apos;s engine, so a change in the score is a change in your page, not in our rules.
+          Crawler access to each page is checked every day, and you are emailed when it changes. The page is re-scored on a schedule (weekly or monthly, depending on your subscription), and every run is kept. When you compare two runs, both are scored again on today&apos;s engine, so a change in the score is a change in your page, not in our rules.
         </p>
       </div>
 

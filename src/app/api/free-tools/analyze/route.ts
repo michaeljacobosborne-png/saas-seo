@@ -4,6 +4,7 @@ export const maxDuration = 60
 import { AUDIT_STEPS, AuditError } from '@/lib/geo-audit'
 import { recordAudit, type RecordedAudit } from '@/lib/geo-audit/history'
 import { consumeRun, identityFor, isQuotaExempt } from '@/lib/geo-audit/rate-limit'
+import { monthlyAuditBudget } from '@/lib/audit-quota'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { snapshotRow } from '@/lib/tracking'
@@ -32,16 +33,35 @@ export async function POST(request: Request) {
   // Their runs are still counted, under their account id, so usage stays visible.
   const user = await verifiedUser()
   const exempt = isQuotaExempt(user)
-  const counted = await consumeRun(exempt ? `user:${user!.id}` : identityFor(request.headers), { tool: type })
-  const budget = exempt ? { ...counted, allowed: true, exempt: true } : counted
-  if (!budget.allowed) {
-    return json(
-      {
-        error: `You've used all ${budget.limit} free runs for today. Your next run is available after ${new Date(budget.resetsAt).toUTCString()}.`,
-        rateLimit: budget,
-      },
-      429,
-    )
+
+  // Signed-in accounts are metered monthly against their plan (10 on Free, 100 /
+  // 500 / 2,000 on the paid plans), by counting their stored runs. Anonymous
+  // visitors keep the daily limit. Neither message names a tier.
+  let budget: { allowed: boolean; remaining: number; limit: number; resetsAt: string; exempt?: boolean; degraded?: string }
+  if (user && !exempt) {
+    const monthly = await monthlyAuditBudget(user.id)
+    if (!monthly.allowed) {
+      return json(
+        {
+          error: `You have used this month's ${monthly.limit} audits. They reset on ${new Date(monthly.resetsAt).toUTCString()}. See https://app.bylineseo.com/pricing for more.`,
+          rateLimit: monthly,
+        },
+        429,
+      )
+    }
+    budget = monthly
+  } else {
+    const counted = await consumeRun(exempt ? `user:${user!.id}` : identityFor(request.headers), { tool: type })
+    budget = exempt ? { ...counted, allowed: true, exempt: true } : counted
+    if (!budget.allowed) {
+      return json(
+        {
+          error: `You've used all ${budget.limit} free runs for today. Your next run is available after ${new Date(budget.resetsAt).toUTCString()}.`,
+          rateLimit: budget,
+        },
+        429,
+      )
+    }
   }
 
   const expectedAuthor = user ? await profileAuthorFor(user.id, url) : null
