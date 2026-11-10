@@ -23,10 +23,10 @@ const founderText = [
 const brandText = `New teardown: Google's AI features guide scored 81/100 for retrievability and Weak for citability on Byline's engine, 10 Nov 2026. One check credited a footer trademark line as a definition, and the post says so: ${POST}`
 
 async function nextId(db: any, prefix: string) {
-  const { data, error } = await db.from('outreach_queue').select('id').like('id', `${prefix}-%`)
+  const { data, error } = await db.from('outreach_queue').select('id').like('id', `${prefix}%`)
   if (error) throw new Error(error.message)
-  const n = Math.max(0, ...(data ?? []).map((x: { id: string }) => Number(x.id.slice(prefix.length + 1)) || 0)) + 1
-  return `${prefix}-${n}`
+  const n = Math.max(0, ...(data ?? []).map((x: { id: string }) => Number(x.id.slice(prefix.length)) || 0)) + 1
+  return `${prefix}${n}`
 }
 
 async function main() {
