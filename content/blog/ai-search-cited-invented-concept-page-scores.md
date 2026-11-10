@@ -4,7 +4,7 @@ slug: "ai-search-cited-invented-concept-page-scores"
 excerpt: "Fudan researchers published posts about a concept they made up, and eight of ten AI search platforms cited it within seven days. Where the posts lived mattered more than how many there were. Here is what that leaves a page score able to say."
 seoTitle: "Study: AI Search Cited a Made-Up Concept. What Page Scores Say"
 seoDescription: "A Fudan University study found eight of ten AI search platforms cited an invented concept within a week. What it means for page scores, placement and client advice."
-publishedAt: "2026-11-04T09:00:00.000Z"
+publishedAt: "2026-11-09T09:00:00.000Z"
 author: michael-osborne
 categories: []
 ---
@@ -15,8 +15,8 @@ posted to arXiv on 8 October 2026, shows how wide that gap is. The researchers
 published posts about a concept they had made up, and eight of ten AI search
 platforms cited it within seven days.
 
-Where the posts were published decided more than how many there were. I score
-pages for a living, so this is what the result means for that work.
+Where the posts were published decided more than how many there were. For
+anyone who scores pages, this is what the result means for that work.
 
 ## What did the Fudan study test?
 
@@ -84,7 +84,7 @@ Byline does not try.
 
 ## Does a high page score still matter?
 
-Yes, for the conditions the page controls. On 2 November 2026 I ran Byline's engine
+Yes, for the conditions the page controls. On 2 November 2026 Byline ran its engine
 (version 2026.14) on our own homepage. Retrievable came back 98 out of 100 and
 Citable came back Strong. Access scored 30 out of 30: the three AI search crawlers
 we probe were served the page, the fourth was permitted by robots.txt, and the

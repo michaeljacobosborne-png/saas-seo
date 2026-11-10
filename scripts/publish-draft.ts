@@ -535,6 +535,17 @@ async function main() {
 
   await client.createOrReplace(doc)
 
+  // Read it back with the token, so "saved" is never reported on faith.
+  const back = (await client.fetch(
+    '*[_id==$id][0]{_id,title,publishedAt,"blocks":count(body)}',
+    { id: draftId },
+  )) as { _id: string; title: string; publishedAt: string; blocks: number } | null
+  if (!back || back.blocks !== body.length) {
+    fail(`Read-back failed for ${draftId}: expected ${body.length} body items, got ${back?.blocks ?? 'no document'}.`)
+  }
+  console.log('')
+  console.log(`  Verified   ${back._id} exists, ${back.blocks} body items, publishedAt ${back.publishedAt}`)
+
   console.log('')
   console.log(`  Draft saved. Review at /studio/structure/post;${draftId}`)
   console.log('  It stays invisible on the live site until you press Publish in Studio.')

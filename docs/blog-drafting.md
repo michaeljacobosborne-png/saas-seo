@@ -173,3 +173,38 @@ changed to exclude `drafts.**`.
 
 Check it renders, then press **Publish** in Studio. That is the only step that
 makes it live, and it is always a human one.
+
+## Weekly loop (host session, no scheduled task)
+
+Same reason as `docs/queue-handoff.md`: since about 4 November 2026 scheduled
+tasks run on a cloud runner with no route to Sanity or Supabase, so a scheduled
+task can at best leave a markdown file nobody sees. Drafting is done by hand in a
+session on Michael's computer (`C:\dev\Byline`). There is no `byline-blog-article`
+task registered any more; do not recreate one.
+
+1. **Pick the topic.** Industry, product or changes in the space, never Michael
+   personally. Check `content/blog/` and Sanity for what already exists.
+2. **Research with sources.** Fetch the primary source (paper, policy page, vendor
+   doc), not a write-up of it. Every claim carries evidence in a `## Sources` list.
+   Attribute a finding to the study it came from, using that study's own measure
+   and denominator, never to Byline.
+3. **Write `content/blog/<slug>.md`** to disk in the same turn. A draft that lives
+   only in chat is lost. Set `publishedAt` to the next weekday 09:00 UTC, never a
+   past date. No em or en dashes. No first person singular.
+4. **Never use retracted claims:** the Forrester 7% and 57% figures; Otterly's AI
+   Overviews and AI Mode percentages; "ten tools, none query an engine"; the
+   Semrush citation-timing study as "unchanged pages" (it studied 81 newly
+   published pages).
+5. **Dry run:** `npm run draft -- content/blog/<slug>.md --dry-run`. Read the
+   mode line: CREATE or UPDATE, and the warnings.
+6. **Create:** `npm run draft -- content/blog/<slug>.md`. This is the one command
+   from markdown to verified draft. It writes the draft, reads it back with the
+   token, and fails loudly if the read-back does not match.
+7. **Hand over** the Studio URL: `https://app.bylineseo.com/studio/structure/post;drafts.post-<slug>`.
+   Publishing is Michael's click. Drafts are invisible until then, so a draft is
+   not an article: report "waiting for you to publish" until it shows on `/blog`.
+8. **Social follow-up:** queue the promoting post with `after_ids: ["blog:<slug>"]`
+   per `docs/queue-handoff.md`.
+
+Parked: `wikipedia-coffee-article-retrievable-citable-teardown.md` is a
+rejected angle (too general). Do not push it.
