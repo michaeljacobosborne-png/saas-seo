@@ -156,6 +156,30 @@ duplicates.
 
 The run prints which of the two it did before writing.
 
+## Internal links must resolve
+
+Every dry run, `--json` and real run checks the internal links in the markdown
+and **fails, writing nothing**, if any does not resolve. There is no flag to
+skip it.
+
+- `/blog/<slug>` (or the same on bylineseo.com, www or app) must be a
+  **published** post in the dataset. A draft does not count: it is invisible on
+  the live site, so the link would 404. A parked or mistyped slug fails the same
+  way.
+- Any other internal path (`/geo-analyzer`, `/pricing`) must answer below 400 on
+  https://app.bylineseo.com. If the site cannot be reached the run fails rather
+  than assume.
+- Write site links as `/path`. A relative link with no leading slash is refused.
+- External links are not checked here.
+
+This exists because a draft once linked to a parked post that was never going to
+exist, in a piece arguing that evidence should hold up when checked. The logic is
+`src/lib/blog-links.ts`; the output line is `Links  N internal link(s) checked,
+all resolve`.
+
+What it cannot catch is prose: "as we showed in our earlier teardown" with no
+link. That is the manual step above.
+
 ## Reviewing and publishing
 
 The draft appears in Studio at `/studio`. It is **not** on the live site.
@@ -195,15 +219,20 @@ task registered any more; do not recreate one.
    Overviews and AI Mode percentages; "ten tools, none query an engine"; the
    Semrush citation-timing study as "unchanged pages" (it studied 81 newly
    published pages).
-5. **Dry run:** `npm run draft -- content/blog/<slug>.md --dry-run`. Read the
+5. **Check every reference to another piece.** The script verifies links (step 6)
+   but cannot read prose. Search the markdown for any post mentioned by name or
+   as "our earlier piece", "the teardown we ran", "see the study". Each must be a
+   published post or be stated as a plain fact with its evidence in this piece.
+   A run that exists only in the audit archive is a fact, not a link.
+6. **Dry run:** `npm run draft -- content/blog/<slug>.md --dry-run`. Read the
    mode line: CREATE or UPDATE, and the warnings.
-6. **Create:** `npm run draft -- content/blog/<slug>.md`. This is the one command
+7. **Create:** `npm run draft -- content/blog/<slug>.md`. This is the one command
    from markdown to verified draft. It writes the draft, reads it back with the
    token, and fails loudly if the read-back does not match.
-7. **Hand over** the Studio URL: `https://app.bylineseo.com/studio/structure/post;drafts.post-<slug>`.
+8. **Hand over** the Studio URL: `https://app.bylineseo.com/studio/structure/post;drafts.post-<slug>`.
    Publishing is Michael's click. Drafts are invisible until then, so a draft is
    not an article: report "waiting for you to publish" until it shows on `/blog`.
-8. **Social follow-up:** queue the promoting post with `after_ids: ["blog:<slug>"]`
+9. **Social follow-up:** queue the promoting post with `after_ids: ["blog:<slug>"]`
    per `docs/queue-handoff.md`.
 
 Parked: `wikipedia-coffee-article-retrievable-citable-teardown.md` is a

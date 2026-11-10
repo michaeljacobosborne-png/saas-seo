@@ -25,6 +25,7 @@ import matter from 'gray-matter'
 import { marked } from 'marked'
 import { config as loadEnv } from 'dotenv'
 import { extractTables, reinsertTables } from '../src/sanity/lib/tables'
+import { checkInternalLinks, LIVE_ORIGIN } from '../src/lib/blog-links'
 
 loadEnv({ path: '.env.local', quiet: true })
 loadEnv({ path: '.env', quiet: true })
@@ -420,6 +421,34 @@ async function main() {
     useCdn: false, // must read live data to resolve refs and find existing drafts
   })
 
+  // ── internal links must resolve (dry runs included, no bypass) ──
+  // A /blog/ link must be a PUBLISHED post; any other site link must answer on
+  // the live site. A draft, a parked post or a typo all 404 for a reader.
+  const linkCheck = await checkInternalLinks(content, {
+    publishedSlugs: async (slugs) => {
+      const found = (await client.fetch(
+        '*[_type=="post" && slug.current in $slugs && !(_id in path("drafts.**"))].slug.current',
+        { slugs },
+      )) as string[]
+      return new Set(found)
+    },
+    liveStatus: async (path) => {
+      try {
+        const res = await fetch(`${LIVE_ORIGIN}${path}`, { method: 'GET', redirect: 'follow', signal: AbortSignal.timeout(15_000) })
+        return res.status
+      } catch {
+        return null
+      }
+    },
+  })
+  if (linkCheck.problems.length) {
+    fail(
+      `${linkCheck.problems.length} internal link(s) do not resolve:\n` +
+        linkCheck.problems.map((p) => `     ${p.raw}\n       ${p.reason}`).join('\n'),
+      'Remove the link or fix it. Nothing was written.',
+    )
+  }
+
   // ── author reference ──
   const authors = (await client.fetch(
     '*[_type=="author"]{_id,name,"slug":slug.current}',
@@ -511,6 +540,7 @@ async function main() {
   console.log(`  Categories ${categoryRefs.length || '— none —'}`)
   const tableCount = body.filter((b) => (b as { _type?: string })._type === 'table').length
   console.log(`  Body       ${blockCount} blocks, ${faqs.length} FAQ, ${tableCount} table(s)`)
+  console.log(`  Links      ${linkCheck.checked} internal link(s) checked, all resolve`)
   console.log(`  Draft id   ${draftId}`)
   console.log(
     `  Mode       ${existingDraft ? 'UPDATE existing draft' : 'CREATE new draft'}` +
