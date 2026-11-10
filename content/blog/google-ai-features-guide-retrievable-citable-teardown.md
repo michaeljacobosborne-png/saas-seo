@@ -72,7 +72,7 @@ The definition-style sentence is the problem. The engine quoted this as its evid
 
 I do not accept that credit. Take the 5 points away and Direct answers is 5 of 10, Extractability is 9 of 20 and the total is 76. I have not changed the report. The 81 is what the engine printed on 10 November, and the 76 is my arithmetic from the rubric.
 
-This is the same kind of limit I reported in the [Wikipedia teardown](/blog/wikipedia-coffee-article-retrievable-citable-teardown), where the engine read two ISBN-like numbers as contact details. A score is a reading made by software. Check the evidence line under any check you plan to act on.
+It is the same kind of limit I hit running the engine over a Wikipedia article, where it read two ISBN-like numbers as contact details. A score is a reading made by software. Check the evidence line under any check you plan to act on.
 
 ## Why is citability Weak?
 
