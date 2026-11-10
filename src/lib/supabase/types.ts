@@ -1,5 +1,29 @@
 export type BrandVoice = 'professional' | 'friendly' | 'authoritative' | 'conversational' | 'witty' | 'inspirational'
 
+/** brand_profiles.voice_fingerprint (migration 20260705_brand_voice_fingerprint). */
+export type VoiceFingerprint = {
+  style_summary: string
+  phrases: string[]
+  sample: string
+  avoid: string
+  posts_analyzed: number
+  crawled_at: string
+}
+
+export interface Subscription {
+  id: string
+  user_id: string
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  plan: 'starter' | 'pro' | 'agency'
+  billing_interval: 'monthly' | 'annual'
+  status: 'active' | 'cancelled' | 'past_due' | 'trialing'
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface BrandProfile {
   id: string
   user_id: string
@@ -11,6 +35,9 @@ export interface BrandProfile {
   tone_notes: string | null
   competitors: string[]
   primary_keywords: string[]
+  avoid_topics: string | null
+  tone_examples: string | null
+  content_goals: string | null
   created_at: string
   updated_at: string
 }
@@ -21,7 +48,24 @@ export interface KeywordProject {
   brand_profile_id: string | null
   name: string
   seed_topic: string | null
+  folder: string | null
   status: 'pending' | 'researching' | 'complete' | 'error'
+  research_brief: Record<string, unknown> | null
+  last_researched_at: string | null
+  created_at: string
+}
+
+export interface SavedKeyword {
+  id: string
+  user_id: string
+  keyword: string
+  volume: number | null
+  difficulty: number | null
+  cpc: number | null
+  intent: string | null
+  folder: string
+  has_article: boolean
+  article_id: string | null
   created_at: string
 }
 
@@ -45,11 +89,14 @@ export interface ArticleScoreCriteria {
 
 export interface ArticleScores {
   seo: { score: number; breakdown: Record<string, ArticleScoreCriteria> }
-  readability: { score: number; breakdown: Record<string, { label: string; value: number }> }
+  /** Removed 2026-10-05 (decision 28). Present on older rows only; never displayed. */
+  readability?: { score: number; breakdown: Record<string, { label: string; value: number }> }
   geo: { score: number; breakdown: Record<string, { label: string; passed: boolean }> }
   aeo: { score: number; breakdown: Record<string, { label: string; passed: boolean }> }
-  ranking_prediction: { timeline: string; confidence: 'low' | 'medium' | 'high' }
-  traffic_prediction: { at_rank_1: number; at_rank_3: number; at_rank_5: number; at_rank_10: number }
+  // ranking_prediction and traffic_prediction were removed 2026-10-04: a
+  // months-to-top-ten forecast is a guarantee. Old rows may still carry them; nothing reads them.
+  /** Real-engine draft report (paid engine phase 2). Absent on rows scored before 2026-09-30. */
+  draft?: import('@/lib/geo-audit/draft-report').DraftReport
 }
 
 export interface Article {
@@ -62,7 +109,9 @@ export interface Article {
   supporting_keywords: string[]
   brief: Record<string, unknown> | null
   content: string | null
+  meta_description: string | null
   word_count: number | null
+  target_word_count: number | null
   status: 'draft' | 'brief_ready' | 'generating' | 'complete' | 'published'
   scores: ArticleScores | null
   published_url: string | null
@@ -82,8 +131,14 @@ export type Database = {
       }
       keyword_projects: {
         Row: KeywordProject
-        Insert: Omit<KeywordProject, 'id' | 'created_at'>
+        Insert: Omit<KeywordProject, 'id' | 'created_at'> & { research_brief?: Record<string, unknown> | null }
         Update: Partial<Omit<KeywordProject, 'id' | 'created_at'>>
+        Relationships: []
+      }
+      saved_keywords: {
+        Row: SavedKeyword
+        Insert: Omit<SavedKeyword, 'id' | 'created_at'>
+        Update: Partial<Omit<SavedKeyword, 'id' | 'created_at'>>
         Relationships: []
       }
       keywords: {
