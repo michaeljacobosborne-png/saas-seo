@@ -24,7 +24,7 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { auditSite, type Failure, type SiteAudit } from '../../src/lib/study/audit-site'
+import { auditSite, refineDnsFailure, type Failure, type SiteAudit } from '../../src/lib/study/audit-site'
 import { Ledger, domainBudgetOk, resolveSite, type AttemptEvent, type Pacing } from '../../src/lib/study/ledger'
 import { evenSample, loadPopulation, splitDuplicates, type Site } from '../../src/lib/study/populations'
 import { lookupEgress, type Vantage } from '../../src/lib/study/vantage'
@@ -103,7 +103,16 @@ async function runOne(site: Site, vantage: Vantage): Promise<SiteAudit> {
     if (!res.ok) {
       return { ok: false, engineVersion: 'unknown', vantage, failure: { kind: 'harness-error', httpStatus: res.status, message: `The vantage function answered HTTP ${res.status}.` } }
     }
-    return (await res.json()) as SiteAudit
+    const out = (await res.json()) as SiteAudit
+    // A name that does not exist is a fact about DNS, not about where we ask from.
+    // The deployed function may be an older build whose independent lookup cannot
+    // tell "no such domain" from a runtime quirk, so a DNS failure it reports is
+    // confirmed again here, and the row says where.
+    if (!out.ok && (out.failure.kind === 'dns' || out.failure.kind === 'dns-transient')) {
+      const again = await refineDnsFailure({ ...out.failure, kind: 'dns' }, site.url)
+      return { ...out, failure: { ...again, message: `${out.failure.message} | re-checked from the harness machine: ${again.kind === 'dns' ? 'no such domain' : again.message.split('[').pop()}` } }
+    }
+    return out
   }
   try {
     return await Promise.race([work(), sleep(pacing.siteTimeoutMs).then(timeout)])

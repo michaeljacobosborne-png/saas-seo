@@ -69,6 +69,13 @@ describe('classifyFailure', () => {
   })
 })
 
+describe('independentLookup fallback', () => {
+  it('is exported and rejects with a code, never hangs, for a name that cannot exist', async () => {
+    const { independentLookup } = await import('./audit-site')
+    await expect(independentLookup('study-smoke-nonexistent.invalid')).rejects.toMatchObject({ code: expect.stringMatching(/ENOTFOUND|ENODATA/) })
+  })
+})
+
 describe('refineDnsFailure', () => {
   const dns = classifyFailure(null, 'That domain could not be resolved. Check the spelling.')
   it('keeps "dns" only when an independent lookup agrees there is no such domain', async () => {

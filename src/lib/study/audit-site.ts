@@ -78,10 +78,33 @@ export function classifyFailure(status: number | null, message: string): Failure
  * (ENODATA). If the name resolves now, or the lookup itself failed, the attempt
  * is a transient failure and cannot count towards dropping the site.
  */
+/**
+ * The default independent lookup. `dns.lookup` goes through the OS resolver, and
+ * on the Vercel runtime it answers EBUSY for a name that does not exist (seen in
+ * the 2026-11-12 smoke test), which would make every real non-resolving domain
+ * look like a hiccup. So when it fails for any reason other than "no such
+ * domain", ask the DNS servers directly (c-ares: resolve4/resolve6), which
+ * report ENOTFOUND and ENODATA properly. Success on either means it resolves.
+ */
+export async function independentLookup(host: string): Promise<unknown> {
+  try {
+    return await dnsPromises.lookup(host, { all: true })
+  } catch (err) {
+    const code = (err as { code?: string }).code
+    if (code === 'ENOTFOUND' || code === 'ENODATA') throw err
+  }
+  const results = await Promise.allSettled([dnsPromises.resolve4(host), dnsPromises.resolve6(host)])
+  const ok = results.find((r) => r.status === 'fulfilled')
+  if (ok && ok.status === 'fulfilled') return ok.value
+  const codes = results.map((r) => (r.status === 'rejected' ? ((r.reason as { code?: string }).code ?? 'unknown') : ''))
+  const gone = codes.every((c) => c === 'ENOTFOUND' || c === 'ENODATA')
+  throw Object.assign(new Error('lookup failed'), { code: gone ? codes[0] : (codes.find((c) => c !== 'ENOTFOUND' && c !== 'ENODATA') ?? 'unknown') })
+}
+
 export async function refineDnsFailure(
   failure: Failure,
   url: string,
-  lookup: (host: string) => Promise<unknown> = (h) => dnsPromises.lookup(h, { all: true }),
+  lookup: (host: string) => Promise<unknown> = independentLookup,
 ): Promise<Failure> {
   if (failure.kind !== 'dns') return failure
   let host = ''
