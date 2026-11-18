@@ -249,20 +249,20 @@ export default async function BlogPostPage({
         <PortableTextBody value={body} />
       </article>
 
-      {/* Footer CTA to try Byline */}
+      {/* Footer CTA: the free analyser, the right next step for a cold reader */}
       <aside className="mt-16 rounded-2xl border border-[rgba(184,115,51,0.25)] bg-[#231F1B] p-8 text-center">
         <h2 className="font-[family-name:var(--font-playfair)] text-2xl font-bold text-[#F7F3EC]">
-          Ready to publish content that ranks?
+          Can your page be retrieved and cited?
         </h2>
         <p className="mt-3 text-[#A89070] max-w-md mx-auto leading-relaxed">
-          Byline pairs real keyword data with an editorial agent that rewrites
-          the sections holding your articles back.
+          Byline scores whether a page can be retrieved and cited, in code, with
+          the evidence under every finding. Check any page free, no signup needed.
         </p>
         <Link
-          href="/pricing"
+          href="/geo-analyzer"
           className="inline-flex items-center mt-6 px-7 py-3.5 rounded-xl text-base font-semibold bg-[#B87333] text-[#1C1917] hover:bg-[#D4954A] transition-colors"
         >
-          Try Byline
+          Check a page
         </Link>
       </aside>
     </main>
