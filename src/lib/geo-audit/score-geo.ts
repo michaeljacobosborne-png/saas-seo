@@ -11,6 +11,7 @@
 
 import { assessFreshness } from './dates'
 import { countWords, truncate, type ExtractedPage } from './extract'
+import { isOwn, organizations } from './attribution-names'
 import { pageForRole, type KeyPageResult } from './crawl'
 import { summariseAccess, type AccessReport } from './access'
 import { FactorBuilder } from './scoring'
@@ -127,8 +128,12 @@ function scoreSchema({ home }: ScoreInput): Factor {
   f.award(4, `Structured data is present (${types.join(', ')}).`, ev(home.url, 'jsonld', types.join(', ')))
 
   const entityTypes = types.filter((t) => /^(Organization|LocalBusiness|OnlineBusiness|Person|Corporation|ProfessionalService)$/i.test(t))
+  // Same definition as Entity resolution: the page's publisher nested in the markup counts (DECISIONS 43).
+  const publisher = organizations(home).filter(isOwn).find((o) => o.name)
   if (entityTypes.length) {
     f.award(4, `An entity type is declared (${entityTypes.join(', ')}), which is what identifies the business to an AI engine.`)
+  } else if (publisher) {
+    f.award(4, `An Organization is declared as the publisher (${publisher.name}), which is what identifies the business to an AI engine.`)
   } else {
     f.miss('No Organization, LocalBusiness or Person type is declared, so the business itself is not described in the markup.')
   }

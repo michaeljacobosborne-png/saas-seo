@@ -59,9 +59,9 @@ describe('2. the brand is the organisation, not the website', () => {
   })
 
   it('counts any capitalisation but all lowercase', () => {
-    const aimclear = { candidates: ['Aimclear'], display: 'Aimclear' }
+    const aimclear = { candidates: ['Aimclear'], display: 'Aimclear', counted: ['Aimclear'] }
     expect(mentionsBrand('AIMCLEAR engineers multi-surface marketing systems', aimclear)).toBe(true)
-    const candour = { candidates: ['Candour'], display: 'Candour' }
+    const candour = { candidates: ['Candour'], display: 'Candour', counted: ['Candour'] }
     expect(mentionsBrand('We value candour above all.', candour)).toBe(false)
     expect(mentionsBrand('Why Candour?', candour)).toBe(true)
   })

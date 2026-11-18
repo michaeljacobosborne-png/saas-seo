@@ -84,9 +84,23 @@ export interface ContentBlock {
   headingLevel: number | null
   text: string
   wordCount: number
+  /**
+   * The text of this section that is claim text: `text` without anything inside
+   * page furniture (navigation, language switchers, tool menus, category and tag
+   * lists, DECISIONS 43). Brand-claim proximity reads this, so a brand name in a
+   * menu is not mistaken for one beside a claim. Absent on blocks built by other
+   * adapters, which have no furniture to exclude; read it with `claimTextOf`.
+   */
+  claimText?: string
+  /** The heading, unless the heading itself sits inside page furniture. */
+  claimHeading?: string | null
   /** Outbound links to third-party sources inside this section (absolute URLs). */
   sourceLinks?: string[]
 }
+
+/** A section's claim text, falling back to all of it where no furniture was marked. */
+export const claimTextOf = (b: ContentBlock): string => b.claimText ?? b.text
+export const claimHeadingOf = (b: ContentBlock): string | null => (b.claimHeading !== undefined ? b.claimHeading : b.headingText)
 
 /** A figure in the prose and the source linked from the same section. */
 export interface SourcedFigure {
@@ -152,6 +166,22 @@ const SOCIAL_HOSTS = [
 ]
 
 const BOILERPLATE_SELECTORS = 'script,style,noscript,template,svg,iframe,object,embed'
+
+/**
+ * Site chrome: what is removed when a page has no content region of its own, so
+ * a brand name in the nav or footer cannot pass for one beside a claim.
+ */
+export const CHROME_ELEMENTS = 'nav,header,footer,aside,[role="navigation"],[role="banner"],[role="contentinfo"]'
+
+/**
+ * Page furniture inside the content region: chrome as above, plus the category,
+ * tag and breadcrumb lists a CMS appends to an article. en.wikipedia.org keeps
+ * its language switcher in a header, its tools menu in a nav and its categories
+ * in div#catlinks, all inside main, so the section text read to the brand
+ * "appearing" in a tools menu and a hidden category list (DECISIONS 43). One
+ * definition: the chrome above and nothing else beside the list-style hints.
+ */
+export const PAGE_FURNITURE = `${CHROME_ELEMENTS},#catlinks,.catlinks,.cat-links,.tags-links,.post-tags,.tagcloud,.breadcrumb,.breadcrumbs,[aria-label="breadcrumb" i]`
 
 const BLOCK_ELEMENTS =
   'p,h1,h2,h3,h4,h5,h6,li,dt,dd,td,th,tr,div,section,article,aside,header,footer,main,nav,blockquote,figcaption,pre,br,hr,address,summary,details,label,button,option'
@@ -362,11 +392,14 @@ function extractBlocks($: Cheerio, pageUrl: string): ContentBlock[] {
   const baseHost = base ? base.hostname.toLowerCase().replace(/^www\./, '') : ''
 
   const blocks: ContentBlock[] = []
-  let current: { headingText: string | null; headingLevel: number | null; parts: string[]; sources: string[] } = {
-    headingText: null,
-    headingLevel: null,
-    parts: [],
-    sources: [],
+  type Current = { headingText: string | null; headingLevel: number | null; headingFurniture: boolean; parts: string[]; claimParts: string[]; sources: string[] }
+  let current: Current = { headingText: null, headingLevel: null, headingFurniture: false, parts: [], claimParts: [], sources: [] }
+  // Inside page furniture, judged against the content region only: a <main>
+  // that itself sits inside a wrapper called "header" is not furniture.
+  const inFurniture = (el: Element): boolean => {
+    const rootEl = root[0] as Element
+    const chain = $(el).add($(el).parentsUntil(rootEl))
+    return chain.filter(PAGE_FURNITURE).length > 0
   }
 
   const flush = () => {
@@ -378,6 +411,8 @@ function extractBlocks($: Cheerio, pageUrl: string): ContentBlock[] {
         headingLevel: current.headingLevel,
         text,
         wordCount: countWords(text),
+        claimText: normalise(current.claimParts.join(' ')),
+        claimHeading: current.headingFurniture ? null : current.headingText,
         sourceLinks: unique(current.sources),
       })
     }
@@ -390,9 +425,10 @@ function extractBlocks($: Cheerio, pageUrl: string): ContentBlock[] {
 
     if (/^h[1-6]$/.test(tag)) {
       flush()
-      current = { headingText: text, headingLevel: Number(tag.slice(1)), parts: [], sources: [] }
+      current = { headingText: text, headingLevel: Number(tag.slice(1)), headingFurniture: inFurniture(el as Element), parts: [], claimParts: [], sources: [] }
     } else {
       current.parts.push(text)
+      if (!inFurniture(el as Element)) current.claimParts.push(text)
       // A source is a link out to another site that is not a social profile.
       $(el)
         .find('a[href]')
@@ -424,7 +460,7 @@ function pickContentRoot($: Cheerio): cheerio.Cheerio<AnyNode> | null {
   // the nav or footer cannot be mistaken for one sitting beside a claim.
   const body = $('body').clone()
   if (!body.length) return null
-  body.find('nav,header,footer,aside,[role="navigation"],[role="banner"],[role="contentinfo"]').remove()
+  body.find(CHROME_ELEMENTS).remove()
   return body
 }
 
@@ -492,7 +528,7 @@ function extractMainText($: Cheerio): string {
   }
 
   const body = $('body').clone()
-  body.find('nav,header,footer,aside,[role="navigation"],[role="banner"],[role="contentinfo"]').remove()
+  body.find(CHROME_ELEMENTS).remove()
   const t = normalise(body.text())
   return countWords(t) >= MIN_MEANINGFUL_WORDS ? t : ''
 }

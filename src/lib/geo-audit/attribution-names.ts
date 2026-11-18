@@ -32,7 +32,17 @@ export interface DeclaredOrganization {
   id: string | null
   /** Where it was found: a node of its own, or inside another node's publisher, author and so on. */
   via: 'node' | 'nested'
+  /** The properties it sits under ("publisher", "author", "memberOf"); empty for a node of its own. */
+  roles: string[]
 }
+
+/**
+ * The properties under which a nested Organization is the site's own: the
+ * publisher of the page or the holder of its copyright. An author credit
+ * ("Contributors to Wikimedia projects"), a membership, a sponsor, a client or a
+ * partner is somebody else (DECISIONS 43).
+ */
+const OWN_ROLES = new Set(['publisher', 'copyrightholder'])
 
 /**
  * Every Organization the markup declares, wherever it sits. Large publishers
@@ -43,24 +53,24 @@ export interface DeclaredOrganization {
  * elsewhere on the page.
  */
 export function organizations(page: ExtractedPage): DeclaredOrganization[] {
-  const found: { raw: Record<string, unknown>; via: 'node' | 'nested' }[] = []
-  const walk = (v: unknown, depth: number, top: boolean) => {
+  const found: { raw: Record<string, unknown>; via: 'node' | 'nested'; role: string | null }[] = []
+  const walk = (v: unknown, depth: number, top: boolean, role: string | null) => {
     if (depth > 6 || v == null || typeof v !== 'object') return
     if (Array.isArray(v)) {
-      for (const x of v) walk(x, depth + 1, false)
+      for (const x of v) walk(x, depth + 1, false, role)
       return
     }
     const o = v as Record<string, unknown>
     const t = o['@type']
     const types = typeof t === 'string' ? [t] : Array.isArray(t) ? t.filter((x): x is string => typeof x === 'string') : []
-    if (types.some((x) => ORG_TYPES.test(x))) found.push({ raw: o, via: top ? 'node' : 'nested' })
-    for (const [k, child] of Object.entries(o)) if (k !== '@graph') walk(child, depth + 1, false)
+    if (types.some((x) => ORG_TYPES.test(x))) found.push({ raw: o, via: top ? 'node' : 'nested', role })
+    for (const [k, child] of Object.entries(o)) if (k !== '@graph') walk(child, depth + 1, false, k)
   }
-  for (const node of page.structuredData) walk(node.raw, 0, true)
+  for (const node of page.structuredData) walk(node.raw, 0, true, null)
 
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
   const byKey = new Map<string, DeclaredOrganization>()
-  for (const { raw, via } of found) {
+  for (const { raw, via, role } of found) {
     const id = str(raw['@id'])
     const key = id ?? `anon-${byKey.size}`
     const prev = byKey.get(key)
@@ -70,9 +80,22 @@ export function organizations(page: ExtractedPage): DeclaredOrganization[] {
       sameAs: [...new Set([...(prev?.sameAs ?? []), ...sameAs])],
       id,
       via: prev?.via === 'node' || via === 'node' ? 'node' : 'nested',
+      roles: [...new Set([...(prev?.roles ?? []), ...(role ? [role] : [])])],
     })
   }
   return [...byKey.values()]
+}
+
+/** A node of its own, or the publisher or copyright holder of the page. */
+export const isOwn = (o: DeclaredOrganization): boolean => o.via === 'node' || o.roles.some((r) => OWN_ROLES.has(r.toLowerCase()))
+
+/**
+ * The site's own organisations: the ones that say who publishes the page. The
+ * single definition used by Structured data validity, Entity resolution and the
+ * brand (DECISIONS 43).
+ */
+export function ownOrganizations(page: ExtractedPage): DeclaredOrganization[] {
+  return organizations(page).filter(isOwn)
 }
 
 /** The label a domain is named for: "hubspot" for blog.hubspot.com, "clickslice" for www.clickslice.co.uk. */
@@ -93,6 +116,14 @@ export interface BrandNames {
   candidates: string[]
   /** The trading name to show in findings ("Candour", not "Candour Agency Ltd"). */
   display: string
+  /**
+   * The names a finding says it counted, one per distinct name: the display name
+   * first, then any other name of the site's own that is also searched for
+   * ("Wikipedia" beside "Wikimedia Foundation"). A name and its stripped forms
+   * ("Candour Agency Ltd", "Candour") are one name. What a finding prints and
+   * what is counted are the same thing (DECISIONS 43).
+   */
+  counted: string[]
 }
 
 /**
@@ -128,7 +159,8 @@ export function nameVariants(name: string): string[] {
  */
 export function brandNames(page: ExtractedPage): BrandNames | null {
   const raw: string[] = []
-  for (const org of organizations(page)) if (org.name && org.name.length <= 60) raw.push(org.name)
+  // The site's own organisation only: not an author credit, a partner or a client.
+  for (const org of ownOrganizations(page)) if (org.name && org.name.length <= 60) raw.push(org.name)
   for (const node of page.structuredData) {
     if (!node.types.some((t) => ORG_TYPES.test(t) || /^WebSite$/i.test(t))) continue
     for (const key of ['name', 'alternateName', 'legalName']) {
@@ -146,8 +178,13 @@ export function brandNames(page: ExtractedPage): BrandNames | null {
 
   const label = squash(domainLabel(page.url))
   const clean = (s: string) => s.replace(/[®™©]/g, '').trim()
+  // A tagline ("AI, Ecommerce & Digital Transformation") is not the site's name,
+  // and counting its words as mentions of the brand credits ordinary copy. The
+  // site's own organisation names are kept as declared, commas and all.
+  const ownNames = new Set(ownOrganizations(page).flatMap((o) => (o.name ? nameVariants(clean(o.name)) : [])))
+  const looksLikeTagline = (c: string) => /,/.test(c) || (c.split(/\s+/).length >= 4 && /(&|\band\b)/i.test(c))
   let candidates = [...new Set(raw.map(clean).flatMap(nameVariants))]
-    .filter((c) => (c.split(/\s+/).length <= 5 && !/[:]/.test(c)) || squash(c) === label)
+    .filter((c) => (c.split(/\s+/).length <= 5 && !/[:]/.test(c) && (ownNames.has(c) || !looksLikeTagline(c))) || squash(c) === label)
     .sort((a, b) => b.length - a.length)
 
   // The domain's own name: a declared form that matches it, or the page's
@@ -179,7 +216,7 @@ export function brandNames(page: ExtractedPage): BrandNames | null {
   // declares "Candour Agency Ltd": the brand is "Candour", not "with Candour".
   // typeamedia.net declares "Type A Media": the domain names the full form, so
   // that stays rather than the stripped "Type A".
-  const orgNames = organizations(page).map((o) => o.name).filter((n): n is string => Boolean(n)).map(clean)
+  const orgNames = ownOrganizations(page).map((o) => o.name).filter((n): n is string => Boolean(n)).map(clean)
   const orgVariants = orgNames.length ? nameVariants(orgNames[0]) : []
   const orgShort = orgVariants.length ? [...orgVariants].sort((a, b) => a.length - b.length)[0] : null
   const shortest = [...candidates].sort((a, b) => a.length - b.length)[0]
@@ -190,7 +227,26 @@ export function brandNames(page: ExtractedPage): BrandNames | null {
       ? orgShort
       : (domainForm ?? fallback)
   if (!candidates.includes(display)) candidates.unshift(display)
-  return { candidates, display }
+  return { candidates, display, counted: distinctNames(candidates, display) }
+}
+
+/**
+ * One entry per distinct name among the candidates. A candidate belongs to the
+ * same name as another when they differ only by capitalisation, spacing or
+ * punctuation, or one is the other stripped of a legal, business or publication
+ * descriptor. The entry for the display name is the display name; any other is
+ * its shortest form.
+ */
+function distinctNames(candidates: string[], display: string): string[] {
+  const parent = candidates.map((_, i) => i)
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])))
+  const extended = (a: string, b: string) => { const x = squash(a), y = squash(b); const [short, long] = x.length <= y.length ? [x, y] : [y, x]; return short.length >= 3 && long.startsWith(short) }
+  const related = (a: string, b: string) => squash(a) === squash(b) || nameVariants(a).includes(b) || nameVariants(b).includes(a) || extended(a, b)
+  for (let i = 0; i < candidates.length; i++) for (let j = i + 1; j < candidates.length; j++) if (related(candidates[i], candidates[j])) parent[find(j)] = find(i)
+  const groups = new Map<number, string[]>()
+  candidates.forEach((c, i) => groups.set(find(i), [...(groups.get(find(i)) ?? []), c]))
+  const names = [...groups.values()].map((g) => (g.includes(display) ? display : [...g].sort((a, b) => a.length - b.length)[0]))
+  return [display, ...names.filter((n) => n !== display)]
 }
 
 /** The most common capitalised spelling on the page of a word or pair that squashes to the domain label. */

@@ -21,11 +21,11 @@
  */
 
 import { assessFreshness } from './dates'
-import { countWords, truncate, type ContentBlock, type ExtractedPage } from './extract'
+import { claimHeadingOf, claimTextOf, countWords, truncate, type ContentBlock, type ExtractedPage } from './extract'
 import { pageForRole, type KeyPageResult } from './crawl'
 import { SignalBuilder, bandCounts, overallBand } from './scoring'
 import { BAND_LABELS, type Citability, type CitabilitySignal, type Evidence } from './types'
-import { brandNames, findPeople, isClientFeedback, mentionsBrand, organizations, type BrandNames } from './attribution-names'
+import { brandNames, findPeople, isClientFeedback, isOwn, mentionsBrand, organizations, type BrandNames } from './attribution-names'
 
 export interface CitabilityInput {
   home: ExtractedPage
@@ -159,7 +159,11 @@ function entityResolution({ home }: CitabilityInput): CitabilitySignal {
   // Nested and referenced Organizations count: large publishers declare theirs
   // as the publisher of the WebSite or Article (DECISIONS 41). Prefer the most
   // complete declaration on the page.
-  const orgs = organizations(home).sort((a, b) => b.sameAs.length - a.sameAs.length || Number(Boolean(b.name)) - Number(Boolean(a.name)))
+  // Only the site's own (its publisher, or a node of its own): an author credit
+  // or a partner does not say who publishes the page (DECISIONS 43).
+  const declared = organizations(home)
+  const orgs = declared.filter(isOwn).sort((a, b) => b.sameAs.length - a.sameAs.length || Number(Boolean(b.name)) - Number(Boolean(a.name)))
+  const others = declared.filter((o) => !isOwn(o) && o.name)
   const org = orgs[0] ?? null
   const orgName = org?.name ?? null
   const sameAs = org?.sameAs ?? []
@@ -179,6 +183,9 @@ function entityResolution({ home }: CitabilityInput): CitabilitySignal {
     s.found('adequate', `An Organization entity is declared as "${orgName}", with ${sameAs.length ? 'one sameAs profile' : 'linked social profiles but no sameAs in the markup'}.`, ev(home.url, 'jsonld', orgName))
   } else if (orgName) {
     s.found('weak', `An Organization entity is declared as "${orgName}", but with no sameAs profiles an engine has nothing to resolve the name against.`, ev(home.url, 'jsonld', orgName))
+  } else if (others.length) {
+    const roles = [...new Set(others.flatMap((o) => o.roles))].join(' and ') || 'a nested property'
+    s.missing(`Organizations appear in structured data only as ${roles} (${others.map((o) => o.name).slice(0, 3).join(', ')}), not as the publisher, so the markup does not say who publishes the page and the brand exists on it only as text.`)
   } else {
     s.missing('No Organization, LocalBusiness or ProfessionalService entity is declared in structured data, so the brand exists on the page only as text.')
   }
@@ -208,8 +215,10 @@ function brandClaimProximity({ home }: CitabilityInput): CitabilitySignal {
     s.missing('No consistent brand name could be read from the markup or title, so proximity to claims could not be established.')
     return s.build()
   }
-  // The trading name, not the legal one: copy says "Candour", not "Candour Agency Ltd".
-  const brand = names.display
+  // The names counted, as counted: the trading name, not the legal one (copy
+  // says "Candour", not "Candour Agency Ltd"), and any other name of the site's
+  // own that is searched for. What is printed is what is counted (DECISIONS 43).
+  const brand = names.counted.map((n) => `"${n}"`).join(' or ')
 
   const substantive = home.blocks.filter((b) => b.wordCount >= 25)
   if (substantive.length === 0) {
@@ -218,23 +227,25 @@ function brandClaimProximity({ home }: CitabilityInput): CitabilitySignal {
   }
 
   const withBrand = substantive.filter(
-    (b) => mentionsBrand(b.text, names) || mentionsBrand(b.headingText ?? '', names),
+    // Claim text only: not a name in a menu, a language switcher or a category
+    // list inside the content region.
+    (b) => mentionsBrand(claimTextOf(b), names) || mentionsBrand(claimHeadingOf(b) ?? '', names),
   )
   const share = withBrand.length / substantive.length
 
   if (share >= 0.3) {
-    s.found('strong', `"${brand}" appears inside ${withBrand.length} of ${substantive.length} substantive sections, so claims travel with the brand name attached when they are quoted.`, ev(home.url, 'text', `${withBrand[0].headingText ?? 'section'}: ${truncate(withBrand[0].text, 160)}`))
+    s.found('strong', `${brand} appears inside ${withBrand.length} of ${substantive.length} substantive sections, so claims travel with the brand name attached when they are quoted.`, ev(home.url, 'text', `${withBrand[0].headingText ?? 'section'}: ${truncate(withBrand[0].text, 160)}`))
   } else if (share >= 0.1) {
-    s.found('adequate', `"${brand}" appears inside ${withBrand.length} of ${substantive.length} substantive sections. The remaining sections carry no attribution anchor, so a quote lifted from them would not name you.`, ev(home.url, 'text', truncate(withBrand[0].text, 200)))
+    s.found('adequate', `${brand} appears inside ${withBrand.length} of ${substantive.length} substantive sections. The remaining sections carry no attribution anchor, so a quote lifted from them would not name you.`, ev(home.url, 'text', truncate(withBrand[0].text, 200)))
   } else if (withBrand.length > 0) {
-    s.found('weak', `"${brand}" appears inside only ${withBrand.length} of ${substantive.length} substantive sections. Most sections carry no attribution anchor of their own.`, ev(home.url, 'text', truncate(withBrand[0].text, 200)))
+    s.found('weak', `${brand} appears inside only ${withBrand.length} of ${substantive.length} substantive sections. Most sections carry no attribution anchor of their own.`, ev(home.url, 'text', truncate(withBrand[0].text, 200)))
   } else if (mentionsBrand(home.mainText, names)) {
     // Named on the page, for example in testimonials or an FAQ, but in none of
     // the sections. cedarwood.digital (2026-11-02) was told "present only in
     // the page chrome" while its testimonials named it 17 times.
-    s.missing(`"${brand}" appears on the page but inside none of the ${substantive.length} substantive sections, so a passage lifted from one of them carries no name.`)
+    s.missing(`${brand} appears on the page but inside none of the ${substantive.length} substantive sections, so a passage lifted from one of them carries no name.`)
   } else {
-    s.missing(`"${brand}" does not appear inside any of the ${substantive.length} substantive sections. It is present only in the page chrome. Passages lifted from this page carry no attribution anchors.`)
+    s.missing(`${brand} does not appear inside any of the ${substantive.length} substantive sections. It is present only in the page chrome. Passages lifted from this page carry no attribution anchors.`)
   }
 
   return s.build()

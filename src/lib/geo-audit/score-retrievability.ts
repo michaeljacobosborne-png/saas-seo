@@ -19,6 +19,7 @@
 
 
 import { countWords, findDefinition, truncate, type ExtractedPage } from './extract'
+import { isOwn, organizations } from './attribution-names'
 import { summariseAccess, type AccessReport } from './access'
 import {
   isPolicyBlock,
@@ -455,7 +456,12 @@ function scoreParseability({ home, access }: RetrievabilityInput): Factor[] {
   const blocks = home.jsonLdBlocks
   const invalid = blocks.filter((b) => !b.valid)
   const types = home.structuredDataTypes
-  const hasEntity = types.some((t) => /^(Organization|LocalBusiness|OnlineBusiness|Person|ProfessionalService|Corporation)$/i.test(t))
+  const hasEntityType = types.some((t) => /^(Organization|LocalBusiness|OnlineBusiness|Person|ProfessionalService|Corporation)$/i.test(t))
+  // The same definition of "an Organization is declared" as Entity resolution:
+  // one nested as the page's publisher counts, one nested as its author or a
+  // partner does not (DECISIONS 43).
+  const declaredOrgs = organizations(home)
+  const ownOrgs = declaredOrgs.filter(isOwn)
   const hasContentType = types.some((t) =>
     /^(Article|BlogPosting|NewsArticle|FAQPage|HowTo|Product|SoftwareApplication|WebApplication|Service|Review|Course|Event|BreadcrumbList)$/i.test(t),
   )
@@ -472,10 +478,18 @@ function scoreParseability({ home, access }: RetrievabilityInput): Factor[] {
     // Valid markup is the floor, not the bar. Full marks need markup that
     // actually describes both the publisher and the content.
     structured.award(3, `${blocks.length} JSON-LD block(s) parse cleanly (${types.join(', ')}).`, ev(home.url, 'jsonld', types.join(', ')))
-    if (hasEntity) {
+    if (hasEntityType) {
       structured.award(3, 'An entity type identifies who publishes the page.')
+    } else if (ownOrgs.length > 0) {
+      const names = ownOrgs.map((o) => o.name).filter(Boolean).slice(0, 2).join(', ')
+      structured.award(3, `An Organization nested in the markup as the publisher${names ? ` (${names})` : ''} identifies who publishes the page.`)
     } else {
-      structured.miss('No Organization, LocalBusiness or Person type is declared, so the markup does not say who publishes this.')
+      const others = declaredOrgs.filter((o) => o.name)
+      structured.miss(
+        others.length
+          ? `Organizations appear only as ${[...new Set(others.flatMap((o) => o.roles))].join(' and ') || 'a nested property'} (${others.map((o) => o.name).slice(0, 3).join(', ')}), not as the publisher, so the markup does not say who publishes this.`
+          : 'No Organization, LocalBusiness or Person type is declared, so the markup does not say who publishes this.',
+      )
     }
     if (hasContentType) {
       structured.award(2, 'A content-level type describes what is on the page.')

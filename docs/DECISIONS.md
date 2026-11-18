@@ -6,6 +6,23 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 43. Engine 2026.16: a finding names what it counted; page furniture is not claim text; a brand is the site's own organisation
+**Date:** 2026-11-17 (found by re-running en.wikipedia.org/wiki/Coffee on 2026.15; approved by Michael the same day)
+**Decision:**
+- **What is printed is what is counted.** Brand-claim proximity lists every distinct name it searches for (`BrandNames.counted`): the display name first, then any other name of the site's own ("Wikipedia" beside "Wikimedia Foundation"). A name and its stripped or extended forms ("Candour Agency Ltd", "Candour"; "Elsner", "Elsner Technologies") are one name. The sentence is no longer allowed to print one name and count another.
+- **Page furniture is not claim text.** Each section carries `claimText`, which excludes anything inside navigation, headers, footers, asides, `role` landmarks, and category, tag and breadcrumb lists (`PAGE_FURNITURE` in extract.ts, built on `CHROME_ELEMENTS`, the same chrome definition the engine already removes when a page has no content region). Brand proximity reads `claimText`; a genuine claim in a list item or a heading still counts. `mainText`, `wordCount` and every Retrievable pillar still read the unpruned region, so Retrievable does not move for this. Known gap, not fixed here: inside a `<main>` the unpruned region still includes that furniture (en.wikipedia.org/wiki/Coffee counts its 210-language switcher in its 16,572 words). Pruning it would move word counts and Parseability on every site and needs its own version bump.
+- **A brand is the site's own organisation.** Only an Organization that is a node of its own, or the `publisher` or `copyrightHolder` of the page, counts (`ownOrganizations`). An author credit ("Contributors to Wikimedia projects"), a member-of, sponsor, client or partner does not. Taglines ("AI, Ecommerce & Digital Transformation") are not names. This one definition now drives the brand, Entity resolution, Structured data validity and the score-geo schema factor.
+- **Structured data validity and Entity resolution agree.** Validity awards its 3 entity points when an own Organization is declared anywhere, nested included, and says which one. When Organizations appear only as author or partner, both lines say "only as author ... not as the publisher".
+**Why (evidence, en.wikipedia.org/wiki/Coffee, 16 Nov 2026, 2026.15):**
+- "Contributors to Wikimedia projects appears in 2 of 42 sections": that string is on the page once, in the JSON-LD. The 2 sections matched "Wikipedia", in the page-tools menu ("Abstract Wikipedia") and in the hidden category list. Correct: 0 of 42, absent.
+- "No Organization is declared" (validity) beside "An Organization entity is declared as ..." (entity), both from the same JSON-LD, which declares the author and the publisher nested in the Article.
+- Measured on the study (139 of 148 sites re-scored on identical fresh pages, old and new engine side by side): 3 brand-proximity bands moved (lawfirmmarketingstrategies adequate to absent, omnieclipse strong to adequate, postman strong to absent), no overall Citable band moved, no other signal moved, and Retrievable moved on one row (flow-agency 67 to 70, Parseability +3). An earlier paragraphs-only estimate of about one site in five was a proxy for a rule that was not adopted.
+- Tests: src/lib/geo-audit/wikipedia-coffee.test.ts, with the page as the fixture (scripts, styles and images stripped).
+**PRIOR SCORES ARE AFFECTED.** Brand-claim proximity, and Parseability by up to 3 points where the only declared Organization is nested as publisher. Do not compare 2026.16 with earlier runs without saying so. The study was run and pre-registered on 2026.15; `ENGINE_VERSION_REQUIRED` in scripts/study/config.ts stays 2026.15, so the harness refuses 2026.16 rows. `scripts/study/regenerate-citability.mts` re-scores the content half on both engines from the same fresh pages.
+**Revisit if:** a legitimate brand mention sits in a `header` or `aside` of the content region (hero copy in a `<header>` is excluded by this rule), or `PAGE_FURNITURE` needs more CMS hints than catlinks, tags and breadcrumbs.
+
+---
+
 ## 42. Plans are metered on pages monitored, not articles written
 **Date:** 2026-11-08
 **Decision:**

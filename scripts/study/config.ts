@@ -41,7 +41,7 @@ export const POPULATIONS: PopulationConfig[] = [
 ]
 
 /** The engine the whole run must be on. A row from any other version halts the run. */
-export const ENGINE_VERSION_REQUIRED = '2026.15'
+export const ENGINE_VERSION_REQUIRED: string = '2026.15'
 
 /** Where the run's vantage point must be. Checked at start and on every row. */
 export const REQUIRED_COUNTRY = 'US'

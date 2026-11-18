@@ -212,13 +212,13 @@ describe('salt.agency: a nav menu is not a testimonial', () => {
 })
 
 describe('client feedback needs a named client', () => {
-  const sf = { candidates: ['Screaming Frog'], display: 'Screaming Frog' }
+  const sf = { candidates: ['Screaming Frog'], display: 'Screaming Frog', counted: ['Screaming Frog'] }
   it('counts a quote naming an outside company (screamingfrog.co.uk)', () => {
     expect(isClientFeedback({ quote: 'x', attribution: 'Simon Goble, Dogbuddy' }, sf)).toBe(true)
     expect(isClientFeedback({ quote: 'x', attribution: 'Founder, Cloudline Aviation' }, sf)).toBe(true)
   })
   it('does not count a name and a role with no company (varn.co.uk, Vicky Walker)', () => {
-    const varn = { candidates: ['Varn'], display: 'Varn' }
+    const varn = { candidates: ['Varn'], display: 'Varn', counted: ['Varn'] }
     expect(isClientFeedback({ quote: 'x', attribution: 'Vicky Walker Comms Director' }, varn)).toBe(false)
     expect(isClientFeedback({ quote: 'x', attribution: 'Tom Vaughton CEO at Varn' }, varn)).toBe(false)
   })
