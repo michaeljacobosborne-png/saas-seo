@@ -1,7 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import { describe, expect, it } from 'vitest'
 import { findCrawlerMisattributions } from './crawler-access'
-import { fallbackNarration, narrate, sanitiseImpact } from './narrate'
+import { fallbackNarration, findUnresolvedPlaceholders, narrate, sanitiseImpact } from './narrate'
 import { STATUS_LABELS, type Factor } from './types'
 
 function factor(overrides: Partial<Factor> = {}): Factor {
@@ -184,5 +184,62 @@ describe('crawler facts in narration', () => {
   it('falls back when every recommendation misattributes a crawler', async () => {
     const out = await narrate(input, { client: fakeClient({ recommendations: [CLICKSLICE_BAD], quickWins: [] }) })
     expect(out.usedFallback).toBe(true)
+  })
+})
+
+/**
+ * `[X]–[Y] word prose` reached the live free tool (reports from 4 Oct to 8 Nov
+ * carry one in 41 of 212 archived runs). It was not a template: the model was
+ * told to use explicit placeholders in example wording and applied the rule to
+ * counts, lengths and ranges the engine had already measured. A placeholder is
+ * allowed only inside quoted example wording the owner must complete (2026-11-19).
+ */
+describe('unresolved placeholders in model output', () => {
+  const input = { type: 'geo' as const, url: 'https://example.com/', factors: [factor()], alreadyPresent: [], scoreWithheld: false }
+  const BAD = { priority: 'high', title: 'Add self-contained sections', description: 'Add a paragraph of [X]–[Y] word prose under each H2 so the section can be quoted on its own.', impact: 'Addresses short sections.' }
+  const COUNT = { priority: 'medium', title: 'Add lists', description: 'Identify [X] key claims in your introduction and present them as a list.', impact: 'Addresses missing lists.' }
+  const QUOTED = { priority: 'medium', title: 'Say who stands behind the page', description: 'Add a line such as "[X] years of experience in [your specialism]" to the About page, using only what is true.', impact: 'Addresses missing credentials.' }
+  const GOOD = { priority: 'low', title: 'Add publication dates', description: 'The page carries no date. Add a visible publication date and a dateModified in the markup.', impact: 'Addresses missing dates.' }
+
+  it('finds a bare placeholder, a range of them, and a count', () => {
+    expect(findUnresolvedPlaceholders(BAD.description)).toEqual(['[X]', '[Y]'])
+    expect(findUnresolvedPlaceholders(COUNT.description)).toEqual(['[X]'])
+    expect(findUnresolvedPlaceholders('Write [number] sections, each [min]-[max] words.')).toEqual(['[number]', '[min]', '[max]'])
+  })
+
+  it('allows a placeholder inside quoted example wording the owner must complete', () => {
+    expect(findUnresolvedPlaceholders(QUOTED.description)).toEqual([])
+    expect(findUnresolvedPlaceholders("For example, '[X]% of clients renewed' if you have the figure.")).toEqual([])
+    expect(findUnresolvedPlaceholders('Say “[X] years in [your specialism]” only if true.')).toEqual([])
+  })
+
+  it('leaves ordinary numbers, ranges and brackets alone', () => {
+    expect(findUnresolvedPlaceholders('Aim for 40–180 words in each of 8+ sections.')).toEqual([])
+    expect(findUnresolvedPlaceholders('See the [Wikipedia] article, item [3], and [citation needed].')).toEqual([])
+  })
+
+  it('drops a recommendation that carries one, and keeps the others', async () => {
+    const out = await narrate(input, { client: fakeClient({ recommendations: [BAD, COUNT, QUOTED, GOOD], quickWins: [] }) })
+    expect(out.usedFallback).toBe(false)
+    expect(out.recommendations.map((r) => r.title)).toEqual([QUOTED.title, GOOD.title])
+  })
+
+  it('drops a quick win that carries one', async () => {
+    const out = await narrate(input, { client: fakeClient({ recommendations: [GOOD], quickWins: ['Write [X] words under each H2.', 'Add a publication date.'] }) })
+    expect(out.quickWins).toEqual(['Add a publication date.'])
+  })
+
+  it('falls back to the deterministic wording when every recommendation is unresolved', async () => {
+    const out = await narrate(input, { client: fakeClient({ recommendations: [BAD, COUNT], quickWins: [] }) })
+    expect(out.usedFallback).toBe(true)
+    expect(out.recommendations.map((r) => `${r.title} ${r.description}`).join(' ')).not.toMatch(/\[[XY]\]/)
+  })
+
+  it('tells the model to keep placeholders to quoted wording and never to use them for counts or lengths', async () => {
+    const calls: { system?: string }[] = []
+    await narrate(input, { client: fakeClient({ recommendations: [GOOD], quickWins: [] }, calls) })
+    const system = calls[0].system ?? ''
+    expect(system).toMatch(/only inside (?:a )?quoted example/i)
+    expect(system).toMatch(/never .*(?:count|length|range|threshold)/i)
   })
 })

@@ -40,6 +40,7 @@ const SYSTEM_PROMPT = `You write the prose for a website content-readiness repor
 Absolute rules:
 - NEVER invent statistics, credentials, testimonials, client names, case-study numbers or awards, and NEVER advise the site owner to invent them. If you suggest adding evidence, say it must be evidence they actually have.
 - When you show example wording, use an explicit placeholder — "[X] years of experience", "[your specialism]" — never a plausible-looking invented figure like "12+ years" or "SaaS and fintech". A reader must not be able to paste your example onto their site as though it were true.
+- Use a placeholder ONLY inside a quoted example of wording the owner must complete with facts only they hold. NEVER use a placeholder such as [X], [Y] or [N] for a count, length, range or threshold: the findings state the measured numbers and the targets, so use those (for example 40 to 180 words, 8 or more sections) or describe the size in words (a short paragraph). Unresolved brackets outside quoted wording are removed from the report.
 - NEVER predict a specific gain. Do not write percentages, multipliers, ranking positions, traffic figures, or phrases like "could increase citations by 30%". The "impact" field says what the change addresses, not what it will achieve.
 - NEVER claim that schema markup guarantees citation, that it trains or influences AI models, or that any change will definitely make the site appear in AI answers. This report measures how ready content is to be quoted — it does not measure actual AI visibility.
 - NEVER recommend adding something the evidence shows is already present. Acknowledge what exists.
@@ -173,6 +174,21 @@ export function sanitiseImpact(impact: string): string {
   return BANNED_IMPACT.test(t) ? '' : truncate(t, 200)
 }
 
+/**
+ * Placeholders the model leaves unresolved. The prompt asks for an explicit
+ * placeholder in example wording the owner must complete ("[X] years of
+ * experience"); the model over-applied it to counts, lengths and ranges the
+ * engine had already measured and shipped "[X]–[Y] word prose" into the free
+ * tool (41 of 212 archived runs, 4 Oct to 8 Nov 2026). A placeholder is allowed
+ * only inside quoted example wording; anywhere else it is a hole in the report.
+ */
+const PLACEHOLDER = /\[(?:[XYZ]|N|number|count|min|max|range|your [^\]]{1,40}|insert [^\]]{1,40})\]/gi
+const QUOTED_WORDING = /"[^"]*"|“[^”]*”|(?<=^|[\s(])'[^']{2,}?'(?=[\s).,;:!?]|$)/g
+
+export function findUnresolvedPlaceholders(text: string): string[] {
+  return (text ?? '').replace(QUOTED_WORDING, ' ').match(PLACEHOLDER) ?? []
+}
+
 function normaliseNarration(raw: unknown): { recommendations: Recommendation[]; quickWins: string[] } {
   const obj = (raw ?? {}) as Record<string, unknown>
   const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
@@ -193,11 +209,15 @@ function normaliseNarration(raw: unknown): { recommendations: Recommendation[]; 
     // A crawler paired with the wrong vendor or role is a false statement about
     // the site's access, so the whole recommendation goes rather than a reworded one.
     .filter((r) => findCrawlerMisattributions(`${r.title}. ${r.description} ${r.impact}`).length === 0)
+    // An unresolved placeholder outside quoted wording is a hole in the report, so
+    // the recommendation goes rather than being patched with an invented number.
+    .filter((r) => findUnresolvedPlaceholders(`${r.title}. ${r.description} ${r.impact}`).length === 0)
     .slice(0, 5)
 
   const quickWins = arr(obj.quickWins)
     .map((w) => truncate(String(w ?? ''), 240))
     .filter(Boolean)
+    .filter((w) => findUnresolvedPlaceholders(w).length === 0)
     .filter((w) => findCrawlerMisattributions(w).length === 0)
     .slice(0, 3)
 
