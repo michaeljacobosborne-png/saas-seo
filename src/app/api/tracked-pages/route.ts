@@ -3,7 +3,7 @@
  * POST /api/tracked-pages  { url, tool? } start tracking a page and record the first run now
  *
  * Score over time (DECISIONS 39). Open to every paid plan; free accounts are
- * refused (page and domain limits: src/lib/plans.ts). Reads go through the user's own session (RLS);
+ * refused (page limit on every plan, domain limit on Agency only: src/lib/plans.ts). Reads go through the user's own session (RLS);
  * snapshots are written with the service client.
  */
 import { NextResponse } from 'next/server'
@@ -55,7 +55,8 @@ export async function POST(request: Request) {
   const tool = body.tool === 'ao' ? 'ao' : 'geo'
   if (!url) return NextResponse.json({ error: 'A page URL is required.' }, { status: 400 })
 
-  // Plan limits bind here (repricing 2026-11-08): pages monitored and domains.
+  // Plan limits bind here (repricing 2026-11-08, domain cap removed from Solo and Pro in DECISIONS 44):
+  // pages monitored on every plan, and domains on Agency.
   // Free accounts monitor nothing. Refusals state the limit, never a tier name.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (supabase as any).from('profiles').select('account_type').eq('user_id', user.id).maybeSingle()

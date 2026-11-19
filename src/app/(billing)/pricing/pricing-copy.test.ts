@@ -36,6 +36,24 @@ describe('pricing copy', () => {
     }
   })
 
+  it('sells Solo and Pro purely on pages monitored: no domain count anywhere in what they promise', () => {
+    for (const p of PLANS.filter((x) => x.id !== 'agency')) {
+      expect([p.tagline, ...p.features.map((f) => f.text)].join('\n')).not.toMatch(/domain|one site|single site|1 site/i)
+    }
+    expect(PLANS[0].features.map((f) => f.text)).toContain('15 pages monitored')
+    expect(PLANS[1].features.map((f) => f.text)).toContain('100 pages monitored')
+  })
+
+  it('keeps the domain count on Agency, where serving client domains is the feature', () => {
+    expect(PLANS[2].features.map((f) => f.text).join('\n')).toContain('500 pages monitored across 20 domains')
+  })
+
+  it('does not describe a Solo or Pro domain limit in the questions either', () => {
+    const faqs = PRICING_FAQS.map((f) => `${f.q}\n${f.a}`).join('\n')
+    expect(faqs).not.toMatch(/on one domain|across 5 domains|1 domain|5 domains|page or domain limit/i)
+    expect(faqs).toMatch(/across 20 domains/)
+  })
+
   it('shows the agreed prices', () => {
     expect(PLANS.map((p) => p.monthlyPrice)).toEqual([49, 129, 599])
   })

@@ -21,8 +21,11 @@ export interface PlanLimits {
   brandProfiles: number
   /** Pages kept under monitoring (daily crawler access checks, change alerts). */
   trackedPages: number
-  /** Distinct domains those pages may sit on. */
-  domains: number
+  /**
+   * Distinct domains those pages may sit on. null = no cap: Solo and Pro are metered on pages
+   * monitored alone (DECISIONS 44). An absent value is read as no cap, never as zero.
+   */
+  domains: number | null
   /** One-off audits of any URL a month. */
   auditsPerMonth: number
   /** Days of history kept at least. null = unlimited. */
@@ -32,8 +35,8 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<PaidPlan, PlanLimits> = {
-  starter: { articles: 8, keywordSessions: 10, brandProfiles: 1, trackedPages: 15, domains: 1, auditsPerMonth: 100, historyDays: 90, rescoreIntervalDays: 30 },
-  pro: { articles: 30, keywordSessions: 60, brandProfiles: 1, trackedPages: 100, domains: 5, auditsPerMonth: 500, historyDays: 365, rescoreIntervalDays: 7 },
+  starter: { articles: 8, keywordSessions: 10, brandProfiles: 1, trackedPages: 15, domains: null, auditsPerMonth: 100, historyDays: 90, rescoreIntervalDays: 30 },
+  pro: { articles: 30, keywordSessions: 60, brandProfiles: 1, trackedPages: 100, domains: null, auditsPerMonth: 500, historyDays: 365, rescoreIntervalDays: 7 },
   agency: { articles: 100, keywordSessions: 200, brandProfiles: 3, trackedPages: 500, domains: 20, auditsPerMonth: 2000, historyDays: null, rescoreIntervalDays: 7 },
 }
 
@@ -84,7 +87,7 @@ export type TrackedPageCheck =
  * they never name a tier (DECISIONS 27).
  */
 export function checkTrackedPageAllowance(args: {
-  limits: { trackedPages: number; domains: number }
+  limits: { trackedPages: number; domains?: number | null }
   /** URLs of the account's active tracked pages. */
   activeUrls: string[]
   newUrl: string
@@ -104,13 +107,18 @@ export function checkTrackedPageAllowance(args: {
     }
   }
 
-  const domain = domainOf(newUrl)
-  const domains = new Set(activeUrls.map(domainOf).filter((d): d is string => !!d))
-  if (domain && !domains.has(domain) && domains.size >= limits.domains) {
-    return {
-      ok: false,
-      code: 'DOMAIN_LIMIT',
-      message: `Your subscription monitors pages on up to ${limits.domains} domain${limits.domains === 1 ? '' : 's'}, and you are monitoring ${domains.size}. Stop monitoring every page on one to add another, or see ${UPGRADE_URL}.`,
+  // Only a plan that states a domain cap has one. null or absent means no cap: it must
+  // never be compared as a number (size >= null is size >= 0, which refuses everyone).
+  const cap = typeof limits.domains === 'number' ? limits.domains : null
+  if (cap !== null) {
+    const domain = domainOf(newUrl)
+    const domains = new Set(activeUrls.map(domainOf).filter((d): d is string => !!d))
+    if (domain && !domains.has(domain) && domains.size >= cap) {
+      return {
+        ok: false,
+        code: 'DOMAIN_LIMIT',
+        message: `Your subscription monitors pages on up to ${cap} domain${cap === 1 ? '' : 's'}, and you are monitoring ${domains.size}. Stop monitoring every page on one to add another, or see ${UPGRADE_URL}.`,
+      }
     }
   }
   return { ok: true }

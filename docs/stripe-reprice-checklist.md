@@ -23,7 +23,7 @@ Rename, do not recreate, so history stays attached:
 | Byline Multi-Brand (or Team) | Byline Agency |
 
 Update each description to one line about pages monitored, for example
-"Daily crawler access checks and change alerts on 15 pages, 1 domain."
+"Daily crawler access checks and change alerts on 15 pages." (No domain count for Solo or Pro since DECISIONS 44; Agency keeps "500 pages across 20 domains".)
 
 ## 2. Prices to create
 

@@ -30,6 +30,7 @@ export interface PlanCard {
 
 const n = (x: number) => x.toLocaleString('en-US')
 const pages = (p: PaidPlan) => `${n(PLAN_LIMITS[p].trackedPages)} pages monitored`
+/** Only Agency states a domain count: serving client domains is the feature there (DECISIONS 44). */
 const domains = (p: PaidPlan) => `${PLAN_LIMITS[p].domains} domain${PLAN_LIMITS[p].domains === 1 ? '' : 's'}`
 const rescore = (p: PaidPlan) => (PLAN_LIMITS[p].rescoreIntervalDays === 7 ? 'Pages re-scored every week' : `Pages re-scored every ${PLAN_LIMITS[p].rescoreIntervalDays} days`)
 const history = (p: PaidPlan) => {
@@ -45,13 +46,13 @@ export const PLANS: PlanCard[] = [
   {
     id: 'starter',
     name: 'Solo',
-    tagline: 'One site you answer for, watched every day.',
+    tagline: 'The pages you answer for, watched every day.',
     cta: 'Start with Solo',
     monthlyPrice: 49,
     annualPrice: 470,
     popular: false,
     features: [
-      { text: `${pages('starter')} on ${domains('starter')}` },
+      { text: pages('starter') },
       MONITORING,
       { text: rescore('starter') },
       { text: history('starter') },
@@ -69,7 +70,7 @@ export const PLANS: PlanCard[] = [
     annualPrice: 1238,
     popular: true,
     features: [
-      { text: `${pages('pro')} across ${domains('pro')}` },
+      { text: pages('pro') },
       MONITORING,
       { text: rescore('pro') },
       { text: history('pro') },

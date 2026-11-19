@@ -11,7 +11,7 @@ const n = (x: number) => x.toLocaleString('en-US')
 export const PRICING_FAQS = [
   {
     q: 'Which plan should I choose?',
-    a: `Choose by how many pages you need watched. Solo monitors ${PLAN_LIMITS.starter.trackedPages} pages on one domain, Pro ${PLAN_LIMITS.pro.trackedPages} pages across ${PLAN_LIMITS.pro.domains} domains, and Agency ${PLAN_LIMITS.agency.trackedPages} pages across ${PLAN_LIMITS.agency.domains} domains. A freelancer watching one client site fits Solo, an in-house SEO with a hundred important pages fits Pro, and an agency with many client domains fits Agency. Every plan scores with the same engine and shows the evidence under every finding. Article generation is included on each plan as a bundled feature.`,
+    a: `Choose by how many pages you need watched. Solo monitors ${PLAN_LIMITS.starter.trackedPages} pages and Pro ${PLAN_LIMITS.pro.trackedPages}, on any sites you like, and Agency ${PLAN_LIMITS.agency.trackedPages} pages across ${PLAN_LIMITS.agency.domains} domains. A freelancer watching a handful of pages across a few client sites fits Solo, an in-house SEO with a hundred important pages fits Pro, and an agency with many client domains fits Agency. Every plan scores with the same engine and shows the evidence under every finding. Article generation is included on each plan as a bundled feature.`,
   },
   {
     q: 'How is a Byline score produced?',
@@ -30,8 +30,8 @@ export const PRICING_FAQS = [
     a: `A one-off audit scores any URL once and stores the run. A monitored page is checked for crawler access every day, re-scored on a schedule, and keeps a history you can compare. Free accounts get ${FREE_LIMITS.auditsPerMonth} one-off audits a month with the crawler probe included and no monitoring. Paid plans include ${n(PLAN_LIMITS.starter.auditsPerMonth)}, ${n(PLAN_LIMITS.pro.auditsPerMonth)} and ${n(PLAN_LIMITS.agency.auditsPerMonth)} a month.`,
   },
   {
-    q: 'What happens when I reach my page or domain limit?',
-    a: 'You can keep every page you already monitor. To add another you stop monitoring one, or move to a plan with a higher limit. Nothing is deleted, and the history of a page you stop monitoring is kept.',
+    q: 'What happens when I reach my limit on monitored pages?',
+    a: 'You can keep every page you already monitor. To add another you stop monitoring one, or move to a plan with a higher limit. Nothing is deleted, and the history of a page you stop monitoring is kept. On Agency the number of client domains is limited too, and the same applies.',
   },
   {
     q: 'Can I cancel anytime?',

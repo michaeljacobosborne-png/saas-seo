@@ -6,6 +6,21 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 44. Solo and Pro are metered on pages monitored alone: the domain cap goes
+**Date:** 2026-11-19 (approved by Michael; supersedes the domain numbers in decision 42)
+**Decision:**
+- **Solo $49: 15 pages monitored, any domains. Pro $129: 100 pages monitored, any domains.** Agency $599 keeps its 20-domain limit alongside 500 pages, because serving twenty client domains is a feature there, next to unbranded reports, not a ceiling.
+- `PlanLimits.domains` is `number | null`. null means no cap, and so does an absent value: `checkTrackedPageAllowance` only compares against a number, never against null or undefined (`size >= null` is `size >= 0`, which would refuse every account). A test covers null, a missing key and undefined.
+- Enforced where tracked pages are created (POST `/api/tracked-pages`): the page limit on every plan, the domain limit on Agency only. A page-limit refusal states the limit and never names a tier: "Your subscription monitors up to 15 pages, and you are monitoring 15. Stop monitoring one to add another, or see https://app.bylineseo.com/pricing."
+- The pricing cards, the pricing FAQs and their FAQPage markup, and the support knowledge base no longer mention domains for Solo or Pro. The Solo tagline changed from "One site you answer for" to "The pages you answer for", because that line was the domain cap in other words. The line for larger operations ("More than 500 pages or 20 domains") is Agency's and stays.
+- `PLAN_MODEL` in `src/lib/mcp/entitlements.ts` has no domain concept (it meters MCP capabilities). The app limits, domains included, live in `src/lib/plans.ts`, which is where this changed. The only other "domain" limit in code is the MCP per-target rate budget (`DOMAIN_BUDGET`, 6 calls per 10 minutes per target site), which is an abuse limit and untouched.
+- Existing accounts: nobody loses anything, because the change only removes a restriction. Checked against the 14 subscription rows (7 Pro, 6 Agency, 1 Solo, every plan value recognised): none has a smaller domain allowance, and none of the Solo or Pro accounts is refused a new domain.
+**Drivers:** two limits per plan meant the one that bit was not the one anyone was watching. A freelancer tracking three pages across three client sites used three of fifteen pages and still hit Solo's one-domain wall, on the cheapest plan, having used a fifth of what they paid for. Solo exists for freelancers and in-house SEOs; one domain served the in-house half and excluded the freelance half.
+**Not changed here:** the Stripe product descriptions (docs/stripe-reprice-checklist.md suggests "15 pages, 1 domain") live in Stripe and need the same edit by hand.
+**Revisit if:** Pro's 100 pages is no longer a sufficient meter on its own, for example one customer monitoring pages across hundreds of sites at Pro's price.
+
+---
+
 ## 43. Engine 2026.16: a finding names what it counted; page furniture is not claim text; a brand is the site's own organisation
 **Date:** 2026-11-17 (found by re-running en.wikipedia.org/wiki/Coffee on 2026.15; approved by Michael the same day)
 **Decision:**
