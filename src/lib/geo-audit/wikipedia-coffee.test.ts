@@ -161,3 +161,46 @@ describe('the engine version', () => {
     expect(ENGINE_VERSION).toBe('2026.16')
   })
 })
+
+/**
+ * Two over-corrections in the first version of the 2026.16 fix, found on 2026-11-17
+ * while explaining the three study rows it moved. Both removed names that are
+ * the site's own: a header and a footer inside main are that section's own, not
+ * the page's, and a declared parent organisation is the same company.
+ */
+describe('4. what the fix must not throw away', () => {
+  it('counts a section intro that sits in a header inside main', () => {
+    const home = page(
+      `<main><section><header><h2>Platform</h2><p>Acme ${PROSE}</p></header><p>${PROSE}</p></section><section><header><h2>Process</h2><p>Acme ${PROSE}</p></header><p>${PROSE}</p></section></main>`,
+      [{ '@type': 'Organization', name: 'Acme' }],
+    )
+    const s = signal(home, 'brand-proximity')
+    expect(s.band).toBe('strong')
+    expect(s.detail).toContain('"Acme" appears inside 2 of 2')
+  })
+
+  it('counts a closing call to action that sits in a footer inside main', () => {
+    const home = page(
+      `<main><h2>Services</h2><p>${PROSE}</p><p>${PROSE}</p><footer><p>Acme ${PROSE}</p></footer></main>`,
+      [{ '@type': 'Organization', name: 'Acme' }],
+    )
+    expect(signal(home, 'brand-proximity').band).not.toBe('absent')
+  })
+
+  it('still ignores a nav, an aside and a category list', () => {
+    const home = page(
+      `<main><h2>Services</h2><p>${PROSE}</p><nav><p>Acme ${PROSE}</p></nav><aside><p>Acme ${PROSE}</p></aside><div id="catlinks"><p>Acme ${PROSE}</p></div></main>`,
+      [{ '@type': 'Organization', name: 'Acme' }],
+    )
+    expect(signal(home, 'brand-proximity').band).toBe('absent')
+  })
+
+  it('counts the name of a declared parent organisation, which is the same company', () => {
+    const home = page(
+      `<main><h2>Services</h2><p>Acme Group ${PROSE}</p><h2>Clients</h2><p>Acme Group ${PROSE}</p></main>`,
+      [{ '@type': 'Organization', name: 'Acme Group Law Firm Marketing', parentOrganization: { '@type': 'Organization', name: 'Acme Group' } }],
+    )
+    expect(brandNames(home)!.candidates).toContain('Acme Group')
+    expect(signal(home, 'brand-proximity').band).toBe('strong')
+  })
+})

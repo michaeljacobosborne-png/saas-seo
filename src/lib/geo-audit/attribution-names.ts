@@ -38,11 +38,13 @@ export interface DeclaredOrganization {
 
 /**
  * The properties under which a nested Organization is the site's own: the
- * publisher of the page or the holder of its copyright. An author credit
+ * publisher of the page, the holder of its copyright, or the parent of an
+ * organisation that is (a site declaring "Acme Group" as the parent of "Acme Group
+ * Law Firm Marketing" calls itself either). An author credit
  * ("Contributors to Wikimedia projects"), a membership, a sponsor, a client or a
  * partner is somebody else (DECISIONS 43).
  */
-const OWN_ROLES = new Set(['publisher', 'copyrightholder'])
+const OWN_ROLES = new Set(['publisher', 'copyrightholder', 'parentorganization'])
 
 /**
  * Every Organization the markup declares, wherever it sits. Large publishers

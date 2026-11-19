@@ -168,20 +168,32 @@ const SOCIAL_HOSTS = [
 const BOILERPLATE_SELECTORS = 'script,style,noscript,template,svg,iframe,object,embed'
 
 /**
+ * Landmarks that are navigation or tangential content wherever they sit: a nav,
+ * an aside, or an explicit landmark role.
+ */
+const LANDMARK_FURNITURE = 'nav,aside,[role="navigation"],[role="banner"],[role="contentinfo"]'
+
+/**
  * Site chrome: what is removed when a page has no content region of its own, so
  * a brand name in the nav or footer cannot pass for one beside a claim.
  */
-export const CHROME_ELEMENTS = 'nav,header,footer,aside,[role="navigation"],[role="banner"],[role="contentinfo"]'
-
+export const CHROME_ELEMENTS = `header,footer,${LANDMARK_FURNITURE}`
 /**
- * Page furniture inside the content region: chrome as above, plus the category,
- * tag and breadcrumb lists a CMS appends to an article. en.wikipedia.org keeps
- * its language switcher in a header, its tools menu in a nav and its categories
- * in div#catlinks, all inside main, so the section text read to the brand
- * "appearing" in a tools menu and a hidden category list (DECISIONS 43). One
- * definition: the chrome above and nothing else beside the list-style hints.
+ * Page furniture inside the content region: the landmarks above, plus the
+ * category, tag and breadcrumb lists a CMS appends to an article. en.wikipedia.org
+ * keeps its tools menu in a nav and its categories in div#catlinks, both inside
+ * main, so the section text read the brand "appearing" in a tools menu and a
+ * hidden category list (DECISIONS 43).
+ *
+ * A header or footer is NOT furniture here. Inside main, article or section the
+ * HTML spec makes it that section's own header or footer, not the page's: a
+ * section's intro paragraph sits in a header, and a closing call to action in a
+ * footer inside main, on two of the 148 study sites. Dropping them read as the
+ * brand missing from copy that names it (found 2026-11-17). The page's
+ * own banner and contentinfo are still caught by their roles, and by CHROME_ELEMENTS
+ * when the page has no content region.
  */
-export const PAGE_FURNITURE = `${CHROME_ELEMENTS},#catlinks,.catlinks,.cat-links,.tags-links,.post-tags,.tagcloud,.breadcrumb,.breadcrumbs,[aria-label="breadcrumb" i]`
+export const PAGE_FURNITURE = `${LANDMARK_FURNITURE},#catlinks,.catlinks,.cat-links,.tags-links,.post-tags,.tagcloud,.breadcrumb,.breadcrumbs,[aria-label="breadcrumb" i]`
 
 const BLOCK_ELEMENTS =
   'p,h1,h2,h3,h4,h5,h6,li,dt,dd,td,th,tr,div,section,article,aside,header,footer,main,nav,blockquote,figcaption,pre,br,hr,address,summary,details,label,button,option'
