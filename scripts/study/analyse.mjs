@@ -39,7 +39,7 @@ const isLoc = (s) => {
   const l = (s.row.htmlLang ?? '').toLowerCase()
   return (l && !l.startsWith('en')) || s.row.redirectedToLocalePath || s.row.redirectedToOtherHost
 }
-const R = { generatedFrom: dir, generatedAt: new Date().toISOString(), engineVersions: [...new Set(audited.map((s) => s.engineVersion))], countries: [...new Set(audited.map((s) => s.vantage.egressCountry))] }
+const R = { generatedFrom: dir, generatedAt: new Date().toISOString(), engineVersions: [...new Set(audited.map((s) => s.engineVersion))], engineRows: count(audited, (s) => s.engineVersion), countries: [...new Set(audited.map((s) => s.vantage.egressCountry))] }
 
 // 0. coverage
 R.status = {}
@@ -197,7 +197,7 @@ const T = (hd, rows) => {
   L.push('')
 }
 const J = (o) => JSON.stringify(o)
-L.push('# Byline study: analysis pack', '', `Source: \`${dir}\`. Generated ${R.generatedAt}. Engine ${R.engineVersions.join(', ')}; egress ${R.countries.join(', ')}. Counts and tables only. Machine-readable: \`byline-study-analysis-data.json\`.`, '')
+L.push('# Byline study: analysis pack', '', `Source: \`${dir}\`. Generated ${R.generatedAt}. Rows by engine version: ${Object.entries(R.engineRows).map(([v, n]) => v + ' (' + n + ')').join(', ')}${R.engineVersions.length > 1 ? ' (MIXED: see the rescore field on each row)' : ''}; egress ${R.countries.join(', ')}. Counts and tables only. Machine-readable: \`byline-study-analysis-data.json\`.`, '')
 L.push('## 0. Coverage', '')
 T(['pop', 'in file', 'audited', 'not audited'], POPS.map((p) => [p, R.status[p].inFile, R.status[p].audited, J(R.status[p].other)]))
 if (R.outstanding.length) {
