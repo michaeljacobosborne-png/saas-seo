@@ -37,7 +37,11 @@ const load = async (root: string) => {
 const OLD = await load(oldRoot)
 const NEW = await load('C:/dev/Byline')
 const { fetchPage } = await import('../../src/lib/geo-audit/fetch')
-console.log(`old engine ${OLD.version}, new engine ${NEW.version}`)
+const { execSync } = await import('node:child_process')
+const gitHead = (root: string) => { try { return execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim() + (execSync('git status --porcelain --untracked-files=no', { cwd: root }).toString().trim() ? '+uncommitted' : '') } catch { return 'unknown' } }
+const CODE = { old: { engineVersion: OLD.version, commit: gitHead(oldRoot) }, new: { engineVersion: NEW.version, commit: gitHead('C:/dev/Byline') } }
+console.log(`old engine ${OLD.version} (${CODE.old.commit}), new engine ${NEW.version} (${CODE.new.commit})`)
+if (OLD.version === NEW.version) throw new Error('Both trees report the same engine version; refusing to compare.')
 
 const sites = readFileSync(`${DIR}/sites.jsonl`, 'utf8').trim().split('\n').map((l) => JSON.parse(l)).filter((s: { status: string }) => s.status === 'audited')
 const reportFile = (key: string) => {
@@ -82,15 +86,15 @@ for (const s of sites) {
       }
       rec.fetch = 'ok'
       rec.keyPages = keyHtml.map((k) => ({ role: k.role, url: k.url, ok: Boolean(k.html) }))
-      rec.old = score(OLD, f, keyHtml, stored)
-      rec.new = score(NEW, f, keyHtml, stored)
+      rec.old = { engineVersion: OLD.version, ...score(OLD, f, keyHtml, stored) }
+      rec.new = { engineVersion: NEW.version, ...score(NEW, f, keyHtml, stored) }
     }
   } catch (e) {
     rec.fetch = 'error ' + String(e).slice(0, 100)
   }
   out.push(rec)
   console.log(i, s.key, rec.fetch)
-  writeFileSync(outFile, JSON.stringify({ generatedAt: new Date().toISOString(), oldEngine: OLD.version, newEngine: NEW.version, rows: out }, null, 1))
+  writeFileSync(outFile, JSON.stringify({ generatedAt: new Date().toISOString(), oldEngine: OLD.version, newEngine: NEW.version, code: CODE, rows: out }, null, 1))
   await sleep(3000)
 }
 console.log('done', out.length)
