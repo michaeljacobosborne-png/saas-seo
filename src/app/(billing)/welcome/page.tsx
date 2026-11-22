@@ -140,7 +140,7 @@ export default function WelcomePage() {
             <p className="mt-4 text-xs" style={{ color: '#7A6555' }}>
               Or{' '}
               <Link href="/brand" style={{ color: '#A89070' }} className="underline underline-offset-2">
-                set up your brand first
+                add your brand name (optional)
               </Link>
             </p>
           </>

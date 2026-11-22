@@ -136,7 +136,8 @@ export default function SearchConsoleSection({
 
       {!brandProfileId ? (
         <p className="text-sm" style={{ color: 'var(--cream-dim)' }}>
-          Set up a brand profile first to connect Search Console.
+          Search Console connects to a brand profile, so it needs one first.{' '}
+          <a href="/brand" className="underline" style={{ color: 'var(--copper-lt)' }}>Set up your brand profile</a>.
         </p>
       ) : !status.connected ? (
         // ── Not connected ──────────────────────────────────────────────

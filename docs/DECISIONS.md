@@ -6,6 +6,19 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 45. The brand profile is a prompt, not a gate
+**Date:** 2026-11-22 (approved by Michael; NOT yet deployed, he reviews the new-account experience first)
+**Decision:**
+- The dashboard layout no longer redirects an account with no brand profile to `/brand`. A new account lands on the dashboard and can track a page (the dashboard's "Start with a page" box posts to the same `/api/tracked-pages`) or run a one-off audit straight away. Neither needs a brand.
+- The profile is still collected and still used, and is asked for where it earns its keep: a dismissible card on the dashboard (dismissal is per browser, in localStorage); a plain notice in the article generator, which cannot write on-brand copy without one ("The article generator needs a brand profile", replacing the bare "Brand profile missing"); and a note on a tracked page when the engine's reading of the site's own name looks uncertain.
+- The engine now reports how it read the name: `citability.brand = { display, counted, confident, basis }` (`brandReading` in attribution-names.ts). `confident` is false when none of the counted names relates to the domain's own name, or none was read. Descriptive only: no score depends on it and the engine version did not change. Reports stored before this carry no reading and show no note.
+- The dashboard's onboarding checklist for article writing dropped its "set up your brand" step; the welcome page offers the brand name as optional; Search Console's "needs a brand profile" line links to the form.
+**What was found beyond the redirect:** the redirect in `(dashboard)/layout.tsx` was the only hard gate. Every other reader tolerates an empty result (the dashboard falls back to "Welcome to Byline", content-audit guards its competitor list, geo-lab and settings use `maybeSingle()` and a null check). Remaining rough edges, not changed here: `keywords/discover` and `keywords/research` read the profile with `.single()`, which errors, and silently drops the brand context, for an account with more than one profile (Agency allows three); `generate-brief` and `PATCH /articles/[id]` return a 404 JSON for a missing profile (the UI stops before it gets there); the Search Console auth and callback routes redirect to `/settings?gsc=error` with no explanation when there is no profile.
+**Not true today, said plainly:** the brand profile does not feed the engine's brand detection. `brandNames()` reads the page only, and the profile is used by article drafts, keyword research and the author-name check. Wiring a user-supplied brand name into Citable scoring is a separate decision: re-scoring a stored run (compare, "re-score every run") would not know the name unless it were stored with the run, so scores could differ between a run and its re-score.
+**Revisit if:** the profile is wired into brand detection (then the tracked-page note can offer it as a fix), or new accounts without a profile turn out to reach the article generator by a path that has no notice.
+
+---
+
 ## 44. Solo and Pro are metered on pages monitored alone: the domain cap goes
 **Date:** 2026-11-19 (approved by Michael; supersedes the domain numbers in decision 42)
 **Decision:**

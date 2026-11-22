@@ -4,6 +4,9 @@ import {
   FileText, Globe, Search, Bookmark, Plus, ArrowRight, ArrowUpRight,
   Sparkles, BarChart2, Clock,
 } from 'lucide-react'
+import { trackedPageLimit } from '@/lib/usage'
+import AddTrackedPage from '../tracking/AddTrackedPage'
+import { DashboardBrandPrompt } from '../_components/BrandPrompt'
 import SearchPerformance from './search-performance'
 import DomainAuthority from './domain-authority'
 import QuickWrite from '../QuickWrite'
@@ -115,6 +118,10 @@ export default async function DashboardPage() {
   const projects: ProjectRow[] = projectsRes.data ?? []
   const savedCount: number = savedRes.count ?? 0
   const brandName: string | undefined = brandRes.data?.brand_name
+  // Monitoring does not depend on a brand profile, so a new account can start here.
+  const { count: trackedCountRaw } = await supabase.from('tracked_pages').select('id', { count: 'exact', head: true }).eq('active', true)
+  const trackedCount = trackedCountRaw ?? 0
+  const trackLimit = await trackedPageLimit(userId, supabase, profileRes.data?.account_type)
   const brandProfileId: string | null = brandRes.data?.id ?? null
   // Domain Authority widget needs the brand's website. brand_profiles.website_url
   // exists in the schema; if it's empty we just skip the card.
@@ -247,6 +254,32 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-[var(--cream-dim)]">Here&apos;s what&apos;s happening across your workspace.</p>
       </div>
 
+      {/* A new account starts with the evidence, not a form: track a page or run an audit. */}
+      {trackedCount === 0 ? (
+        <div className="rounded-xl p-6 mb-6" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.3)' }}>
+          <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--cream)' }}>Start with a page</h2>
+          <p className="text-sm mb-4 max-w-2xl" style={{ color: 'var(--cream-dim)' }}>
+            Track a page and Byline checks every day whether AI search crawlers are served it, re-scores it on a schedule and keeps every run. The first run is recorded now.
+          </p>
+          <AddTrackedPage atLimit={false} limit={trackLimit} />
+          <p className="mt-3 text-xs" style={{ color: 'var(--cream-faint)' }}>
+            Or <Link href="/geo-analyzer" className="underline">run a one-off audit of any page</Link> without tracking it.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl px-5 py-4 mb-6 flex flex-wrap items-center justify-between gap-3" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>
+          <span className="text-sm" style={{ color: 'var(--cream-dim)' }}>
+            Tracking {trackedCount} page{trackedCount === 1 ? '' : 's'}, crawler access checked every day.
+          </span>
+          <Link href="/tracking" className="inline-flex items-center gap-1 text-sm font-medium" style={{ color: 'var(--copper-lt)' }}>
+            View tracked pages <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      )}
+
+      {/* The brand profile is optional context: a dismissible prompt, not a gate. */}
+      {!brandProfileId && <DashboardBrandPrompt />}
+
       {/* Quick Write — fast lane straight to article generation */}
       <div className="mb-8">
         <QuickWrite />
@@ -256,12 +289,11 @@ export default async function DashboardPage() {
       {articles.length === 0 && (
         <div className="rounded-xl p-6 mb-6" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.3)' }}>
           <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--cream)' }}>Get started with Byline</h2>
-          <p className="text-sm mb-4" style={{ color: 'var(--cream-dim)' }}>Three steps to your first SEO article:</p>
+          <p className="text-sm mb-4" style={{ color: 'var(--cream-dim)' }}>Two steps to your first SEO article (the article generator asks for a brand profile when you open it):</p>
           <div className="space-y-3">
             {[
-              { step: '1', label: 'Set up your Brand Profile', href: '/brand', desc: 'Tell Byline about your brand and audience' },
-              { step: '2', label: 'Run keyword research', href: '/keywords', desc: 'Find keywords your audience is searching for' },
-              { step: '3', label: 'Generate your first article', href: '/articles/new', desc: 'Turn a keyword into a full SEO article in minutes' },
+              { step: '1', label: 'Run keyword research', href: '/keywords', desc: 'Find keywords your audience is searching for' },
+              { step: '2', label: 'Generate your first article', href: '/articles/new', desc: 'Turn a keyword into a full SEO article in minutes' },
             ].map(({ step, label, href, desc }) => (
               <Link key={href} href={href} className="flex items-start gap-3 p-3 rounded-lg transition-colors hover:bg-[rgba(184,115,51,0.08)]">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5" style={{ background: 'rgba(184,115,51,0.2)', color: '#B87333' }}>{step}</span>

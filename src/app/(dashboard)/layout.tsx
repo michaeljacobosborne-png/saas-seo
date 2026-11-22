@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import DashboardSidebar from './DashboardSidebar'
 import SupportWidget from '@/app/_components/SupportWidget'
@@ -37,20 +36,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // subscription is always treated as paid regardless of the stored account_type.
   const accountType: 'free' | 'paid' = sub ? 'paid' : (profile?.account_type === 'free' ? 'free' : 'paid')
 
-  // Brand-new users must set up their brand profile before doing anything else.
-  // Skip /brand itself (where they set it up) and /settings (account utilities)
-  // so they're never trapped in a redirect loop.
-  const pathname = (await headers()).get('x-pathname') ?? ''
-  if (!pathname.startsWith('/brand') && !pathname.startsWith('/settings') && !pathname.startsWith('/content-audit')) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: brandProfile } = await (supabase as any)
-      .from('brand_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (!brandProfile) redirect('/brand')
-  }
+  // No brand-profile gate (2026-11-22). A new account lands on the dashboard and can
+  // track a page or run an audit straight away; neither needs a brand. The profile
+  // is asked for where it earns its keep: a dismissible prompt on the dashboard,
+  // the article generator, and a tracked page where the engine's reading of the
+  // site's name looks uncertain.
 
   return (
     <div className="flex h-screen" style={{ background: 'var(--ink)' }}>

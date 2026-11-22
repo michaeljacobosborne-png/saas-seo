@@ -269,12 +269,30 @@ export interface CitabilitySignal {
   evidence: Evidence[]
 }
 
+/**
+ * How the engine read the site's own name, and whether it could tie that name to
+ * the domain. Descriptive only: no score depends on it. Used to tell an account
+ * holder when the engine's reading of their brand looks uncertain.
+ */
+export interface BrandReading {
+  /** The name the report prints first, or null when none could be read. */
+  display: string | null
+  /** Every distinct name Brand-claim proximity counted (what the finding prints). */
+  counted: string[]
+  /** False when none of the counted names relates to the domain's own name, or none was read. */
+  confident: boolean
+  /** Where the display name came from: the declared Organization, the domain's own name, or a page title. */
+  basis: 'organization' | 'domain' | 'title' | 'none'
+}
+
 export interface Citability {
   /** Roll-up of the six signals. */
   band: Band
   label: string
   signals: CitabilitySignal[]
   counts: Record<Band, number>
+  /** Absent on reports stored before 2026-11-22. */
+  brand?: BrandReading
 }
 
 export type RetrievabilityGroupId = 'access' | 'parseability' | 'chunkability' | 'extractability'

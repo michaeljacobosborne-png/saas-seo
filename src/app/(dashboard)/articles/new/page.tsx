@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { KeywordProject, BrandProfile } from '@/lib/supabase/types'
+import { ArticlesBrandNotice } from '../../_components/BrandPrompt'
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, CheckCircle2,
   AlertCircle, ChevronUp, ChevronDown, FileText, Info, Plus, X,
@@ -688,9 +689,8 @@ function NewArticleWizard() {
                 </button>
               </form>
               {brandMissing && (
-                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
-                  <span className="font-medium">Brand profile missing.</span>{' '}
-                  <Link href="/brand" className="underline hover:text-amber-900">Set it up first →</Link>
+                <div className="mt-4">
+                  <ArticlesBrandNotice />
                 </div>
               )}
             </div>
@@ -733,9 +733,8 @@ function NewArticleWizard() {
               )}
 
               {brandMissing && (
-                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
-                  <span className="font-medium">Brand profile missing.</span>{' '}
-                  <Link href="/brand" className="underline hover:text-amber-900">Set it up first →</Link>
+                <div className="mt-4">
+                  <ArticlesBrandNotice />
                 </div>
               )}
             </div>

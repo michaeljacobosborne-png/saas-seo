@@ -25,7 +25,7 @@ import { claimHeadingOf, claimTextOf, countWords, truncate, type ContentBlock, t
 import { pageForRole, type KeyPageResult } from './crawl'
 import { SignalBuilder, bandCounts, overallBand } from './scoring'
 import { BAND_LABELS, type Citability, type CitabilitySignal, type Evidence } from './types'
-import { brandNames, findPeople, isClientFeedback, isOwn, mentionsBrand, organizations, type BrandNames } from './attribution-names'
+import { brandNames, brandReading, findPeople, isClientFeedback, isOwn, mentionsBrand, organizations, type BrandNames } from './attribution-names'
 
 export interface CitabilityInput {
   home: ExtractedPage
@@ -50,7 +50,7 @@ export function assessCitability(input: CitabilityInput): Citability {
   ]
 
   const band = overallBand(signals)
-  return { band, label: BAND_LABELS[band], signals, counts: bandCounts(signals) }
+  return { band, label: BAND_LABELS[band], signals, counts: bandCounts(signals), brand: brandReading(input.home) }
 }
 
 // ── 1. Named authorship ───────────────────────────────────────────────────────

@@ -16,6 +16,7 @@
  * it, and when we cannot tell staff from client we claim neither.
  */
 import type { ExtractedPage, Testimonial } from './extract'
+import type { BrandReading } from './types'
 
 // ── Brand names ──────────────────────────────────────────────────────────────
 
@@ -249,6 +250,26 @@ function distinctNames(candidates: string[], display: string): string[] {
   candidates.forEach((c, i) => groups.set(find(i), [...(groups.get(find(i)) ?? []), c]))
   const names = [...groups.values()].map((g) => (g.includes(display) ? display : [...g].sort((a, b) => a.length - b.length)[0]))
   return [display, ...names.filter((n) => n !== display)]
+}
+
+/**
+ * How the site's own name was read, and whether it ties to the domain. Not a
+ * score input: a site whose counted names say nothing of its domain ("Coalition
+ * SEO - PPC - Web Design Services Company" on coalitiontechnologies.com, a crowd
+ * credit on wikipedia.org) is one where the owner may know better than the page.
+ */
+export function brandReading(page: ExtractedPage): BrandReading {
+  const names = brandNames(page)
+  if (!names) return { display: null, counted: [], confident: false, basis: 'none' }
+  const label = squash(domainLabel(page.url))
+  const relates = (c: string) => {
+    const x = squash(c)
+    return x.length >= 3 && label.length >= 3 && (x.includes(label) || label.includes(x))
+  }
+  const confident = label.length < 3 || names.counted.some(relates)
+  const fromOrg = ownOrganizations(page).some((o) => o.name && squash(o.name).length > 0 && nameVariants(o.name).some((v) => squash(v) === squash(names.display)))
+  const basis: BrandReading['basis'] = fromOrg ? 'organization' : relates(names.display) ? 'domain' : 'title'
+  return { display: names.display, counted: names.counted, confident, basis }
 }
 
 /** The most common capitalised spelling on the page of a word or pair that squashes to the domain label. */
