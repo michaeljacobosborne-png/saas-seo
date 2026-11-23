@@ -170,6 +170,10 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 - "Semrush's test showed citations of unchanged pages peaking and falling." The source (Semrush, Tushar Pol, 10 December 2025) tested 81 newly published pages and does not say whether they were edited during the 30 days.
 - The figures stand: Google AI Mode cited 29 pages on day 1, 48 on day 6, 39 on day 14 and 21 on day 30. "Unchanged" and "nobody edited them" are our inference, not the finding.
 - Removed from the live homepage and from the one-ai-visibility-score blog draft on 2026-10-15. Already listed as limited in the byline-outreach-and-social skill.
+**Scope note, added 2026-11-23: there are two Otterly claims, one retracted and one good. Do not confuse them.**
+- RETRACTED, never reuse: Otterly's "AI Overviews up 16%, AI Mode up 24%, Claude and Copilot at 0.000%". Not corroborated, and a 0.000% in a monitoring tool usually means below the reporting floor, not zero.
+- VERIFIED, usable with attribution: Otterly.AI, July to September 2026, Reddit's share of ChatGPT citations fell 94% while its share of Perplexity citations rose 86% (byline-outreach-and-social evidence library, source https://otterly.ai/blog/chatgpt-reddit-citations/). This is on the live homepage and stays. The 94/86 pair is NOT on the retracted list. An earlier status note wrongly called it retracted.
+- A retraction that is ambiguous about its own scope eventually takes a good claim down with it. Any new retraction names the exact figures it covers.
 **Rule:** neither claim is restated in any form. Any count of free tools needs the evidence file open beside it, and the file says to re-read the vendor pages before reuse.
 
 ## 34. Engine 2026.12: block boundaries, "N of M" figures, defined terms

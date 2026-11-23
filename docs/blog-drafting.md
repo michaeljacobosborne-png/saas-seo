@@ -216,7 +216,9 @@ task registered any more; do not recreate one.
    only in chat is lost. Set `publishedAt` to the next weekday 09:00 UTC, never a
    past date. No em or en dashes. No first person singular.
 4. **Never use retracted claims:** the Forrester 7% and 57% figures; Otterly's AI
-   Overviews and AI Mode percentages; "ten tools, none query an engine"; the
+   Overviews 16%, AI Mode 24% and 0.000% figures (NOT the verified Otterly
+   Reddit pair, ChatGPT citations down 94% and Perplexity up 86%, which is
+   usable with attribution; see DECISIONS 35); "ten tools, none query an engine"; the
    Semrush citation-timing study as "unchanged pages" (it studied 81 newly
    published pages).
 5. **Check every reference to another piece.** The script verifies links (step 6)
