@@ -6,6 +6,20 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 47. Password reset: our own email, the token is spent on submit, the request never says who has an account
+**Date:** 2026-11-24 (branch `password-reset`; not deployed until Michael has looked)
+**Decision:**
+- Login has a "Forgot your password?" link to `/forgot-password`. The request posts to `/api/auth/forgot-password`, which answers identically for an address with an account and one without, and does the lookup, token and send after the response so timing does not tell either. Rate limited per address (3/day) and per caller (10/day) through the existing Postgres counter, `tool` values `pwreset-email` and `pwreset-ip`; no migration.
+- The token comes from the Supabase admin `generateLink({ type: 'recovery' })`, and the email is sent by us through Resend from the configured sender, not by Supabase's mailer. Reason: the Supabase default template is unbranded and its default SMTP is tightly rate limited, and the browser PKCE flow breaks when the link is opened on a different device from the one that asked.
+- The link is `/reset-password?token_hash=...&type=recovery`. Opening it spends nothing; the token is verified only when the new password is submitted to `/api/auth/reset-password` (a mail scanner that opens the link does not use it up). On success the person is signed in and the account's other sessions are ended. An expired, used or missing token shows one plain message with a button to request a new link.
+- The link's host is built only from our own hosts (app.bylineseo.com, localhost, `saas-seo-*.vercel.app` previews), never from an unknown Host header.
+- Minimum 8 characters (signup's own field says 6; unchanged here, see below).
+**Drivers:** paying customers had no way back in short of emailing Michael. Found while he tried to reach a preview account.
+**Found, not fixed here:** no change-password or change-email anywhere in the app (settings is billing and connections only); the login page ignores `?error=confirmation_failed` and `?error=auth_callback_failed`, so a failed or cross-device signup confirmation lands on a blank login form; no resend-confirmation path; two callback routes exist (`/auth/callback` and `/callback`, the second a legacy subset); signup allows 6-character passwords; the Supabase signup email template cannot be read or edited from the repo.
+**Revisit if:** reset volume or abuse outgrows the per-address limit, or Supabase custom SMTP and a branded template are set up and make our own sender redundant.
+
+---
+
 ## 44. Solo and Pro are metered on pages monitored alone: the domain cap goes
 **Date:** 2026-11-19 (approved by Michael; supersedes the domain numbers in decision 42)
 **Decision:**

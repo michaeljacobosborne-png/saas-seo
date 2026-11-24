@@ -111,6 +111,12 @@ export default function LoginPage() {
               />
             </div>
 
+            <div className="text-right -mt-2">
+              <Link href="/forgot-password" className="text-sm" style={{ color: 'var(--copper)' }}>
+                Forgot your password?
+              </Link>
+            </div>
+
             {error && (
               <p className="text-sm px-3 py-2 rounded-lg" style={{ color: '#e05c5c', background: 'rgba(224,92,92,0.1)' }}>{error}</p>
             )}
