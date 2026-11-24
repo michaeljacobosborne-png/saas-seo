@@ -5,6 +5,8 @@
 // the REST endpoint directly and degrades gracefully (no-op) when RESEND_API_KEY is unset,
 // so support flows never break. Set RESEND_API_KEY and SUPPORT_EMAIL_FROM to enable.
 
+import { reportEmailFailure } from '@/lib/email-alert'
+
 export interface EmailResult {
   ok: boolean
   skipped?: boolean
@@ -30,7 +32,7 @@ const DEFAULT_FROM = 'Byline Support <hi@bylineseo.com>'
 export async function sendEmail({ to, subject, text, html }: SendEmailInput): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
-    console.warn('[email] RESEND_API_KEY not set — skipping email send to', to)
+    await reportEmailFailure({ to, subject, reason: 'RESEND_API_KEY is not set' })
     return { ok: false, skipped: true }
   }
 
@@ -50,14 +52,14 @@ export async function sendEmail({ to, subject, text, html }: SendEmailInput): Pr
 
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
-      console.error('[email] send failed', res.status, detail)
+      await reportEmailFailure({ to, subject, reason: `Resend ${res.status}: ${detail.slice(0, 200)}` })
       return { ok: false, error: `Resend ${res.status}` }
     }
     const data = (await res.json().catch(() => ({}))) as { id?: string }
     return { ok: true, id: data.id }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error'
-    console.error('[email] send threw', msg)
+    await reportEmailFailure({ to, subject, reason: `request threw: ${msg}` })
     return { ok: false, error: msg }
   }
 }

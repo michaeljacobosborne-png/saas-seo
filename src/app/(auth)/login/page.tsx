@@ -1,9 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import ResendConfirmation from './ResendConfirmation'
+
+/** What to tell someone who lands here after a failed email link, by the callback's error code. */
+const CALLBACK_ERRORS: Record<string, string> = {
+  confirmation_failed: 'That confirmation link has expired or has already been used. You can have a new one sent below, or sign in if you have already confirmed.',
+  auth_callback_failed: 'Sign-in could not be completed. If you confirmed your email on a different device from the one you signed up on, sign in with your email and password here instead.',
+}
 
 function GoogleIcon() {
   return (
@@ -25,7 +32,17 @@ function GitHubIcon() {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const router = useRouter()
+  const callbackCode = useSearchParams().get('error')
+  const callbackError = callbackCode ? CALLBACK_ERRORS[callbackCode] ?? null : null
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -117,9 +134,13 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            {error && (
-              <p className="text-sm px-3 py-2 rounded-lg" style={{ color: '#e05c5c', background: 'rgba(224,92,92,0.1)' }}>{error}</p>
+            {callbackError && !error && (
+              <p role="alert" className="text-sm px-3 py-2 rounded-lg" style={{ color: '#e05c5c', background: 'rgba(224,92,92,0.1)' }}>{callbackError}</p>
             )}
+            {error && (
+              <p role="alert" className="text-sm px-3 py-2 rounded-lg" style={{ color: '#e05c5c', background: 'rgba(224,92,92,0.1)' }}>{error}</p>
+            )}
+            {(callbackCode === 'confirmation_failed' || (error && /not confirmed/i.test(error))) && <ResendConfirmation initialEmail={email} />}
 
             <button
               type="submit"
