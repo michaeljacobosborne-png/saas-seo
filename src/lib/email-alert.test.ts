@@ -65,4 +65,27 @@ describe('a failed send is reported, not swallowed', () => {
     expect(await sendEmail(mail)).toEqual({ ok: true, id: 'abc' })
     expect(sendTelegramMessage).not.toHaveBeenCalled()
   })
+
+  it('treats the Vercel "[SENSITIVE]" placeholder as no key, and says so', async () => {
+    vi.stubEnv('RESEND_API_KEY', '[SENSITIVE]')
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+    expect((await sendEmail(mail)).skipped).toBe(true)
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(sendTelegramMessage.mock.calls[0][0]).toMatch(/not a Resend key/)
+  })
+})
+
+describe('where mail comes from', () => {
+  it('always sends from the verified sending subdomain, never the root domain, and replies to a real mailbox', async () => {
+    vi.stubEnv('RESEND_API_KEY', 're_test')
+    vi.stubEnv('SUPPORT_EMAIL_FROM', 'support@bylineseo.com') // the old root-domain setting must not leak through
+    const fetchSpy = vi.fn().mockResolvedValue(new Response('{"id":"abc"}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchSpy)
+    await sendEmail(mail)
+    const sent = JSON.parse(fetchSpy.mock.calls[0][1].body)
+    expect(sent.from).toMatch(/<[^@>]+@send.bylineseo.com>$/)
+    expect(sent.from).not.toMatch(/@bylineseo.com/)
+    expect(sent.reply_to).toBe('hi@bylineseo.com')
+  })
 })
