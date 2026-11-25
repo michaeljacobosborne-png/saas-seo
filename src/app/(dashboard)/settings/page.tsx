@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { CreditCard, CheckCircle2, AlertCircle, Settings, Globe, ChevronRight } from 'lucide-react'
 import ManageBillingButton from './manage-billing-button'
 import SearchConsoleSection from './search-console-section'
+import AccountSection from './AccountSection'
+import { hasPasswordLogin } from '@/lib/account-security'
 
 // Maps the internal plan key stored on the subscription (set from checkout
 // metadata) to the customer-facing plan name shown on /pricing.
@@ -137,6 +139,8 @@ export default async function SettingsPage() {
           <p className="text-sm" style={{ color: 'var(--cream-faint)' }}>Manage your account and billing</p>
         </div>
       </div>
+
+      <AccountSection email={user.email ?? ''} hasPassword={hasPasswordLogin(user)} />
 
       {/* Billing card */}
       <div className="rounded-2xl p-6" style={{ background: 'var(--ink-card)', border: '1px solid rgba(184,115,51,0.18)' }}>

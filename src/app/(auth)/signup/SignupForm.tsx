@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { analytics } from '@/lib/analytics'
+import { MIN_PASSWORD_LENGTH } from '@/lib/password-reset'
 
 function GoogleIcon() {
   return (
@@ -182,7 +183,7 @@ export default function SignupForm({
                 id="password"
                 type="password"
                 required
-                minLength={6}
+                minLength={MIN_PASSWORD_LENGTH}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"

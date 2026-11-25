@@ -1,0 +1,10 @@
+- [Sanity blog](sanity-blog.md) — /blog + /studio built on Sanity; project ID + env vars still need manual setup
+- [Manual keyword-add migration](keywords-manual-add-migration.md) — manual-add endpoint needs source/brand_id columns; run npm run migrate after deploy
+- [Shared worktree clobber](shared-worktree-clobber.md) — concurrent sessions share one git tree; commit your own files fast with explicit pathspec; branch is master not main
+- [ARCHITECTURE.md ahead of master](architecture-md-ahead-of-master.md) — doc describes branch-only versioning/History system that master lacks; verify doc claims against src/
+- [Publishing migration manual apply](publishing-migration-manual-apply.md) — WordPress publishing needs migration 20260615 run in Supabase before /api/publish/* works
+- [Signup confirmation emails](signup-confirmation-emails.md) — confirmation emails are 100% Supabase-sent, autoconfirm OFF; missing emails block all email signups (fix: enable Custom SMTP via Resend)
+- [Supabase service role key stale](supabase-service-role-key-stale.md) — service key in .env.local 401s at gateway; direct DB host is IPv6-only
+- [GHL activation events](ghl-activation-events.md) — src/lib/ghl.ts REST v1 helper + 5 activation events wired; set GHL_API_KEY + 3 more env vars in Vercel before go-live (dormant until then)
+- [usage_events migration manual apply](usage-events-migration-manual-apply.md) — /admin cost tracking needs migration 20260618 run in Supabase; dashboard degrades gracefully until then
+- [Cleanup audit 2026-07](cleanup-audit-2026-07.md) — full audit in repo-root CLEANUP_AUDIT.md; open P0s: leaked GHL/Firebase tokens, open redirect, team-plan limit bug, dead polish pass

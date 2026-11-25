@@ -197,7 +197,9 @@ export function emailAccessChange(db: SupabaseClient) {
     const to = data.user?.email
     if (!to) return
     const { subject, text } = buildAccessEmail(page.id, page.url, changes)
-    await sendEmail({ to, subject, text })
+    const sent = await sendEmail({ to, subject, text })
+    // Only record an alert as emailed if it was. Marking it on a failed send hid, for as long as the key was broken, that no one had been told.
+    if (!sent.ok) return
     await db
       .from('access_alerts')
       .update({ emailed_at: new Date().toISOString() })
