@@ -6,6 +6,23 @@ Format: title, date, decision, what drove it (with evidence), what would make us
 
 ---
 
+## 48. What our own pages tell a machine Byline is: structured data corrected, old-product copy removed
+**Date:** 2026-11-25 (approved by Michael; deployed)
+**Decision:**
+- The homepage `SoftwareApplication.description` now opens with the crawler probe and the browser control, then Retrievable and Citable with evidence, then monitoring. It no longer says Byline "drafts articles". The same first sentence is the new `Organization.description` (the Organization node had none). Both come from `PRODUCT_SUMMARY` in `src/lib/structured-data.ts`.
+- `featureList` is reordered to lead with the crawler probe, Retrievable scoring, Citable bands, daily crawler access checks, change alerts and run history. Article drafting and the rewrite agent are in, as feature nine of ten, because they are real and bundled. "AI keyword research", "Answer Optimization analysis" and "Free content map" are no longer separate lines.
+- `offers` was one offer, price 0, "Free trial available". It is now Free plus Solo, Pro and Agency, built from `FREE_LIMITS`, `PLAN_LIMITS` and `PLANS` so it cannot drift from the app or the pricing page.
+- The homepage workflow was Research, Generate, Optimize and the page said "From keyword to scored draft". It is now Check, Watch, Fix, with generation mentioned as something Byline also does. The hero button and the final CTA changed to match.
+- `/geo-analyzer` and `/ao-analyzer` closed with "sign up to generate a draft and score it before you publish". They now point at the free check and the plans. Their second button was "Start Free" (a free account landed on a dashboard that sells generating an article); it is now "See plans". The paid-signup tagline "Start building your SEO content engine" became "Check pages for AI search readiness".
+- Every page footer now reads the current year (derived, not typed) and the legal entity, **Peacock Creative Services LLC**, the same on all pages. The footer sits beside the Privacy and Terms links, so it is where a reader looks for who they contract with. If the brand name is wanted there instead, change it everywhere, not on one page.
+- **The "six" is literal**: six crawler user-agents (OAI-SearchBot, Claude-SearchBot, PerplexityBot, ClaudeBot, GPTBot, CCBot). A comment at \`PRODUCT_SUMMARY\` and at the homepage structured data says the number must change if the crawler set does.
+- Tests (\`src/app/site-copy.test.ts\`) fail if a page hardcodes a copyright year or names anything but the legal entity, if an analyzer page closes on "sign up to generate a draft", if the homepage regains "Free trial" or Research/Generate/Optimize, if the feature list stops leading with the probe, scoring and monitoring, or if the description starts selling drafting again.
+**Drivers:** a prospecting tool (explee.com) read the live site and described Byline as an "AI SEO content writing platform" for "AI SEO content editor" buyers, with no mention of crawler access or retrievable versus citable. The page title, meta description and prose were already right. The structured data, the part a scraper lifts, was not: it led with AI keyword research and SEO content generation, and the description ended on drafting articles. The before state is saved raw in \`C:\Users\ozzy5\Documents\byline-audits\bylineseo.com\` (captured 2026-11-25 08:51 UTC from the live response) with the after state beside it.
+**Left on purpose:** \`/audit\` (the content-gap tool) still closes on "sign up to generate a draft", since a draft is its natural next step. The free-account dashboard still says "Let's get your first SEO article live" and "Generate your first SEO article"; that file is also edited by the \`brand-prompt-not-gate\` branch, so it is fixed there. It is a live inconsistency: it is the first thing a new free user reads.
+**Revisit if:** the crawler set changes (the number six), the plans change, or article drafting stops being a real feature.
+
+---
+
 ## 47. Password reset: our own email, the token is spent on submit, the request never says who has an account
 **Date:** 2026-11-24 (branch `password-reset`; not deployed until Michael has looked)
 **Decision:**

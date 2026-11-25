@@ -62,12 +62,23 @@ function cleanAll(urls: string[]): string[] {
   return [...new Set(urls.map(cleanProfileUrl).filter((u): u is string => !!u))]
 }
 
+/**
+ * What Byline is, in the words a scraper or a model will lift from the page. Keep it
+ * short and concrete. "Six" is the number of crawler user-agents the access probe
+ * sends (OAI-SearchBot, Claude-SearchBot, PerplexityBot, ClaudeBot, GPTBot, CCBot):
+ * if the crawler set changes, change this number, the homepage workflow text and the
+ * feature list in src/app/page.tsx with it.
+ */
+export const PRODUCT_SUMMARY =
+  'Byline requests a page as six AI crawlers and as an ordinary browser, and records which were served the page and which were refused.'
+
 export function organizationNode() {
   return {
     '@type': 'Organization',
     '@id': ORG_ID,
     name: 'Byline',
     url: SITE_URL,
+    description: PRODUCT_SUMMARY,
     logo: { '@type': 'ImageObject', url: `${SITE_URL}/icon-192.png`, width: 192, height: 192 },
     founder: { '@id': FOUNDER.id },
   }

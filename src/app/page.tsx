@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import NavLinks from './_components/NavLinks'
 import { FREE_LIMITS, PLAN_LIMITS } from '@/lib/plans'
 import { PLANS } from './(billing)/pricing/pricing-plans'
-import { ORG_ID, SITE_URL, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
+import { ORG_ID, PRODUCT_SUMMARY, SITE_URL, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
 import { ENGINE_VERSION } from '@/lib/geo-audit/types'
 
 export const metadata: Metadata = {
@@ -98,8 +98,8 @@ const jsonLd = graph(organizationNode(), websiteNode(), personNode({ slug: 'mich
   publisher: { '@id': ORG_ID },
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
-  description:
-    'Scores how ready a page is for AI search to reach, parse and quote, in deterministic code with the evidence shown, and drafts articles scored against the same rubric before they publish.',
+  // PRODUCT_SUMMARY and the first feature below both say "six" crawlers: that number must change if the crawler set does.
+  description: `${PRODUCT_SUMMARY} It then scores the page for Retrievable (can an engine reach it, parse it and lift a passage, out of 100) and Citable (does a lifted passage point back to you, in bands), showing the evidence for every finding. Paid plans monitor chosen pages, check crawler access daily, email when it changes, and keep each score with the engine version that produced it.`,
   // Read from the same tables the app enforces and the pricing page shows, so this cannot drift from them.
   offers: [
     {
@@ -118,15 +118,16 @@ const jsonLd = graph(organizationNode(), websiteNode(), personNode({ slug: 'mich
     })),
   ],
   featureList: [
-    'AI keyword research',
-    'SEO content generation',
-    'Editorial rewrite agent',
-    'GEO (Generative Engine Optimization) scoring',
-    'Answer Optimization analysis',
-    'Free content map',
-    'Evidence shown for every finding',
-    'Deterministic scoring, no model-set scores',
-    'Stored run history with engine version',
+    'Crawler access probe: each page requested as six AI crawlers and as an ordinary browser',
+    'Retrievable score out of 100, with the evidence for every finding',
+    'Citable bands from six signals, such as named authorship and original evidence',
+    'Daily crawler access checks on monitored pages',
+    'Email alerts when crawler access changes, sent only after two consecutive checks agree',
+    'Score history with the engine version recorded on every run',
+    'Comparison of any two runs, refused when the engine version differs',
+    'Deterministic scoring: no score is set by a language model',
+    'Article drafting and an in-editor rewrite agent, scored against the same rubric',
+    'Free page audits, including a content audit',
   ],
 })
 

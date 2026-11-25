@@ -54,7 +54,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
 
       <footer className="border-t border-[rgba(184,115,51,0.15)] mt-20">
         <div className="max-w-6xl mx-auto px-6 py-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-[#7A6555]">
-          <span>© {new Date().getFullYear()} Byline</span>
+          <span>© {new Date().getFullYear()} Peacock Creative Services LLC</span>
           <Link href="/blog" className="hover:text-[#A89070] transition-colors">
             Blog
           </Link>
