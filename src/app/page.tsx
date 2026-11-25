@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import { Search, FileText, Sparkles, Check } from 'lucide-react'
+import { Search, Activity, Sparkles, Check } from 'lucide-react'
 import type { Metadata } from 'next'
 import NavLinks from './_components/NavLinks'
-import { FREE_LIMITS } from '@/lib/plans'
+import { FREE_LIMITS, PLAN_LIMITS } from '@/lib/plans'
 import { PLANS } from './(billing)/pricing/pricing-plans'
 import { ORG_ID, SITE_URL, graph, jsonLdString, organizationNode, personNode, websiteNode } from '@/lib/structured-data'
 import { ENGINE_VERSION } from '@/lib/geo-audit/types'
@@ -47,7 +47,7 @@ function PrimaryCta({ light = false }: { light?: boolean }) {
             : 'bg-[#B87333] text-[#F7F3EC] hover:bg-[#A0622A]'
         }`}
       >
-        Score your first draft
+        See plans
       </Link>
       <GuaranteeLine light={light} />
     </div>
@@ -100,12 +100,23 @@ const jsonLd = graph(organizationNode(), websiteNode(), personNode({ slug: 'mich
   operatingSystem: 'Web',
   description:
     'Scores how ready a page is for AI search to reach, parse and quote, in deterministic code with the evidence shown, and drafts articles scored against the same rubric before they publish.',
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'USD',
-    description: 'Free trial available',
-  },
+  // Read from the same tables the app enforces and the pricing page shows, so this cannot drift from them.
+  offers: [
+    {
+      '@type': 'Offer',
+      name: 'Free',
+      price: '0',
+      priceCurrency: 'USD',
+      description: `${FREE_LIMITS.auditsPerMonth} audits a month on any URL, crawler access probe included. No monitoring.`,
+    },
+    ...PLANS.map((p) => ({
+      '@type': 'Offer',
+      name: p.name,
+      price: String(p.monthlyPrice),
+      priceCurrency: 'USD',
+      description: `Per month. ${PLAN_LIMITS[p.id].trackedPages} pages monitored, with daily crawler access checks and change alerts.`,
+    })),
+  ],
   featureList: [
     'AI keyword research',
     'SEO content generation',
@@ -295,10 +306,10 @@ export default function HomePage() {
       <section className="bg-[#231F1B] px-6 py-20">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-3 text-[#F7F3EC]">
-            From keyword to scored draft in one workflow.
+            Check a page, watch it, fix what the evidence shows.
           </h2>
           <p className="text-center text-[#A89070] mb-14 max-w-xl mx-auto">
-            Research, generate, score and fix, all without leaving Byline.
+            Byline reads a page the way a crawler does, keeps watching it, and points at the evidence for each fix.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
@@ -309,28 +320,29 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
-                Step 1: Research
+                Step 1: Check
               </div>
-              <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Discover the right keywords</h3>
+              <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Request the page as each AI crawler</h3>
               <p className="text-[#A89070] text-sm leading-relaxed">
-                Tell the discovery agent your topic and audience. It asks the right questions and generates
-                15–20 targeted keyword seeds before touching the API, so your results fit your topic.
+                Byline asks for the page as six AI crawlers and as an ordinary browser, and records who was served
+                it and who was refused. It then scores whether the page can be retrieved and how citable it is, and
+                quotes the evidence for every finding.
               </p>
             </div>
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
               <div className="flex items-center gap-3 mb-5">
                 <span className="w-8 h-8 rounded-full bg-[#B87333] text-[#F7F3EC] flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
                 <div className="w-12 h-12 rounded-xl bg-[rgba(184,115,51,0.08)] flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-[#B87333]" />
+                  <Activity className="w-6 h-6 text-[#B87333]" />
                 </div>
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
-                Step 2: Generate
+                Step 2: Watch
               </div>
-              <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Generate an article that actually fits</h3>
+              <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Monitor the pages you answer for</h3>
               <p className="text-[#A89070] text-sm leading-relaxed">
-                Choose your target word count. Byline generates a fully structured, SEO-optimized article
-                matched to the keyword&apos;s search intent, then scores how retrievable and citable it is before you publish.
+                Pick the pages. Byline checks crawler access on them every day, emails you when it changes, and
+                re-scores them on a schedule. Every run is kept with the engine version that produced it.
               </p>
             </div>
             <div className="bg-[#1C1917] rounded-2xl p-7 shadow-sm border border-[rgba(184,115,51,0.15)]">
@@ -341,12 +353,13 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-xs font-semibold text-[#B87333] uppercase tracking-wider mb-2">
-                Step 3: Optimize
+                Step 3: Fix
               </div>
-              <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Let the agent fix what the scorer flagged</h3>
+              <h3 className="text-lg font-bold mb-3 text-[#F7F3EC]">Fix what the evidence shows</h3>
               <p className="text-[#A89070] text-sm leading-relaxed">
-                Select any section. Tell the agent to rewrite it. The fix drops in directly, with no copy-paste
-                and no leaving the editor. The agent also surfaces content gaps and suggests your next article.
+                Each finding names its threshold and what was found. Select a section and the rewrite agent drafts
+                the fix in the editor, and you choose whether to apply it. Byline also drafts articles, scored
+                against the same rubric.
               </p>
             </div>
           </div>
@@ -488,7 +501,7 @@ export default function HomePage() {
       <section className="bg-[#B87333] px-6 py-20 text-center">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-[#F7F3EC] mb-8 leading-tight">
-            Start with a keyword. Leave with a draft you can check line by line.
+            Start with a page. Leave with evidence you can check line by line.
           </h2>
           <PrimaryCta light />
         </div>

@@ -570,11 +570,12 @@ export default function GeoAnalyzerClient() {
       <section className="bg-[#1C1917] px-6 py-24 text-center">
         <div className="max-w-2xl mx-auto">
           <h2 style={playfair} className="text-3xl sm:text-4xl font-bold text-[#F7F3EC] mb-4 leading-tight">
-            Ready to optimize for AI?
+            See what an AI crawler is served.
           </h2>
           <p className="text-lg text-[#A89070] mb-9 leading-relaxed">
-            Run a free GEO analysis above, or sign up to generate a draft and score it before
-            you publish.
+            Run a free check above to see how each AI crawler is served your page and what stands in the way of
+            it being retrieved or cited. To have Byline check pages every day and email you when crawler access
+            changes, see the plans.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
@@ -584,10 +585,10 @@ export default function GeoAnalyzerClient() {
               Analyze My Site
             </button>
             <Link
-              href="/signup?plan=free&ref=geo_analyzer"
+              href="/pricing"
               className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-transparent border border-[#B87333] text-[#D4954A] text-sm font-semibold rounded-xl hover:bg-[#B87333]/10 transition-colors w-full sm:w-auto"
             >
-              Start Free <ArrowRight className="w-4 h-4" />
+              See plans <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -596,7 +597,7 @@ export default function GeoAnalyzerClient() {
       {/* Footer */}
       <footer className="bg-[#1C1917] border-t border-white/10 px-6 py-10">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#A89070]">
-          <span>© 2025 Byline</span>
+          <span>© {new Date().getFullYear()} Byline</span>
           <div className="flex flex-wrap items-center justify-center gap-6">
             <Link href="/privacy" className="hover:text-[#F7F3EC] transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-[#F7F3EC] transition-colors">Terms</Link>

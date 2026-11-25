@@ -154,7 +154,7 @@ export default function SignupForm({
                 </div>
               </div>
             ) : (
-              <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>Start building your SEO content engine</p>
+              <p className="mt-1 text-sm" style={{ color: 'var(--cream-dim)' }}>Check pages for AI search readiness</p>
             )}
           </div>
 

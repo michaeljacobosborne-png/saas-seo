@@ -603,8 +603,8 @@ export default function AoAnalyzerClient() {
             Ready to see what comes out of your page?
           </h2>
           <p className="text-lg text-[#A89070] mb-9 leading-relaxed">
-            Run a free AO analysis above, or sign up to generate a draft and score it before
-            you publish.
+            Run a free analysis above to see how your page reads to an answer engine. To have Byline check pages
+            every day and email you when crawler access changes, see the plans.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
@@ -614,10 +614,10 @@ export default function AoAnalyzerClient() {
               Analyze My Site
             </button>
             <Link
-              href="/signup?plan=free&ref=ao_analyzer"
+              href="/pricing"
               className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-transparent border border-[#B87333] text-[#D4954A] text-sm font-semibold rounded-xl hover:bg-[#B87333]/10 transition-colors w-full sm:w-auto"
             >
-              Start Free <ArrowRight className="w-4 h-4" />
+              See plans <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -626,7 +626,7 @@ export default function AoAnalyzerClient() {
       {/* Footer */}
       <footer className="bg-[#1C1917] border-t border-white/10 px-6 py-10">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#A89070]">
-          <span>© 2025 Byline</span>
+          <span>© {new Date().getFullYear()} Byline</span>
           <div className="flex flex-wrap items-center justify-center gap-6">
             <Link href="/privacy" className="hover:text-[#F7F3EC] transition-colors">
               Privacy

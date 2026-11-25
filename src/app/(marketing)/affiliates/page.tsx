@@ -197,7 +197,7 @@ export default function AffiliatePage() {
       {/* Footer */}
       <footer className="bg-[#1C1917] border-t border-white/10 px-6 py-10">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#A89070]">
-          <span>© 2025 Byline</span>
+          <span>© {new Date().getFullYear()} Byline</span>
           <div className="flex flex-wrap items-center justify-center gap-6">
             <Link href="/privacy" className="hover:text-[#F7F3EC] transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-[#F7F3EC] transition-colors">Terms</Link>
