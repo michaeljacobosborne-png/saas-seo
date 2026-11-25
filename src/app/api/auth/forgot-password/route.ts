@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       // No account for this address (or generation failed): send nothing, say nothing.
       if (error || !data?.properties?.hashed_token) return
 
-      const mail = resetEmail(resetLink(origin, data.properties.hashed_token))
+      const mail = resetEmail(resetLink(origin, data.properties.hashed_token), origin)
       const sent = await sendEmail({ to: email, ...mail })
       if (!sent.ok) console.error('[password-reset] email not sent', sent.skipped ? 'RESEND_API_KEY unset' : sent.error)
     } catch (err) {

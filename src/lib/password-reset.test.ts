@@ -63,7 +63,7 @@ describe('requesting a reset', () => {
     await settle()
     expect(sendEmail).toHaveBeenCalledTimes(1)
     expect(sendEmail.mock.calls[0][0].to).toBe('real@example.com')
-    expect(sendEmail.mock.calls[0][0].text).toContain('https://app.bylineseo.com/reset-password?token_hash=abc&type=recovery')
+    expect(sendEmail.mock.calls[0][0].text).toContain('/reset-password?token_hash=abc&type=recovery')
   })
 
   it('sends nothing, still says the same thing, when the rate limit is hit', async () => {
@@ -81,11 +81,52 @@ describe('requesting a reset', () => {
     expect(generateLink).not.toHaveBeenCalled()
   })
 
+  const PROD = { nodeEnv: 'production', vercelEnv: 'production' }
+  const PREVIEW = { nodeEnv: 'production', vercelEnv: 'preview' }
+  const DEV = { nodeEnv: 'development', vercelEnv: 'development' }
+
   it('never builds the link from a Host header that is not ours', () => {
-    expect(resetOrigin('evil.example.com')).toBe('https://app.bylineseo.com')
-    expect(resetOrigin('app.bylineseo.com.evil.com')).toBe('https://app.bylineseo.com')
-    expect(resetOrigin('saas-seo-git-password-reset-x.vercel.app')).toBe('https://saas-seo-git-password-reset-x.vercel.app')
-    expect(resetOrigin(null)).toBe('https://app.bylineseo.com')
+    expect(resetOrigin('evil.example.com', PREVIEW)).toBe('https://app.bylineseo.com')
+    expect(resetOrigin('app.bylineseo.com.evil.com', PREVIEW)).toBe('https://app.bylineseo.com')
+    expect(resetOrigin(null, PREVIEW)).toBe('https://app.bylineseo.com')
+  })
+
+  it('in production the link is always the canonical site, whatever host the request arrived on', () => {
+    for (const host of ['app.bylineseo.com', 'bylineseo.com', 'evil.example.com', 'localhost:3000', 'saas-seo-abc123-michael-osborne-s-projects.vercel.app', 'saas-seo-git-password-reset-michael-osborne-s-projects.vercel.app', null]) {
+      expect(resetOrigin(host, PROD)).toBe('https://app.bylineseo.com')
+    }
+  })
+
+  it('only a preview deployment or a local server may use its own host, and only if it is one of ours', () => {
+    expect(resetOrigin('saas-seo-git-password-reset-x.vercel.app', PREVIEW)).toBe('https://saas-seo-git-password-reset-x.vercel.app')
+    expect(resetOrigin('localhost:3109', DEV)).toBe('http://localhost:3109')
+  })
+
+  it('the production link in the sent email, and the fallback line beside it, both name app.bylineseo.com', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('VERCEL_ENV', 'production')
+    generateLink.mockResolvedValueOnce({ data: { properties: { hashed_token: 'tok' } }, error: null })
+    await forgot(req('https://x/api/auth/forgot-password', { email: 'real@example.com' }, 'saas-seo-abc123-michael-osborne-s-projects.vercel.app'))
+    await settle()
+    const { text, html } = sendEmail.mock.calls[0][0]
+    for (const body of [text, html]) {
+      expect(body).toContain('https://app.bylineseo.com/reset-password?token_hash=tok&type=recovery')
+      expect(body).toContain('app.bylineseo.com/forgot-password')
+      expect(body).not.toMatch(/vercel.app|localhost/)
+    }
+    vi.unstubAllEnvs()
+  })
+
+  it('on a preview both URLs in the email use the preview host, from one mechanism', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('VERCEL_ENV', 'preview')
+    generateLink.mockResolvedValueOnce({ data: { properties: { hashed_token: 'tok' } }, error: null })
+    await forgot(req('https://x/api/auth/forgot-password', { email: 'real@example.com' }, 'saas-seo-git-password-reset-x.vercel.app'))
+    await settle()
+    const { text } = sendEmail.mock.calls[0][0]
+    expect(text).toContain('https://saas-seo-git-password-reset-x.vercel.app/reset-password?token_hash=tok')
+    expect(text).toContain('https://saas-seo-git-password-reset-x.vercel.app/forgot-password')
+    vi.unstubAllEnvs()
   })
 })
 

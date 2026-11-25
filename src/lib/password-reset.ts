@@ -17,12 +17,23 @@ export function isPlausibleEmail(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 }
 
+export const CANONICAL_ORIGIN = 'https://app.bylineseo.com'
+
 /**
- * Hosts a reset link may point at. The Host header is attacker-controlled, so a
- * link is never built from it unless it is one of ours; anything else falls back
- * to the canonical site.
+ * The site a link in an account email points at.
+ *
+ * In production it is ALWAYS the canonical site, whatever host the request
+ * arrived on: nothing about where a request came from can reach a customer's
+ * inbox. Only on a Vercel preview (so the branch can be walked end to end) or a
+ * local dev server is the request host used, and then only if it is one of ours;
+ * an unknown host falls back to the canonical site.
  */
-export function resetOrigin(host: string | null, canonical = 'https://app.bylineseo.com'): string {
+export function resetOrigin(
+  host: string | null,
+  deploy: { nodeEnv?: string; vercelEnv?: string } = { nodeEnv: process.env.NODE_ENV, vercelEnv: process.env.VERCEL_ENV },
+  canonical = CANONICAL_ORIGIN,
+): string {
+  if (deploy.vercelEnv === 'production' && deploy.nodeEnv === 'production') return canonical
   const h = (host ?? '').toLowerCase()
   const bare = h.split(':')[0]
   if (bare === 'app.bylineseo.com') return `https://${bare}`
@@ -46,7 +57,7 @@ export function passwordProblem(password: unknown): string | null {
 export const EXPIRED_LINK_MESSAGE =
   'This reset link has expired or has already been used. Request a new one and use the newest email.'
 
-export function resetEmail(link: string): { subject: string; text: string; html: string } {
+export function resetEmail(link: string, origin: string = CANONICAL_ORIGIN): { subject: string; text: string; html: string } {
   const subject = 'Reset your Byline password'
   const text = [
     'Hello,',
@@ -57,7 +68,7 @@ export function resetEmail(link: string): { subject: string; text: string; html:
     '',
     'The link works once and expires in one hour. If you did not ask for this, ignore the email: your password has not changed and nobody can use the link without access to this inbox.',
     '',
-    'If the link has expired, request a new one at https://app.bylineseo.com/forgot-password.',
+    `If the link has expired, request a new one at ${origin}/forgot-password.`,
     '',
     'Byline',
     'bylineseo.com',
@@ -68,7 +79,7 @@ export function resetEmail(link: string): { subject: string; text: string; html:
 <p><a href="${link}" style="display:inline-block;background:#B87333;color:#1c1a17;text-decoration:none;font-weight:bold;padding:10px 18px;border-radius:6px">Choose a new password</a></p>
 <p>Or paste this link into your browser:<br><a href="${link}" style="color:#7a4a1c;word-break:break-all">${link}</a></p>
 <p>The link works once and expires in one hour. If you did not ask for this, ignore the email: your password has not changed and nobody can use the link without access to this inbox.</p>
-<p>If the link has expired, request a new one at <a href="https://app.bylineseo.com/forgot-password" style="color:#7a4a1c">app.bylineseo.com/forgot-password</a>.</p>
+<p>If the link has expired, request a new one at <a href="${origin}/forgot-password" style="color:#7a4a1c">${origin.replace('https://', '').replace('http://', '')}/forgot-password</a>.</p>
 <p>Byline<br>bylineseo.com</p>
 </div>`
   return { subject, text, html }
