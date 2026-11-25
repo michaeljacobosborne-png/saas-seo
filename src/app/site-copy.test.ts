@@ -40,12 +40,27 @@ describe('public pages', () => {
     expect(src).not.toMatch(/Step 1: Research|Step 2: Generate|Step 3: Optimize|From keyword to scored draft/)
   })
 
-  it('every copyright line names the legal entity, the same on every page', () => {
+  it('every page footer reads the current year and Byline, the same on every page', () => {
     // Pages and layouts only: the footer of a transactional email (api/audit/lead) is not a page.
     const lines = files.filter((f) => !/[\\/]api[\\/]|[\\/]lib[\\/]/.test(f)).flatMap((f) => (read(f).match(/(?:©|&copy;)[^<\n]*/g) ?? []).map((l) => [f, l] as const))
     expect(lines.length).toBeGreaterThan(5)
-    const bad = lines.filter(([, l]) => !/getFullYear\(\)\} Peacock Creative Services LLC$/.test(l.trim()))
+    const bad = lines.filter(([, l]) => !/getFullYear\(\)\} Byline$/.test(l.trim()))
     expect(bad).toEqual([])
+  })
+})
+
+describe('who Byline is operated by', () => {
+  it('Terms and Privacy open by saying Byline is operated by Peacock Creative Services LLC, before any section', () => {
+    for (const page of ['terms', 'privacy']) {
+      const src = read(join(ROOT, '(marketing)', page, 'page.tsx'))
+      const top = src.slice(src.indexOf('<h1'), src.indexOf('<section'))
+      expect(top).toMatch(/Byline is operated by <strong>Peacock Creative Services LLC<\/strong>/)
+    }
+  })
+
+  it('no page footer names the legal entity', () => {
+    const footers = files.filter((f) => !/[\\/]api[\\/]|[\\/]lib[\\/]/.test(f)).flatMap((f) => read(f).match(/(?:©|&copy;)[^<\n]*/g) ?? [])
+    expect(footers.filter((l) => /Peacock/.test(l))).toEqual([])
   })
 })
 

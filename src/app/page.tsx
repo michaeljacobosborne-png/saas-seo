@@ -557,7 +557,7 @@ export default function HomePage() {
 
           {/* Bottom bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-8 border-t border-[rgba(184,115,51,0.12)] text-xs text-[#7A6555]">
-            <span>&copy; {new Date().getFullYear()} Peacock Creative Services LLC</span>
+            <span>&copy; {new Date().getFullYear()} Byline</span>
             <div className="flex items-center gap-5">
               <a href="#" aria-label="Byline on X" className="hover:text-[#A89070] transition-colors">X</a>
               <a href="#" aria-label="Byline on LinkedIn" className="hover:text-[#A89070] transition-colors">LinkedIn</a>

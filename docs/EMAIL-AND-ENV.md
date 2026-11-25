@@ -56,8 +56,17 @@ missing, the alert itself cannot send, so check they are set in Production.
 ## The old sender setting is dead
 
 `SUPPORT_EMAIL_FROM` (was `support@bylineseo.com`, the unverified root domain) is no
-longer read by anything. **Delete it from Vercel.** The sender is the constant
-`EMAIL_FROM` in `src/lib/email.ts`. A test fails if a From on the root domain returns.
+longer read by anything. The sender is the constant `EMAIL_FROM` in `src/lib/email.ts`.
+A test fails if a From on the root domain returns. It has been removed from the local
+`.env.local` and `.env.local.example`.
+
+Whether it was ever set in production is not settled. Michael checked the Vercel
+dashboard and did not find it. But the `.env.local` created by the Vercel CLI on
+2026-11-24 contained it, and a CLI pull only writes Vercel's variables, so it may have
+existed in an environment scope that was not checked. Either way the production sender
+was on the unverified root domain: `Byline Support <support@bylineseo.com>` if it was set,
+or the code's fallback `hi@bylineseo.com` if not. If it is still in Vercel under any
+scope, delete it; nothing reads it.
 
 ## The access-alert marking bug, and what it would have hidden
 

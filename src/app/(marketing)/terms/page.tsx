@@ -19,6 +19,7 @@ export default function TermsPage() {
 
       <main className="max-w-3xl mx-auto px-6 py-16">
         <h1 className="text-3xl font-bold mb-2">Terms of Service</h1>
+        <p className="mb-2 text-gray-700">Byline is operated by <strong>Peacock Creative Services LLC</strong>.</p>
         <p className="text-sm text-gray-500 mb-10">Effective date: June 1, 2025</p>
 
         <div className="space-y-10 text-gray-700 leading-relaxed">
